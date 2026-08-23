@@ -1,6 +1,6 @@
 /**
  * 协议事件流演示器：
- * 回放一轮真实形态的 Submission/Event 序列（JSONL 观感），
+ * 回放一轮当前 App Server Thread/Turn/Item 通知序列（JSONL 观感），
  * 支持播放/暂停、速度切换与重放；减弱动效下直接完整呈现。
  */
 
@@ -12,21 +12,21 @@ interface Line {
 }
 
 const SCRIPT: Line[] = [
-  { cls: "k-user", dir: "in", text: '→ Op::TurnInput { input: "测试 test_login 挂了，修一下"' },
-  { cls: "k-sys", text: "◂ EventMsg::TurnStarted          (wire: task_started)" },
-  { cls: "k-model", text: '◂ AgentMessageContentDelta "先复现：跑一下这个用例。"' },
-  { cls: "k-tool", dir: "out", text: '→ shell ["cargo","test","login"]' },
-  { cls: "k-warn", text: "◂ EventMsg::ExecCommandEnd { exit_code: 1 }" },
-  { cls: "k-model", text: '◂ AgentMessageContentDelta "断言过期了：登录页已改版，更新断言并补快照。"' },
-  { cls: "k-tool", dir: "out", text: '→ apply_patch *** Update File: tests/login.rs' },
-  { cls: "k-warn", text: "◂ requestApproval(file_change) —— 策略要求请示用户", note: "平台侧落库为 approval 行 · TTL 600s" },
-  { cls: "k-user", dir: "in", text: '→ decision { decision: "approve" }' },
-  { cls: "k-sys", text: "◂ EventMsg::PatchAppliedBegin / End { success: true }" },
-  { cls: "k-tool", dir: "out", text: '→ shell ["cargo","test","login"]' },
-  { cls: "k-tool", text: "◂ EventMsg::ExecCommandEnd { exit_code: 0 · 6 passed }" },
-  { cls: "k-model", text: '◂ AgentMessageContentDelta "已修复：……建议把快照纳入 CI。"' },
-  { cls: "k-sys", text: "◂ EventMsg::TurnComplete          (wire: task_complete)" },
-  { cls: "k-sys", text: "◂ EventMsg::TokenCount { 21,407 tok · cache_read 71% }" },
+  { cls: "k-user", dir: "in", text: 'turn/start { threadId, input: [{ type: "text", text: "修复 test_login" }] }' },
+  { cls: "k-sys", text: "◂ turn/started { turn.id: turn_42 }" },
+  { cls: "k-sys", text: "◂ item/started { type: agentMessage }" },
+  { cls: "k-model", text: '◂ item/agentMessage/delta "先复现这个用例。"' },
+  { cls: "k-sys", text: "◂ item/completed { type: agentMessage }" },
+  { cls: "k-tool", dir: "out", text: "◂ item/started { type: commandExecution }" },
+  { cls: "k-warn", text: "◂ item/commandExecution/requestApproval", note: "threadId + turnId + itemId" },
+  { cls: "k-user", dir: "in", text: '→ { decision: "accept" }' },
+  { cls: "k-sys", text: "◂ serverRequest/resolved { requestId }" },
+  { cls: "k-tool", text: "◂ item/completed { commandExecution · exitCode: 1 }" },
+  { cls: "k-tool", dir: "out", text: "◂ item/started { type: fileChange }" },
+  { cls: "k-tool", text: "◂ item/completed { fileChange · status: completed }" },
+  { cls: "k-model", text: '◂ item/agentMessage/delta "已修复并验证 6 passed。"' },
+  { cls: "k-sys", text: "◂ item/completed { type: agentMessage }" },
+  { cls: "k-sys", text: "◂ turn/completed { status: completed }" },
 ];
 
 export function initEventStream(

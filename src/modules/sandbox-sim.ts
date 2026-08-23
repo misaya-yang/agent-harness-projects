@@ -16,7 +16,7 @@ type Op = {
 };
 
 type Sandbox = "ro" | "ww" | "dfa";
-type Approval = "untrusted" | "on-request" | "granular" | "never";
+type Approval = "untrusted" | "on-request" | "never";
 
 const OPS: Op[] = [
   { id: "read", label: "读取源码", cmd: 'cat src/main.rs', reads: true, writeIn: false, writeOut: false, net: false, riskNote: "纯读操作" },
@@ -77,9 +77,6 @@ function decide(op: Op, sbx: Sandbox, apr: Approval): { key: VerdictKey; trace: 
     case "untrusted":
       trace.push("approval=UnlessTrusted → 未放行命令在执行前就请示");
       return { key: "ask", trace };
-    case "granular":
-      trace.push("approval=Granular → 该类别未放行 = 自动拒绝，不打扰用户");
-      return { key: "deny", trace };
     case "never":
       trace.push("approval=Never → 不请示，直接以失败收场");
       return { key: "deny", trace };

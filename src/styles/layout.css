@@ -281,6 +281,13 @@
   }
 }
 
+@media (min-width: 1120px) and (max-height: 700px) {
+  .rail {
+    justify-content: flex-start;
+    overflow-y: auto;
+  }
+}
+
 /* ---- 内容壳 ---- */
 .shell {
   max-width: 1180px;

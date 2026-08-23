@@ -6,17 +6,17 @@
 
 const LAYERS: Record<string, { name: string; en: string; role: string }> = {
   "http": {
-    name: "HTTP 服务面",
+    name: "HTTP 服务面（平台扩展）",
     en: "http_service",
     role: "对外唯一入口：线程与回合的生命周期路由、鉴权与签名校验、错误模型、健康检查。把「平台语义」翻译成内核调用。",
   },
   "lifecycle": {
-    name: "平台生命周期",
+    name: "平台生命周期（平台扩展）",
     en: "platform_lifecycle",
     role: "启动自举 → 就绪门控 → 排水（drain）→ 优雅停机。保证升级/扩缩容时不打断进行中的回合。",
   },
   "capability": {
-    name: "能力平面",
+    name: "能力平面（平台扩展）",
     en: "capability_plane",
     role: "声明式地回答「这个身份在这个作用域里能做什么」：能力授予、范围限定、只读模式与撤销。",
   },
@@ -36,14 +36,14 @@ const LAYERS: Record<string, { name: string; en: string; role: string }> = {
     role: "上一章的回合循环：上下文组装、流式响应、工具分发、沙箱执行——平台不重写它，只包裹它。",
   },
   "store": {
-    name: "事件存储",
+    name: "示例事件存储（平台扩展）",
     en: "postgres_store",
-    role: "以事件溯源持久化一切：追加事件、构建投影、支撑线程查询与恢复。状态是事件的函数。",
+    role: "参考平台可用事件溯源与投影支撑线程查询和恢复；这不是 Codex 上游唯一或必需的存储实现。",
   },
   "lease": {
-    name: "签名租约",
+    name: "示例签名租约（平台扩展）",
     en: "signed lease",
-    role: "把「权限」变成可过期的凭据：绑定平台作用域摘要与被预留的 Codex 回合，到期即失效，防止越权重放。",
+    role: "参考平台可把能力变成绑定作用域和回合的短期凭据；签名租约属于本课程的平台蓝图，不是 Codex 上游通用原语。",
   },
 };
 

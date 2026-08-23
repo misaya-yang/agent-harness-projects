@@ -12,6 +12,9 @@ import { initSandboxSim } from "./modules/sandbox-sim";
 import { initContextMeter } from "./modules/context-meter";
 import { initPlatformMap } from "./modules/platform-map";
 import { initTheme } from "./modules/theme";
+import { initStateModel } from "./modules/state-model";
+import { initExtensionAtlas } from "./modules/extension-atlas";
+import { initSurfaceSwitchboard } from "./modules/surface-switchboard";
 
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
@@ -27,6 +30,9 @@ function boot(): void {
   initSandboxSim(document.querySelector("#machine-sandbox"));
   initContextMeter(document.querySelector("#machine-context"));
   initPlatformMap(document.querySelector("#machine-platform"));
+  initStateModel(document.querySelector("#machine-state"));
+  initExtensionAtlas(document.querySelector("#machine-extensions"));
+  initSurfaceSwitchboard(document.querySelector("#machine-surfaces"));
 }
 
 if (document.readyState === "loading") {

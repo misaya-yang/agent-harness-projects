@@ -6,7 +6,7 @@
   "description": "深入 Codex Agent 内核 —— 交互式教学站（理论 · 思考 · 实践 · 面试备战）",
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit && vite build",
+    "build": "tsc --noEmit && vite build && node scripts/embed-worker.mjs",
     "typecheck": "tsc --noEmit",
     "preview": "vite preview"
   },

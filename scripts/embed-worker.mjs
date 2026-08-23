@@ -54,11 +54,12 @@ function decodeBase64(value) {
 export default {
   async fetch(request) {
     const url = new URL(request.url);
-    const path = url.pathname === "/" ? "/index.html" : url.pathname;
+    const routeAliases = { "/": "/index.html", "/codex": "/index.html", "/grok": "/grok.html" };
+    const path = routeAliases[url.pathname] || url.pathname;
     const headers = {
       "content-type": contentType(path),
       "x-content-type-options": "nosniff",
-      "cache-control": path === "/index.html" ? "public, max-age=60" : "public, max-age=31536000, immutable",
+      "cache-control": path.endsWith(".html") ? "public, max-age=60" : "public, max-age=31536000, immutable",
     };
     if (Object.hasOwn(textAssets, path)) return new Response(textAssets[path], { headers });
     if (Object.hasOwn(binaryAssets, path)) return new Response(decodeBase64(binaryAssets[path]), { headers });

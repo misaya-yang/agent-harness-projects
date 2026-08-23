@@ -15,6 +15,7 @@ export default defineConfig({
       preserveEntrySignatures: "strict",
       input: {
         app: "index.html",
+        grok: "grok.html",
         "server/index": "src/worker.js",
       },
       output: {

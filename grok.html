@@ -21,12 +21,12 @@
       if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) document.documentElement.classList.add("rm");
     </script>
   </head>
-  <body class="grok-page">
+  <body class="grok-page" data-agent="grok">
     <a class="skip-link" href="#main">跳到正文</a>
     <div class="progress-line" aria-hidden="true"></div>
     <header class="topbar">
       <a class="brand" href="#top">Grok Build 内核图谱 <span class="label-mono">FIELD GUIDE</span></a>
-      <div class="topbar-actions"><a class="series-link" href="/codex">Codex</a><button class="theme-btn" type="button" data-theme-toggle aria-label="切换到深色模式"><span aria-hidden="true" data-theme-icon>◐</span><span data-theme-label>深色</span></button><button class="menu-btn" type="button" data-menu-btn aria-expanded="false" aria-controls="chapter-nav">章节</button></div>
+      <div class="topbar-actions"><div data-series-nav data-variant="top"><a class="series-fallback" href="/codex">Agent 系列</a></div><button class="theme-btn" type="button" data-theme-toggle aria-label="切换到深色模式"><span aria-hidden="true" data-theme-icon>◐</span><span data-theme-label>深色</span></button><button class="menu-btn" type="button" data-menu-btn aria-expanded="false" aria-controls="chapter-nav">章节</button></div>
     </header>
     <nav class="chapter-nav" id="chapter-nav" data-menu-panel hidden aria-label="课程章节">
       <a href="#top" data-spy-link><span class="no">00</span>课程入口</a>
@@ -45,7 +45,7 @@
     </nav>
     <aside class="rail" aria-label="课程章节">
       <a class="brand" href="#top">Grok Build 图谱</a>
-      <div class="series-switch" aria-label="Agent 教学系列"><a href="/codex">Codex</a><span aria-current="page">Grok Build</span></div>
+      <div data-series-nav data-variant="rail"><a class="series-fallback" href="/codex">浏览 Agent 系列</a></div>
       <a href="#top" data-spy-link><span class="no">00</span>课程入口</a>
       <a href="#architecture" data-spy-link><span class="no">01</span>Rust 分层</a>
       <a href="#turn" data-spy-link><span class="no">02</span>回合运行时</a>

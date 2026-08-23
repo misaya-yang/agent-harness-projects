@@ -15,11 +15,13 @@ import { initTheme } from "./modules/theme";
 import { initStateModel } from "./modules/state-model";
 import { initExtensionAtlas } from "./modules/extension-atlas";
 import { initSurfaceSwitchboard } from "./modules/surface-switchboard";
+import { initSeriesNav } from "./modules/series-nav";
 
 const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
 
 function boot(): void {
   initTheme();
+  initSeriesNav();
   initReveal(reducedMotion.matches);
   initSpy();
   initNavMenu();

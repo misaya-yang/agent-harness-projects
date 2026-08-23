@@ -7,6 +7,7 @@ import { initReveal } from "./modules/reveal";
 import { initSpy } from "./modules/spy";
 import { initNavMenu } from "./modules/navmenu";
 import { initTheme } from "./modules/theme";
+import { initSeriesNav } from "./modules/series-nav";
 
 type Detail = { title: string; body: string; status?: string };
 
@@ -142,7 +143,7 @@ function initSurface(id: string, data: Record<string, Array<[string, string]>>):
 
 function boot(): void {
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
-  initTheme(); initReveal(reduced.matches); initSpy(); initNavMenu(); initTurn(); initEvents(); initSafety(); initSession(); initContext();
+  initTheme(); initSeriesNav(); initReveal(reduced.matches); initSpy(); initNavMenu(); initTurn(); initEvents(); initSafety(); initSession(); initContext();
   initChoiceDetail("#grok-architecture", {
     render: { title: "xai-grok-pager", body: "先检查 scrollback block、布局约束和 render snapshot；Session 事件可能完全正确。", status: "PAGER" },
     stall: { title: "xai-grok-shell / sampling", body: "核对 stop reason、pending tool call、取消状态和回合完成事件。", status: "SHELL" },

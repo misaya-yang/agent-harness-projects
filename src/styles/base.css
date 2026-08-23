@@ -1,0 +1,140 @@
+/* ============================================================
+   基础层：重置、排版、焦点、降级
+   ============================================================ */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+* {
+  margin: 0;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  scroll-behavior: smooth;
+}
+
+body {
+  background: var(--canvas);
+  color: var(--text);
+  font-family: var(--ff-body);
+  font-size: var(--step-body);
+  line-height: 1.85; /* 中文正文行距 */
+  letter-spacing: 0.01em;
+  line-break: strict;
+  overflow-wrap: break-word;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+img,
+svg,
+video {
+  display: block;
+  max-width: 100%;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+a {
+  color: inherit;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
+h1,
+h2,
+h3,
+h4 {
+  font-family: var(--ff-display);
+  font-weight: 900;
+  line-height: 1.28;
+  letter-spacing: 0.015em; /* 汉字禁用负字距 */
+  overflow-wrap: anywhere;
+}
+
+code,
+kbd {
+  font-family: var(--ff-mono);
+  font-size: 0.86em;
+}
+
+::selection {
+  background: color-mix(in oklch, var(--o-amber-core) 30%, transparent);
+}
+
+/* ---- 焦点：2px 外环，偏移出组件边界 ---- */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.surface-console :focus-visible,
+.machine :focus-visible {
+  outline-color: var(--accent-glow);
+}
+
+/* ---- 等宽标签（眉题、注记）---- */
+.label-mono {
+  font-family: var(--ff-mono);
+  font-size: var(--step-label);
+  font-weight: 500;
+  letter-spacing: 0.09em;
+  text-transform: uppercase;
+}
+
+/* ---- 屏幕阅读器专用 ---- */
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ============================================================
+   渐进增强的进场：
+   仅当 JS 可用且未开启减弱动效时才预隐藏；
+   JS 失败或 prefers-reduced-motion 下内容完整可见。
+   ============================================================ */
+html.js:not(.rm) [data-reveal] {
+  opacity: 0;
+  transform: translateY(16px);
+}
+
+html.js [data-reveal].is-in {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity var(--dur-slow) var(--ease-out),
+    transform var(--dur-slow) var(--ease-emph);
+  transition-delay: var(--d, 0ms);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

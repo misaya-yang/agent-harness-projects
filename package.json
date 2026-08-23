@@ -1,0 +1,19 @@
+{
+  "name": "codex-kernel-atlas",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "深入 Codex Agent 内核 —— 交互式教学站（理论 · 思考 · 实践 · 面试备战）",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@openai/sites-vite-plugin": "^0.2.0",
+    "playwright": "^1.62.1",
+    "typescript": "^5.9.2",
+    "vite": "^8.2.2"
+  }
+}

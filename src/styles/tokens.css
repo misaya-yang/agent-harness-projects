@@ -1,0 +1,172 @@
+/* ============================================================
+   codex-kernel-atlas · 设计令牌
+   论点：一本工程手册与一台活着的终端的合奏。
+   纸面承载理论，深色控制台承载可交互的机器；
+   琥珀（磷光）信号色贯穿两者，只标记状态与可交互之物。
+   ============================================================ */
+
+/* ---- 原始值（primitives）——组件不得直接引用 ---- */
+:root {
+  /* 纸面 */
+  --o-paper: oklch(0.976 0.007 84);
+  --o-paper-deep: oklch(0.949 0.010 82);
+  --o-paper-edge: oklch(0.918 0.012 80);
+
+  /* 墨 */
+  --o-ink: oklch(0.235 0.012 260);
+  --o-ink-soft: oklch(0.372 0.014 260);
+  --o-ink-mute: oklch(0.452 0.013 260);
+
+  /* 控制台（终端面板）*/
+  --o-console: oklch(0.232 0.011 255);
+  --o-console-raised: oklch(0.277 0.012 255);
+  --o-console-line: oklch(0.40 0.012 255);
+
+  /* 琥珀磷光 —— 主强调色 */
+  --o-amber-bright: oklch(0.800 0.128 75);
+  --o-amber-core: oklch(0.700 0.132 66);
+  --o-amber-deep: oklch(0.520 0.115 55);
+
+  /* 语义状态（仅模拟器判定结果使用）*/
+  --o-ok: oklch(0.535 0.118 152);
+  --o-deny: oklch(0.545 0.176 27);
+
+  /* 中性阶（控制台内文字）*/
+  --o-console-text: oklch(0.905 0.008 90);
+  --o-console-mute: oklch(0.660 0.010 90);
+
+  /* 字体族：宋体显示 × 黑体正文 × 等宽注记 */
+  --ff-display: "Noto Serif SC", "Songti SC", "STSong", serif;
+  --ff-body: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --ff-mono: "IBM Plex Mono", "SFMono-Regular", Menlo, ui-monospace, monospace;
+
+  /* 流体字阶 */
+  --step-hero: clamp(2.5rem, 1.1rem + 4.6vw, 4.35rem);
+  --step-h2: clamp(1.8rem, 1.15rem + 2.4vw, 2.85rem);
+  --step-h3: clamp(1.28rem, 1.1rem + 0.7vw, 1.55rem);
+  --step-body: clamp(1.02rem, 0.97rem + 0.24vw, 1.145rem);
+  --step-small: clamp(0.86rem, 0.83rem + 0.15vw, 0.94rem);
+  --step-label: 0.74rem;
+
+  /* 间距阶 */
+  --s-1: 0.25rem;
+  --s-2: 0.5rem;
+  --s-3: 0.875rem;
+  --s-4: 1.375rem;
+  --s-5: 2.125rem;
+  --s-6: 3.25rem;
+  --s-7: 4.75rem;
+  --s-8: 7rem;
+  --s-9: 10rem;
+
+  /* 圆角 */
+  --r-control: 8px;
+  --r-surface: 14px;
+  --r-console: 12px;
+  --r-pill: 999px;
+
+  /* 动效词汇：机械、精确、仪器感 */
+  --dur-fast: 140ms;
+  --dur-base: 240ms;
+  --dur-slow: 460ms;
+  --ease-out: cubic-bezier(0.22, 0.61, 0.2, 1);
+  --ease-emph: cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ---- 语义令牌（semantic）——组件只引用这一层 ---- */
+:root {
+  color-scheme: light;
+
+  --canvas: var(--o-paper);
+  --canvas-deep: var(--o-paper-deep);
+  --canvas-edge: var(--o-paper-edge);
+
+  --surface-console: var(--o-console);
+  --surface-console-raised: var(--o-console-raised);
+
+  --text: var(--o-ink);
+  --text-2: var(--o-ink-soft);
+  --text-3: var(--o-ink-mute);
+  --text-on-console: var(--o-console-text);
+  --text-on-console-mute: var(--o-console-mute);
+
+  --accent: var(--o-amber-deep);        /* 纸面上的强调（文字级对比达标）*/
+  --accent-vivid: var(--o-amber-core);  /* 图形、边框、状态 */
+  --accent-glow: var(--o-amber-bright); /* 深色控制台内的强调 */
+  --accent-wash: color-mix(in oklch, var(--o-amber-core) 10%, transparent);
+  --accent-line: color-mix(in oklch, var(--o-amber-core) 42%, transparent);
+
+  --status-ok: var(--o-ok);
+  --status-deny: var(--o-deny);
+
+  --line: color-mix(in oklch, var(--o-ink) 13%, transparent);
+  --line-strong: color-mix(in oklch, var(--o-ink) 26%, transparent);
+  --line-on-console: color-mix(in oklch, var(--o-console-text) 14%, transparent);
+
+  --focus-ring: var(--o-amber-deep);
+  --shadow-float: 0 1px 2px color-mix(in oklch, var(--o-ink) 6%, transparent),
+    0 12px 40px color-mix(in oklch, var(--o-ink) 10%, transparent);
+
+  --measure-prose: 34em;   /* 中文正文约 34 字/行 */
+  --measure-wide: 62em;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --o-paper: oklch(0.175 0.010 255);
+    --o-paper-deep: oklch(0.205 0.011 255);
+    --o-paper-edge: oklch(0.235 0.012 255);
+    --o-ink: oklch(0.935 0.009 85);
+    --o-ink-soft: oklch(0.790 0.010 85);
+    --o-ink-mute: oklch(0.680 0.012 85);
+    --o-console: oklch(0.125 0.009 255);
+    --o-console-raised: oklch(0.165 0.010 255);
+    --o-console-line: oklch(0.34 0.012 255);
+    --o-amber-deep: oklch(0.760 0.125 70);
+    --canvas: var(--o-paper);
+    --canvas-deep: var(--o-paper-deep);
+    --canvas-edge: var(--o-paper-edge);
+    --surface-console: var(--o-console);
+    --surface-console-raised: var(--o-console-raised);
+    --text: var(--o-ink);
+    --text-2: var(--o-ink-soft);
+    --text-3: var(--o-ink-mute);
+    --accent: var(--o-amber-deep);
+    --line: color-mix(in oklch, var(--o-ink) 14%, transparent);
+    --line-strong: color-mix(in oklch, var(--o-ink) 28%, transparent);
+    --focus-ring: var(--o-amber-bright);
+    --shadow-float: 0 1px 2px color-mix(in oklch, black 38%, transparent), 0 18px 48px color-mix(in oklch, black 42%, transparent);
+  }
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --o-paper: oklch(0.175 0.010 255);
+  --o-paper-deep: oklch(0.205 0.011 255);
+  --o-paper-edge: oklch(0.235 0.012 255);
+  --o-ink: oklch(0.935 0.009 85);
+  --o-ink-soft: oklch(0.790 0.010 85);
+  --o-ink-mute: oklch(0.680 0.012 85);
+  --o-console: oklch(0.125 0.009 255);
+  --o-console-raised: oklch(0.165 0.010 255);
+  --o-console-line: oklch(0.34 0.012 255);
+  --o-amber-deep: oklch(0.760 0.125 70);
+  --canvas: var(--o-paper);
+  --canvas-deep: var(--o-paper-deep);
+  --canvas-edge: var(--o-paper-edge);
+  --surface-console: var(--o-console);
+  --surface-console-raised: var(--o-console-raised);
+  --text: var(--o-ink);
+  --text-2: var(--o-ink-soft);
+  --text-3: var(--o-ink-mute);
+  --accent: var(--o-amber-deep);
+  --line: color-mix(in oklch, var(--o-ink) 14%, transparent);
+  --line-strong: color-mix(in oklch, var(--o-ink) 28%, transparent);
+  --focus-ring: var(--o-amber-bright);
+  --shadow-float: 0 1px 2px color-mix(in oklch, black 38%, transparent), 0 18px 48px color-mix(in oklch, black 42%, transparent);
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+}

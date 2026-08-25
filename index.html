@@ -58,7 +58,6 @@
     </nav>
     <aside class="rail" aria-label="课程章节">
       <a class="brand" href="#top">Codex 内核图谱</a>
-      <div data-series-nav data-variant="rail"><a class="series-fallback" href="/grok">浏览 Agent 系列</a></div>
       <a href="#top" data-spy-link><span class="no">00</span>课程入口</a>
       <a href="#loop" data-spy-link><span class="no">01</span>一次回合</a>
       <a href="#protocol" data-spy-link><span class="no">02</span>事件协议</a>
@@ -75,15 +74,17 @@
       <button class="theme-btn rail-theme" type="button" data-theme-toggle aria-label="切换到深色模式"><span aria-hidden="true" data-theme-icon>◐</span><span data-theme-label>深色模式</span></button>
     </aside>
     <main id="main">
+      <div data-series-nav data-variant="tabs"><nav class="course-tabs" aria-label="选择 Agent 课程"><a href="/codex" aria-current="page">Codex</a><a href="/grok">Grok Build</a><a href="/deepseek">DeepSeek Harness</a><a href="/pi">Pi Agent</a></nav></div>
       <section class="hero shell" id="top" data-spy>
         <div class="hero-grid">
           <div data-reveal>
-            <p class="eyebrow label-mono">INTERACTIVE SYSTEMS COURSE · 2026</p>
-            <h1>把 Codex 从<br /><span class="alt">“会行动”</span>拆到运行时。</h1>
-            <p class="sub">沿着 Thread、Turn 与 Item，读懂模型、工具、沙箱、审批、上下文、MCP、Skills、Hooks 与客户端如何咬合；每一章都能操作、观察，再把结论带去实践与面试。</p>
+            <p class="eyebrow label-mono">从一次真实修复任务，读懂 Agent 运行时</p>
+            <h1>看懂 Codex 如何把一句请求，变成<span class="alt">可验证的代码改动。</span></h1>
+            <p class="sub">跟踪一个“修复失败测试”的任务：请求如何进入 Thread / Turn，模型何时生成 Item，工具怎样经过审批与沙箱，结果又如何回到下一轮判断。不是记术语，而是学会沿源码和事件定位故障。</p>
+            <ul class="hero-outcomes" aria-label="学完本课程你将能够"><li>画出一次回合从输入到完成的完整链路</li><li>判断失败属于协议、策略还是执行环境</li><li>用事件记录与源码位置证明结论</li></ul>
             <div class="hero-cta">
-              <a class="btn-primary" href="#loop">开始拆解 <span class="arrow" aria-hidden="true">→</span></a>
-              <a class="btn-secondary" href="#loop">先看学习地图</a>
+              <a class="btn-primary" href="#loop">从真实任务开始 <span class="arrow" aria-hidden="true">→</span></a>
+              <a class="btn-secondary" href="#source-route">先看源码路线</a>
             </div>
           </div>
           <figure class="hero-loop" data-hero-loop data-reveal data-reveal-delay="120">
@@ -101,14 +102,26 @@
             <figcaption><span>turn_loop / live map</span><button class="pause-btn" type="button" data-loop-pause aria-pressed="false">⏸ 暂停</button></figcaption>
           </figure>
         </div>
-        <div class="hero-meta label-mono" aria-label="课程范围"><span>12 CHAPTERS</span><span>08 INTERACTIVE LABS</span><span>上游事实 → 平台扩展 → 实践</span></div>
+        <div class="hero-meta label-mono" aria-label="课程范围"><span>SOURCE SNAPSHOT · 2df6705</span><span>12 章 · 08 个实验</span><span>读链路 → 动手操作 → 回到源码</span></div>
       </section>
       <section class="chapter shell" id="loop" data-spy>
         <header class="chapter-head" data-reveal>
           <span class="label-mono">CHAPTER 01 · TURN LOOP</span>
-          <h2>先看循环，而不是“智能”。</h2>
-          <p class="lede">Agent 的能力不是一团魔法，而是一个可观察、可中断、可审计的回合循环。掌握它，你才知道错误发生在哪一层。</p>
+          <h2>从“测试失败”开始，跟踪一次完整回合。</h2>
+          <p class="lede">假设你让 Codex 修复一个失败测试。本章不先背概念，而是追踪任务从协议入口、模型判断、工具执行到完成事件的全过程。</p>
         </header>
+        <article class="lesson-brief" id="source-route" data-reveal>
+          <span class="label-mono">SOURCE ROUTE · CODEX 2df6705</span>
+          <h3>先读四个入口，再操作下面的回合步进机。</h3>
+          <p>这四处源码分别回答“任务从哪里进、这一轮带了什么、过程中产生了什么、谁把请求交给内核”。</p>
+          <ol class="source-route">
+            <li><span><code>codex-rs/app-server-protocol/src/protocol/v2/thread.rs</code><strong>ThreadStartParams</strong> 建立会话容器与工作上下文。</span></li>
+            <li><span><code>codex-rs/app-server-protocol/src/protocol/v2/turn.rs</code><strong>TurnStartParams</strong> 携带本轮输入、模型与执行策略。</span></li>
+            <li><span><code>codex-rs/app-server-protocol/src/protocol/v2/item.rs</code><strong>ThreadItem</strong> 与 started / completed 通知描述消息、命令和文件变更。</span></li>
+            <li><span><code>codex-rs/app-server/src/request_processors/turn_processor.rs</code><strong>turn_start_inner</strong> 把协议请求交给正在运行的 Codex 会话。</span></li>
+          </ol>
+          <p class="lesson-result"><strong>学完本章你能：</strong>解释为什么“命令退出码为 0”不等于“Turn 已完成”，并指出该去查哪一类事件。</p>
+        </article>
         <div class="spread">
           <article class="prose" data-reveal>
             <h3>心智模型</h3>

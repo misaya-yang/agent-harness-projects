@@ -45,7 +45,6 @@
     </nav>
     <aside class="rail" aria-label="课程章节">
       <a class="brand" href="#top">Grok Build 图谱</a>
-      <div data-series-nav data-variant="rail"><a class="series-fallback" href="/codex">浏览 Agent 系列</a></div>
       <a href="#top" data-spy-link><span class="no">00</span>课程入口</a>
       <a href="#architecture" data-spy-link><span class="no">01</span>Rust 分层</a>
       <a href="#turn" data-spy-link><span class="no">02</span>回合运行时</a>
@@ -62,13 +61,15 @@
       <button class="theme-btn rail-theme" type="button" data-theme-toggle aria-label="切换到深色模式"><span aria-hidden="true" data-theme-icon>◐</span><span data-theme-label>深色模式</span></button>
     </aside>
     <main id="main">
+      <div data-series-nav data-variant="tabs"><nav class="course-tabs" aria-label="选择 Agent 课程"><a href="/codex">Codex</a><a href="/grok" aria-current="page">Grok Build</a><a href="/deepseek">DeepSeek Harness</a><a href="/pi">Pi Agent</a></nav></div>
       <section class="hero shell" id="top" data-spy>
         <div class="hero-grid">
           <div data-reveal>
-            <p class="eyebrow label-mono">TOP AGENT SERIES · SOURCE-LED · 2026</p>
-            <h1>把 Grok Build 从<br /><span class="alt">“终端助手”</span>拆到 Rust 内核。</h1>
-            <p class="sub">沿着 TUI → Shell → Agent → Tools → Workspace，读懂一次回合如何采样、审批、执行、持久化与恢复；再进入 ACP、多代理、Memory、Skills、Plugins 与 Hooks。</p>
-            <div class="hero-cta"><a class="btn-primary" href="#architecture">开始拆解 <span class="arrow" aria-hidden="true">→</span></a><a class="btn-secondary" href="/codex">对照 Codex</a></div>
+            <p class="eyebrow label-mono">从一次真实修复任务，读懂 Rust Agent</p>
+            <h1>看懂 Grok Build 如何接住任务，再<span class="alt">安全地改动工作区。</span></h1>
+            <p class="sub">跟踪一个“修复失败测试”的任务：输入如何从 TUI / ACP 进入 Session，Actor 怎样保存状态，工具如何落到 Workspace，失败后又靠什么恢复。不是记 crate 名，而是学会找到真正拥有问题的那一层。</p>
+            <ul class="hero-outcomes" aria-label="学完本课程你将能够"><li>画出 Session、采样、工具与 Workspace 的调用链</li><li>按症状找到负责状态或副作用的 crate</li><li>用 ACP 更新、检查点与源码验证判断</li></ul>
+            <div class="hero-cta"><a class="btn-primary" href="#architecture">从真实任务开始 <span class="arrow" aria-hidden="true">→</span></a><a class="btn-secondary" href="#grok-source-route">先看源码路线</a></div>
           </div>
           <div class="grok-core" data-reveal data-reveal-delay="120" aria-label="Grok Build 五层运行时">
             <div><span>01</span><strong>TUI / ACP / Headless</strong><small>呈现与入口</small></div>
@@ -78,11 +79,23 @@
             <div><span>05</span><strong>Workspace</strong><small>文件、进程与检查点</small></div>
           </div>
         </div>
-        <div class="hero-meta label-mono" aria-label="课程范围"><span>12 CHAPTERS</span><span>10 INTERACTIVE LABS</span><span>源码事实 → 心智模型 → 调试</span></div>
+        <div class="hero-meta label-mono" aria-label="课程范围"><span>SOURCE SNAPSHOT · 07b2f71</span><span>12 章 · 10 个实验</span><span>找拥有层 → 看事件 → 做最小验证</span></div>
       </section>
 
       <section class="chapter shell" id="architecture" data-spy>
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 01 · RUST ARCHITECTURE</span><h2>先找到拥有问题的 crate，再谈 Agent 能力。</h2><p class="lede">Grok Build 不是单体 CLI。组合根把 TUI、Shell、Agent、Tools 与 Workspace 接成一条可替换的运行管线；共享协议和事件 crate 则把边界稳定下来。</p></header>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 01 · RUST ARCHITECTURE</span><h2>用一个“测试失败”，找出每层真正负责什么。</h2><p class="lede">假设模型已经给出工具调用，但测试迟迟没有结果。本章沿输入、会话状态、可观察事件与工作区副作用逐层追踪，建立第一条可用于调试的源码路线。</p></header>
+        <article class="lesson-brief" id="grok-source-route" data-reveal>
+          <span class="label-mono">SOURCE ROUTE · GROK BUILD 07b2f71</span>
+          <h3>先读四个入口，再用架构责任探针做定位。</h3>
+          <p>这四处源码把“收到任务、保存状态、呈现进度、执行副作用”分给不同拥有者。</p>
+          <ol class="source-route">
+            <li><span><code>crates/codegen/xai-grok-shell/src/session/acp_session.rs</code><strong>SessionActor</strong> 接收请求并编排一次会话工作。</span></li>
+            <li><span><code>crates/codegen/xai-chat-state/src/actor/mod.rs</code><strong>ChatStateActor</strong> 持有 conversation、token 与 prompt index。</span></li>
+            <li><span><code>crates/codegen/xai-grok-pager/src/acp/tracker.rs</code><strong>AcpUpdateTracker</strong> 把 SessionUpdate 变成用户看到的进度。</span></li>
+            <li><span><code>crates/codegen/xai-grok-workspace/src/session/mod.rs</code><strong>WorkspaceSession</strong> 拥有文件、进程与可回退检查点。</span></li>
+          </ol>
+          <p class="lesson-result"><strong>学完本章你能：</strong>面对“模型结束但测试没返回”，先判断状态、事件还是副作用链路断了，而不是笼统归因于模型。</p>
+        </article>
         <div class="spread"><article class="prose" data-reveal><h3>五个责任层</h3><p><strong>Pager</strong> 负责全屏终端与交互；<strong>Shell</strong> 承载 Session、采样和持久化；<strong>Agent</strong> 组装模型、工具与系统提示；<strong>Tools</strong> 管注册、schema、通知和实现；<strong>Workspace</strong> 拥有文件系统、VCS、进程、权限与检查点。</p><div class="decision"><span class="label-mono">ROOT-CAUSE LENS</span><p>显示错位查 Pager；回合卡住查 Shell；工具不存在查 Agent/Registry；命令状态错查 Workspace。分层的价值，是让故障有唯一首要归属。</p></div></article><ol class="kp-list" data-reveal><li data-no="UI"><span><strong>xai-grok-pager</strong>：scrollback、prompt、modal 与渲染。</span></li><li data-no="RUN"><span><strong>xai-grok-shell</strong>：Session host、sampling、compaction、events。</span></li><li data-no="CAP"><span><strong>xai-grok-agent/tools</strong>：提示词、工具能力与调用桥。</span></li><li data-no="ENV"><span><strong>xai-grok-workspace</strong>：真实世界副作用与恢复点。</span></li></ol></div>
         <div class="machine" id="grok-architecture" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>架构责任探针</strong></span><span class="label-mono" data-status>选择一个故障</span></div><div class="machine-body atlas-layout"><div class="atlas-choices" data-choices><button class="layer-row" type="button" data-key="render">终端内容错位</button><button class="layer-row" type="button" data-key="stall">模型结束但回合未收敛</button><button class="layer-row" type="button" data-key="missing">工具没有暴露给模型</button><button class="layer-row" type="button" data-key="dirty">命令后工作区状态异常</button></div><div class="atlas-detail" data-detail><span class="label-mono">OWNING LAYER</span><h3>点击故障开始定位</h3><p>系统会给出首查 crate、边界和下一份证据。</p></div></div></div>
       </section>

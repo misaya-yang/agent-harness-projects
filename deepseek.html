@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="从 Cordis 插件树到 Turn / Step、Session Log、工具管线、安全隔离与运行表面，交互式拆解 DeepSeek Harness。" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="DeepSeek Harness 内核图谱 · 顶级 Agent 教学系列" />
+    <meta property="og:description" content="沿着 Profile、Plugin Tree、Agent Loop、Session Log 与 Capability Seam，读懂可组合 Agent 运行时。" />
+    <meta property="og:url" content="https://codex-kernel-atlas.lvy-u.chatgpt.site/deepseek" />
+    <link rel="canonical" href="https://codex-kernel-atlas.lvy-u.chatgpt.site/deepseek" />
+    <meta name="twitter:card" content="summary" />
+    <title>DeepSeek Harness 内核图谱 · 顶级 Agent 教学系列</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=Noto+Sans+SC:wght@400;500;700&amp;family=Noto+Serif+SC:wght@700;900&amp;display=swap" rel="stylesheet" />
+    <link href="/src/styles/tokens.css" rel="stylesheet" />
+    <script>
+      document.documentElement.classList.add("js");
+      try { const t = localStorage.getItem("codex-atlas-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch {}
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) document.documentElement.classList.add("rm");
+    </script>
+  </head>
+  <body class="deepseek-page" data-agent="deepseek">
+    <a class="skip-link" href="#main">跳到正文</a>
+    <div class="progress-line" aria-hidden="true"></div>
+    <header class="topbar">
+      <a class="brand" href="#top"><span class="brand-long">DeepSeek Harness</span><span class="brand-short">DSH</span> 图谱 <span class="label-mono">FIELD GUIDE</span></a>
+      <div class="topbar-actions"><div data-series-nav data-variant="top"><a class="series-fallback" href="/codex">Agent 系列</a></div><button class="theme-btn" type="button" data-theme-toggle aria-label="切换到深色模式"><span aria-hidden="true" data-theme-icon>◐</span><span data-theme-label>深色</span></button><button class="menu-btn" type="button" data-menu-btn aria-expanded="false" aria-controls="chapter-nav">章节</button></div>
+    </header>
+    <nav class="chapter-nav" id="chapter-nav" data-menu-panel hidden aria-label="课程章节">
+      <a href="#top" data-spy-link><span class="no">00</span>课程入口</a>
+      <a href="#composition" data-spy-link><span class="no">01</span>插件组合</a>
+      <a href="#loop" data-spy-link><span class="no">02</span>Turn / Step</a>
+      <a href="#session" data-spy-link><span class="no">03</span>Session Log</a>
+      <a href="#prompt" data-spy-link><span class="no">04</span>Prompt 与请求</a>
+      <a href="#tools" data-spy-link><span class="no">05</span>工具管线</a>
+      <a href="#capabilities" data-spy-link><span class="no">06</span>能力缝</a>
+      <a href="#safety" data-spy-link><span class="no">07</span>安全隔离</a>
+      <a href="#profiles" data-spy-link><span class="no">08</span>Profile / Preset</a>
+      <a href="#context" data-spy-link><span class="no">09</span>上下文压缩</a>
+      <a href="#extensions" data-spy-link><span class="no">10</span>扩展运行时</a>
+      <a href="#surfaces" data-spy-link><span class="no">11</span>运行表面</a>
+      <a href="#practice" data-spy-link><span class="no">12</span>实践与面试</a>
+    </nav>
+    <aside class="rail" aria-label="课程章节">
+      <a class="brand" href="#top">DeepSeek Harness 图谱</a>
+      <a href="#top" data-spy-link><span class="no">00</span>课程入口</a>
+      <a href="#composition" data-spy-link><span class="no">01</span>插件组合</a>
+      <a href="#loop" data-spy-link><span class="no">02</span>Turn / Step</a>
+      <a href="#session" data-spy-link><span class="no">03</span>Session Log</a>
+      <a href="#prompt" data-spy-link><span class="no">04</span>Prompt 与请求</a>
+      <a href="#tools" data-spy-link><span class="no">05</span>工具管线</a>
+      <a href="#capabilities" data-spy-link><span class="no">06</span>能力缝</a>
+      <a href="#safety" data-spy-link><span class="no">07</span>安全隔离</a>
+      <a href="#profiles" data-spy-link><span class="no">08</span>Profile / Preset</a>
+      <a href="#context" data-spy-link><span class="no">09</span>上下文压缩</a>
+      <a href="#extensions" data-spy-link><span class="no">10</span>扩展运行时</a>
+      <a href="#surfaces" data-spy-link><span class="no">11</span>运行表面</a>
+      <a href="#practice" data-spy-link><span class="no">12</span>实践与面试</a>
+      <button class="theme-btn rail-theme" type="button" data-theme-toggle aria-label="切换到深色模式"><span aria-hidden="true" data-theme-icon>◐</span><span data-theme-label>深色模式</span></button>
+    </aside>
+    <main id="main">
+      <div data-series-nav data-variant="tabs"><nav class="course-tabs" aria-label="选择 Agent 课程"><a href="/codex">Codex</a><a href="/grok">Grok Build</a><a href="/deepseek" aria-current="page">DeepSeek Harness</a><a href="/pi">Pi Agent</a></nav></div>
+      <section class="hero shell" id="top" data-spy>
+        <div class="hero-grid">
+          <div data-reveal>
+            <p class="eyebrow label-mono">EVERYTHING IS A PLUGIN · SOURCE-LED</p>
+            <h1>看懂 DeepSeek Harness 如何<span class="alt">从插件树，跑完一次任务。</span></h1>
+            <p class="sub">跟踪一个“检查配置并修复超时”的任务：Profile 挂载插件树，Turn / Step 驱动模型与工具，Session Log 留下可恢复证据，Provider 在不改 Loop 的前提下替换执行世界。</p>
+            <ul class="hero-outcomes" aria-label="学完本课程你将能够"><li>从有效配置读出真正运行的插件树</li><li>沿事件日志重建模型看到的输入与工具结果</li><li>把问题定位到插件、事件或 Definition / Provider / Consumer</li></ul>
+            <div class="hero-cta"><a class="btn-primary" href="#composition">从插件树开始 <span class="arrow" aria-hidden="true">→</span></a><a class="btn-secondary" href="#deepseek-source-route">先看源码路线</a></div>
+          </div>
+          <div class="plugin-tree" data-reveal data-reveal-delay="120" aria-label="DeepSeek Harness 插件组合树">
+            <div class="plugin-root"><span>PROFILE</span><strong>web / headless</strong></div>
+            <div class="plugin-row depth-1"><span>COMPOSE</span><strong>Bundle → Patch</strong><small>entry tree</small></div>
+            <div class="plugin-row depth-2"><span>DRIVE</span><strong>Agent Loop</strong><small>turn / step</small></div>
+            <div class="plugin-row depth-2"><span>CAPABILITY</span><strong>Tools + Providers</strong><small>scoped seams</small></div>
+            <div class="plugin-row depth-1"><span>EVIDENCE</span><strong>Session Event Log</strong><small>replay / projection</small></div>
+          </div>
+        </div>
+        <div class="hero-meta label-mono" aria-label="课程范围"><span>SOURCE SNAPSHOT · b150a55</span><span>12 章 · 08 个实验</span><span>读配置 → 追事件 → 换 Provider</span></div>
+      </section>
+
+      <section class="chapter shell" id="composition" data-spy>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 01 · CORDIS COMPOSITION</span><h2>先看插件树：运行时不是一个不可替换的“大循环”。</h2><p class="lede">DeepSeek Harness 把模型适配器、Prompt、Tools、Session、持久化和 Agent Loop 都挂到 Cordis Context。扩展行为优先新增或替换插件，而不是修改 Loop。</p></header>
+        <article class="lesson-brief" id="deepseek-source-route" data-reveal>
+          <span class="label-mono">SOURCE ROUTE · DEEPSEEK HARNESS b150a55</span><h3>先读四个入口，再操作下面的插件责任探针。</h3><p>四处源码分别回答“配置怎样变成树、谁驱动任务、历史写在哪里、工具怎样执行”。</p>
+          <ol class="source-route">
+            <li><span><code>packages/boot/app-boot/src/profile.ts</code><strong>composeEntries</strong> 按层应用 Bundle 与 Patch，得到有效插件列表。</span></li>
+            <li><span><code>packages/core/agent-loop/src/agent.ts</code><strong>ReactLoopAgent.turn / step</strong> 打开 Turn、执行 Step 并决定是否继续。</span></li>
+            <li><span><code>packages/core/session/src/index.ts</code><strong>Session.append / deriveMessages</strong> 保存事实并投影模型历史。</span></li>
+            <li><span><code>packages/core/tools/src/index.ts</code><strong>ToolRuntime.execute</strong> 进入 pre、guard、execute、post 与最终结果管线。</span></li>
+          </ol>
+          <p class="lesson-result"><strong>学完本章你能：</strong>看到一个症状后，先问“哪个插件、哪类事件、哪个服务拥有它”，而不是直接改 Agent Loop。</p>
+        </article>
+        <div class="machine" id="dsh-composition" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>插件责任探针</strong></span><span class="label-mono" data-status>选择症状</span></div><div class="machine-body atlas-layout"><div class="atlas-choices"><button class="layer-row" type="button" data-key="model">换模型 Provider</button><button class="layer-row" type="button" data-key="prompt">增加系统上下文</button><button class="layer-row" type="button" data-key="tool">新增模型工具</button><button class="layer-row" type="button" data-key="history">恢复历史失败</button></div><div class="atlas-detail" data-detail><span class="label-mono">OWNING PLUGIN</span><h3>点击一个症状</h3><p>查看首先应替换或检查的服务与证据。</p></div></div></div>
+      </section>
+
+      <section class="chapter band-deep" id="loop" data-spy><div class="shell">
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 02 · TURN / STEP LOOP</span><h2>一个 Step 是一次模型请求和它触发的工具；一个 Turn 可以有多个 Step。</h2><p class="lede">输入进入持久 Inbox，Loop 先记录 Turn，再组装 Prompt、读取日志、发起流式请求、执行工具并回注结果；只有没有欠下的工作时 Turn 才结束。</p></header>
+        <div class="machine" id="dsh-loop" data-reveal><div class="machine-bar"><span class="title"><span class="led" data-led></span><strong>Turn / Step 事件步进机</strong></span><span class="label-mono" data-phase>idle</span></div><div class="machine-body loop-layout"><ol class="m-steps" data-steps><li data-no="01">turn/start</li><li data-no="02">claim inbox</li><li data-no="03">step/start</li><li data-no="04">user/message</li><li data-no="05">request/header</li><li data-no="06">assistant/chunk*</li><li data-no="07">assistant/message</li><li data-no="08">tool/call → result</li><li data-no="09">step/end → turn/end</li></ol><div><div class="m-controls"><button class="cbtn primary" type="button" data-run>▶ 连续</button><button class="cbtn" type="button" data-step>单步 →</button><button class="cbtn" type="button" data-reset>重置</button></div><p class="stage-note" data-note>逐步观察“活的控制”怎样留下“持久事实”。</p></div><div class="loop-logwrap stream-log elog" data-log aria-live="polite"></div></div></div>
+      </div></section>
+
+      <section class="chapter shell" id="session" data-spy>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 03 · SESSION EVENT LOG</span><h2>Session Log 记录事实；模型历史和 UI 都是它的投影。</h2><p class="lede"><code>assistant/chunk</code> 保留流式与回放证据，却不直接进入模型历史；<code>user/message</code>、非空 <code>assistant/message</code> 与 <code>tool/result</code> 才成为可见节点。</p></header>
+        <div class="machine" id="dsh-session" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>事件 → Surface → Model 投影台</strong></span><span class="label-mono">teaching projection</span></div><div class="machine-body state-layout"><div><div class="state-counters"><div><span class="label-mono">EVENTS</span><strong data-events>0</strong></div><div><span class="label-mono">SURFACE</span><strong data-surface>0</strong></div><div><span class="label-mono">MESSAGES</span><strong data-messages>0</strong></div></div><div class="state-actions"><button class="cbtn primary" type="button" data-event="user">+ user/message</button><button class="cbtn" type="button" data-event="chunk">+ assistant/chunk</button><button class="cbtn" type="button" data-event="assistant">+ assistant/message</button><button class="cbtn" type="button" data-event="tool">+ tool/result</button><button class="cbtn" type="button" data-event="compact">替换为摘要</button><button class="cbtn" type="button" data-event="reset">重置</button></div></div><div class="stream-log elog" data-log aria-live="polite"></div></div></div>
+        <div class="fact-boundary" data-reveal><span class="label-mono">RECOVERY FACT</span><strong>崩溃尾部不是靠猜。</strong><span><code>interruptedTurnClosers()</code> 会为未完成工具补 synthetic result，再补 step/end 与 interrupted turn/end；本页只展示投影主线，不模拟完整修复算法。</span></div>
+      </section>
+
+      <section class="chapter band-edge" id="prompt" data-spy><div class="shell">
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 04 · PROMPT & REQUEST</span><h2>每个 Step 都重新组装 Prompt，但请求必须能从日志重建。</h2><p class="lede"><code>SystemPrompt.assemble()</code> 收集 sections、contexts、tool schemas 与 variables；<code>buildRequest()</code> 绑定精确 Provider generation，记录 header/context，再从 <code>deriveMessages()</code> 构造 frozen request。</p></header>
+        <div class="custom-stack" data-reveal><div><span class="custom-key">SECTION</span><strong>Prompt sections</strong><p>身份、persona 与插件贡献按 order / name 排序。</p></div><div><span class="custom-key">CONTEXT</span><strong>Runtime context</strong><p>在 pre-step 进入本轮可见输入；若模型能看见，就必须有可重放事实。</p></div><div><span class="custom-key">TOOLS</span><strong>Tool schemas</strong><p>来自当前 Agent scope 的 ToolRuntime layer，而不是全局硬编码列表。</p></div><div><span class="custom-key">HEADER</span><strong>request/header</strong><p>记录有效模型配置、Prompt 与工具顺序，支持请求重建。</p></div></div>
+      </div></section>
+
+      <section class="chapter shell" id="tools" data-spy>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 05 · TOOL PIPELINE</span><h2>模型只提出调用；工具结果要穿过有序策略后才成为权威事实。</h2><p class="lede">调用先记录 <code>tool/call</code>，再经过 pre-execute、审批与 monotonic guard、execute、工具 body、post-execute、内容收口，最后同步通知并记录唯一 model-facing result。</p></header>
+        <div class="machine" id="dsh-tools" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>工具失败定位器</strong></span><span class="label-mono" data-status>选择症状</span></div><div class="machine-body atlas-layout"><div class="atlas-choices"><button class="layer-row" type="button" data-key="hidden">模型看不到工具</button><button class="layer-row" type="button" data-key="denied">调用未进入 body</button><button class="layer-row" type="button" data-key="timeout">执行中超时</button><button class="layer-row" type="button" data-key="distorted">结果回注失真</button></div><div class="atlas-detail" data-detail><span class="label-mono">FIRST EVIDENCE</span><h3>选择一种失败</h3><p>系统会指出最先查看的管线阶段。</p></div></div></div>
+        <div class="decision" data-reveal><span class="label-mono">ORDERING</span><p>并发安全的 tool body 可以重叠执行，但结果仍按模型顺序提交；exclusive call 形成 barrier。并行是调度策略，不改变日志顺序。</p></div>
+      </section>
+
+      <section class="chapter band-deep" id="capabilities" data-spy><div class="shell">
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 06 · CAPABILITY SEAMS</span><h2>一个能力缝必须同时回答：谁定义、谁提供、谁消费。</h2><p class="lede">以文件和命令为例：Service Definition 固定接口，Local / E2B Provider 决定执行世界，模型工具只依赖抽象 Consumer。替换 Provider 不要求复制上层工具。</p></header>
+        <div class="primitive-grid" data-reveal><article><span class="primitive-no">01 / DEFINITION</span><h3>定义接口</h3><p><code>FileSystem</code>、<code>ShellExecutor</code>、<code>SubprocessRuntime</code> 声明调用者依赖的能力。</p></article><article><span class="primitive-no">02 / PROVIDER</span><h3>选择世界</h3><p>Local、Sandbox、E2B 等实现决定路径、进程和隔离发生在哪里。</p></article><article><span class="primitive-no">03 / CONSUMER</span><h3>暴露用途</h3><p><code>tool-fs</code>、<code>tool-bash</code> 与 Terminal/LSP 消费接口，不写 Provider 分支。</p></article></div>
+        <div class="machine" id="dsh-capabilities" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>执行世界交换台</strong></span><span class="label-mono" data-status>选择 Provider</span></div><div class="machine-body surface-layout"><div class="surface-choices"><button class="cbtn" type="button" data-key="local">Local</button><button class="cbtn" type="button" data-key="sandbox">Sandboxed Local</button><button class="cbtn" type="button" data-key="e2b">E2B POC</button></div><dl class="surface-detail" data-detail><div><dt>Provider</dt><dd>选择一种执行世界</dd></div><div><dt>Consumers</dt><dd>FS、Bash、PTY、LSP 保持同一接口</dd></div></dl></div></div>
+      </div></section>
+
+      <section class="chapter shell" id="safety" data-spy>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 07 · SANDBOX & APPROVAL</span><h2>Sandbox 限制文件效果；Approval 决定能否获得一次人工决定。</h2><p class="lede">文件模式只有 read-only、workspace-write、danger-full-access。无可用本地 runner 时 confined mode 失败关闭，不降级为未隔离；审批没有 answerer 时也返回 unavailable。</p></header>
+        <div class="machine" id="dsh-safety" data-reveal><div class="machine-bar"><span class="title"><span class="led"></span><strong>文件边界 × 审批通道实验台</strong></span><span class="label-mono">independent signals</span></div><div class="machine-body sim-layout"><div><div class="sim-group" data-op><span class="label-mono">01 · 操作</span><div class="seg-row"><button class="cbtn" type="button" data-v="read">读取工作区</button><button class="cbtn" type="button" data-v="write">写工作区</button><button class="cbtn" type="button" data-v="outside">写工作区外</button></div></div><div class="sim-group" data-mode><span class="label-mono">02 · Sandbox mode</span><div class="seg-row"><button class="cbtn" type="button" data-v="ro">read-only</button><button class="cbtn" type="button" data-v="ww">workspace-write</button><button class="cbtn" type="button" data-v="dfa">danger-full-access</button></div></div><div class="sim-group" data-approval><span class="label-mono">03 · Approval</span><div class="seg-row"><button class="cbtn" type="button" data-v="ask">answerer available</button><button class="cbtn" type="button" data-v="none">unavailable / never</button></div></div></div><div><div class="verdict-badge" data-verdict="ask"><span data-verdict-label>等待选择</span></div><ol class="trace-list" data-trace><li>先选择操作、文件模式和审批通道。</li></ol></div></div></div>
+        <div class="fact-boundary" data-reveal><span class="label-mono">PLATFORM BOUNDARY</span><strong>隔离能力必须以实际 probe 为准。</strong><span>Linux 优先 bwrap、其次 Landlock；macOS 使用 Seatbelt；Windows 使用 restricted token / ACL。Landlock 的 partial / full 不能只靠内核版本推断。</span></div>
+      </section>
+
+      <section class="chapter band-edge" id="profiles" data-spy><div class="shell">
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 08 · PROFILE / BUNDLE / PRESET</span><h2>Profile 组合进程；Preset 组合一个 Agent 的能力面。</h2><p class="lede">Profile 把 Bundle、用户 Patch 与启动 Patch 叠成全局插件树；Preset 在 Agent scope 下挂载 per-session 组合。已有输出的 Agent 不能随意 recompose，否则日志中的旧工具可能失去解释。</p></header>
+        <div class="machine" id="dsh-profiles" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>组合层定位器</strong></span><span class="label-mono" data-status>选择变化</span></div><div class="machine-body atlas-layout"><div class="atlas-choices"><button class="layer-row" type="button" data-key="base">所有 Profile 的基础能力</button><button class="layer-row" type="button" data-key="surface">Web 与 Headless 差异</button><button class="layer-row" type="button" data-key="profile">用户覆盖插件配置</button><button class="layer-row" type="button" data-key="preset">单个 Agent 换工具集</button></div><div class="atlas-detail" data-detail><span class="label-mono">COMPOSITION OWNER</span><h3>选择一种变化</h3><p>查看应修改的层，以及它影响新进程还是新 Session。</p></div></div></div>
+      </div></section>
+
+      <section class="chapter shell" id="context" data-spy>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 09 · CONTEXT & COMPACTION</span><h2>Compaction 是带锁、校验和 Surface Replacement 的事务。</h2><p class="lede">系统先在稳定日志上选区与生成摘要，再验证选区未被异步工作改变，最后用有 provenance 的 replacement 落地；原始事件仍留在日志中。</p></header>
+        <ol class="kp-list" data-reveal><li data-no="01"><span><strong>触发</strong>：pre-step 压力或 canonical context overflow。</span></li><li data-no="02"><span><strong>锁定</strong>：append compaction/start，阻止同范围重入。</span></li><li data-no="03"><span><strong>选区</strong>：保留近期 tail，不切断 tool call / result 配对。</span></li><li data-no="04"><span><strong>摘要</strong>：复用 request system/tools，生成 text-only checkpoint。</span></li><li data-no="05"><span><strong>验证</strong>：whole-surface 或 selected-span 必须仍稳定。</span></li><li data-no="06"><span><strong>替换</strong>：追加 summary 与 replacement，再 compaction/end。</span></li></ol>
+        <div class="decision" data-reveal><span class="label-mono">DO NOT SAY “DELETE CHAT”</span><p>Tool-result pruning 同样通过 shadow price 与 Surface replacement 降低模型成本；它没有从 append-only log 中抹掉原始结果。</p></div>
+      </section>
+
+      <section class="chapter band-deep" id="extensions" data-spy><div class="shell">
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 10 · EXTENSION RUNTIME</span><h2>Skills、Web、Subagent、Workflow 与 Hooks 都是独立能力，不是 Loop 特例。</h2><p class="lede">每个扩展通过自己的 Service 或事件加入组合；Dynamic Cordis 还能在 opt-in 运行时定义和切换临时 Package，但它的 VM 不是恶意代码安全边界。</p></header>
+        <div class="custom-stack" data-reveal><div><span class="custom-key">LEARN</span><strong>Skills</strong><p>Provider-neutral catalog 与 loader tool，把流程知识带入当前 Agent。</p></div><div><span class="custom-key">ACCESS</span><strong>Web</strong><p>Search / fetch Provider 可替换，tool-web 只消费 <code>ctx.web</code>。</p></div><div><span class="custom-key">DELEGATE</span><strong>Subagent</strong><p>one-shot 或 continuable child；Provider 决定进程与产品边界。</p></div><div><span class="custom-key">ORCHESTRATE</span><strong>Workflow</strong><p>worker thread 隔离事件循环，不构成安全隔离。</p></div><div><span class="custom-key">INTERCEPT</span><strong>Hooks</strong><p>把外部 hook 协议桥接到 pre-step、tools 与 turn-stopping。</p></div><div><span class="custom-key">SELF-MODIFY</span><strong>Dynamic Cordis</strong><p>临时 Package 仅存当前进程；VM 受限但明确不是恶意代码安全边界。</p></div></div>
+        <div class="fact-boundary" data-reveal><span class="label-mono">POC / OPT-IN</span><strong>包存在，不等于当前 Profile 已挂载。</strong><span>E2B 是 provider-composition POC；Dynamic Cordis 是 deliberate opt-in。任何部署结论都应先读取有效插件树。</span></div>
+      </div></section>
+
+      <section class="chapter shell" id="surfaces" data-spy>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 11 · EXECUTION SURFACES</span><h2>不同入口共享 Agent / Session，不复制一套内核。</h2><p class="lede">Web 面向人机协作，Headless 只提交一次任务，ACP 是 automation-only 协议面，JSON-RPC SDK 负责跨进程产品集成，Python SDK 驱动 bundled runtime。</p></header>
+        <div class="machine" id="dsh-surfaces" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>运行表面交换台</strong></span><span class="label-mono" data-status>选择表面</span></div><div class="machine-body surface-layout"><div class="surface-choices"><button class="cbtn" type="button" data-key="web">Web</button><button class="cbtn" type="button" data-key="headless">Headless</button><button class="cbtn" type="button" data-key="acp">ACP</button><button class="cbtn" type="button" data-key="sdk">TS SDK / JSON-RPC</button><button class="cbtn" type="button" data-key="python">Python SDK</button></div><dl class="surface-detail" data-detail><div><dt>消费者</dt><dd>选择一种运行表面</dd></div><div><dt>共享核心</dt><dd>Profile + Agent + Session + Services</dd></div></dl></div></div>
+      </section>
+
+      <section class="chapter band-edge" id="practice" data-spy><div class="shell">
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 12 · PRACTICE & INTERVIEW</span><h2>用“组合、事件、能力、证据”解释一个 Agent Harness。</h2><p class="lede">真正掌握 DeepSeek Harness，不是背 package 列表，而是能从有效树找到拥有者、从日志重建状态、从能力缝解释 Provider 替换，并清楚指出 POC 与安全限制。</p></header>
+        <div class="spread"><article class="prose" data-reveal><h3>五步诊断法</h3><p>先 dump 有效 Profile；再确认 Agent 的 Preset 与 scope；沿 turn/step/session events 找最后一个持久事实；把失败归到 Prompt、LLM、Tool、Provider 或 Policy；最后用一个能推翻假设的最小实验验证。</p><div class="decision"><span class="label-mono">SOURCE BOUNDARY · b150a55</span><p>本课基于本地开发者预览快照。静态源码能证明实现关系，不能替代真实平台 probe、E2B 运行、生产安全验收或当前部署的有效 composition。</p></div></article><div class="interview" data-reveal><span class="label-mono">90-SECOND ANSWER</span><h4>“DeepSeek Harness 为什么说 everything is a plugin？”</h4><div class="qa"><details><summary>展开答题骨架</summary><div class="ans">它用 Cordis Profile 把插件行组合成 Context：Agent Loop、Session、Prompt、Tools、LLM 和持久化都由服务与事件连接。一次 Turn 由多个 Step 构成，模型输入从 Session Log 投影，工具经过可插拔策略管线后把唯一结果写回日志。Definition / Provider / Consumer 让本地、沙箱或远程执行世界可替换，Web、Headless、ACP 与 SDK 只是不同入口。因此新能力优先新增插件或 Provider，而不是修改 Loop。</div></details></div></div></div>
+        <dl class="gloss" data-reveal><div><dt>Plugin Tree</dt><dd>Profile、Bundle 与 Patch 组合出的有效 Cordis entry 树。</dd></div><div><dt>Turn / Step</dt><dd>Turn 是完整用户工作；Step 是一次模型请求及其工具批次。</dd></div><div><dt>Session Event</dt><dd>append-only、可持久化和可投影的运行事实。</dd></div><div><dt>Surface</dt><dd>从事件序列维护的当前可见消息节点集合。</dd></div><div><dt>Capability Seam</dt><dd>Service Definition、Provider 与 Consumer 的完整可替换能力。</dd></div><div><dt>Preset</dt><dd>挂在 Agent scope 下的 per-session 插件组合。</dd></div><div><dt>Waterfall</dt><dd>监听器必须调用 next 才继续的可拦截事件链。</dd></div><div><dt>Compaction</dt><dd>对稳定日志区间生成摘要并以 replacement 更新 Surface。</dd></div></dl>
+        <section class="source-notes" aria-labelledby="deepseek-sources" data-reveal><span class="label-mono">PRIMARY SOURCES</span><h3 id="deepseek-sources">继续查证</h3><p>课程事实来自本地 DeepSeek Harness 快照的架构文档、package README 与 TypeScript / native 源码。</p><div><a href="https://github.com/deepseek-ai/deepseek-harness">开源仓库</a><a href="https://github.com/cordiverse/cordis">Cordis</a></div></section>
+      </div></section>
+    </main>
+    <footer class="site"><div class="shell"><span>顶级 Agent 内核图谱 · DeepSeek Harness</span><div><a href="/codex">Codex</a> · <a href="/grok">Grok Build</a> · <a href="#top">返回顶部 ↑</a></div></div></footer>
+    <script type="module" src="/src/deepseek.ts"></script>
+  </body>
+</html>

@@ -198,6 +198,17 @@
   }
 }
 
+@media (min-width: 1120px) and (max-width: 1279px) {
+  .hero {
+    --step-hero: clamp(2.75rem, 4.8vw, 3.55rem);
+  }
+
+  .hero-grid {
+    grid-template-columns: minmax(0, 1fr) minmax(260px, 0.72fr);
+    gap: var(--s-5);
+  }
+}
+
 .hero .eyebrow {
   display: flex;
   align-items: center;
@@ -222,11 +233,39 @@
   color: var(--accent);
 }
 
+@media (max-width: 520px) {
+  .hero h1 {
+    font-size: clamp(2.25rem, 9.8vw, 2.5rem);
+  }
+}
+
 .hero .sub {
   margin-block-start: var(--s-4);
   max-width: 30em;
   color: var(--text-2);
   font-size: calc(var(--step-body) * 1.04);
+}
+
+.hero-outcomes {
+  display: grid;
+  gap: 7px;
+  margin-block-start: var(--s-4);
+  padding: 0;
+  list-style: none;
+  color: var(--text-2);
+  font-size: var(--step-small);
+}
+
+.hero-outcomes li {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 8px;
+}
+
+.hero-outcomes li::before {
+  content: "↳";
+  color: var(--accent);
+  font-family: var(--ff-mono);
 }
 
 .hero-cta {
@@ -374,6 +413,67 @@
   font-family: var(--ff-mono);
   font-size: 0.74rem;
   letter-spacing: 0.05em;
+}
+
+/* ---- 源码导读：每门课先用一个真实任务建立阅读路线 ---- */
+.lesson-brief {
+  margin-block: var(--s-6);
+  padding-block: var(--s-5);
+  border-block: 1px solid var(--line-strong);
+}
+
+.lesson-brief > .label-mono {
+  color: var(--accent);
+}
+
+.lesson-brief h3 {
+  margin-block: var(--s-2) var(--s-3);
+  font-size: var(--step-h3);
+}
+
+.lesson-brief > p {
+  max-width: var(--measure-prose);
+  color: var(--text-2);
+}
+
+.source-route {
+  display: grid;
+  gap: 0;
+  margin-block: var(--s-4);
+  padding: 0;
+  list-style: none;
+  counter-reset: source-step;
+}
+
+.source-route li {
+  counter-increment: source-step;
+  display: grid;
+  grid-template-columns: 28px minmax(0, 1fr);
+  gap: var(--s-3);
+  padding-block: var(--s-3);
+  border-block-start: 1px solid var(--line);
+  color: var(--text-2);
+  font-size: var(--step-small);
+  line-height: 1.75;
+}
+
+.source-route li::before {
+  content: counter(source-step, decimal-leading-zero);
+  color: var(--accent);
+  font-family: var(--ff-mono);
+  font-size: .72rem;
+}
+
+.source-route code {
+  display: block;
+  margin-block-end: 3px;
+  color: var(--text);
+  overflow-wrap: anywhere;
+}
+
+.lesson-result {
+  padding-inline-start: var(--s-4);
+  border-inline-start: 2px solid var(--accent-vivid);
 }
 
 /* 循环图通用节点样式（SVG 内，深色控制台语境）*/

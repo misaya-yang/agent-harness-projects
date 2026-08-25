@@ -25,6 +25,22 @@ const courses: AgentCourse[] = [
     description: "Session Actors、ACP、Tools 与 Workspace",
     chapters: 12,
   },
+  {
+    id: "deepseek",
+    name: "DeepSeek Harness",
+    path: "/deepseek",
+    code: "DEEPSEEK / TYPESCRIPT",
+    description: "Cordis 插件树、Turn / Step、Session Log 与能力缝",
+    chapters: 12,
+  },
+  {
+    id: "pi",
+    name: "Pi Agent",
+    path: "/pi",
+    code: "PI / TYPESCRIPT",
+    description: "Agent Loop、统一 LLM、Session Tree 与扩展运行时",
+    chapters: 12,
+  },
 ];
 
 function courseItems(currentId: string): string {
@@ -36,6 +52,13 @@ function courseItems(currentId: string): string {
     </a>`).join("");
 }
 
+function courseTabs(currentId: string): string {
+  return courses.map((course, index) => `
+    <a href="${course.path}" ${course.id === currentId ? 'aria-current="page"' : ""}>
+      <span>${String(index + 1).padStart(2, "0")}</span>${course.name}
+    </a>`).join("");
+}
+
 export function initSeriesNav(): void {
   const currentId = document.body.dataset.agent ?? "codex";
   const current = courses.find((course) => course.id === currentId) ?? courses[0];
@@ -43,6 +66,12 @@ export function initSeriesNav(): void {
   document.querySelectorAll<HTMLElement>("[data-series-nav]").forEach((root) => {
     const variant = root.dataset.variant ?? "top";
     root.className = `series-nav series-nav-${variant}`;
+
+    if (variant === "tabs") {
+      root.innerHTML = `<nav class="course-tabs" aria-label="选择 Agent 课程"><span class="label-mono">课程</span>${courseTabs(currentId)}</nav>`;
+      return;
+    }
+
     root.innerHTML = `
       <details class="series-menu">
         <summary aria-label="选择 Agent 课程">

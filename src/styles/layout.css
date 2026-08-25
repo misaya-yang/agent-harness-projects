@@ -138,9 +138,7 @@
 .series-panel > p { padding: 10px 10px 4px; color: var(--text-3); font-size: .68rem; }
 .series-fallback { font-family: var(--ff-mono); font-size: .72rem; }
 
-.series-nav-rail { margin-block: calc(var(--s-4) * -0.5) var(--s-4); }
-.series-nav-rail .series-menu > summary { width: 100%; justify-content: space-between; border-radius: var(--r-control); }
-.series-nav-rail .series-panel { inset-inline: 0 auto; inset-block-start: calc(100% + 8px); width: 410px; }
+.series-nav-tabs { display: none; }
 
 .theme-btn {
   display: inline-flex;
@@ -192,6 +190,12 @@
 
   .series-summary-label { display: none; }
   .series-menu > summary { padding-inline: 11px; }
+  .series-panel {
+    position: fixed;
+    inset-block-start: 60px;
+    inset-inline: 12px;
+    width: auto;
+  }
   .series-option { grid-template-columns: 24px minmax(0, 1fr); }
   .series-meta { display: none; }
 }
@@ -354,6 +358,72 @@
 
   main {
     padding-inline-start: 232px;
+  }
+
+  .series-nav-tabs {
+    position: sticky;
+    inset-block-start: 0;
+    z-index: 45;
+    display: block;
+    border-block-end: 1px solid var(--line);
+    background: color-mix(in oklch, var(--canvas) 90%, transparent);
+    backdrop-filter: blur(14px) saturate(150%);
+  }
+
+  .course-tabs {
+    display: flex;
+    align-items: stretch;
+    gap: var(--s-2);
+    max-width: 1180px;
+    min-height: 54px;
+    margin-inline: auto;
+    padding-inline: clamp(20px, 5vw, 60px);
+  }
+
+  .course-tabs > .label-mono {
+    display: flex;
+    align-items: center;
+    margin-inline-end: var(--s-3);
+    color: var(--text-3);
+  }
+
+  .course-tabs a {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding-inline: var(--s-3);
+    border-block-end: 2px solid transparent;
+    color: var(--text-3);
+    font-size: .86rem;
+    font-weight: 700;
+    text-decoration: none;
+  }
+
+  .course-tabs a span {
+    color: var(--accent);
+    font-family: var(--ff-mono);
+    font-size: .68rem;
+    font-weight: 500;
+  }
+
+  .course-tabs a[aria-current="page"] {
+    border-block-end-color: var(--accent-vivid);
+    color: var(--text);
+  }
+
+  .series-nav-tabs + .hero {
+    min-height: calc(100svh - 54px);
+  }
+}
+
+@supports not (backdrop-filter: blur(1px)) {
+  .series-nav-tabs { background: var(--canvas); }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .course-tabs a:hover {
+    color: var(--text);
+    background: var(--accent-wash);
   }
 }
 
@@ -591,5 +661,8 @@ footer.site .shell {
 }
 
 footer.site a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 24px;
   color: var(--text-2);
 }

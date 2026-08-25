@@ -16,6 +16,8 @@ export default defineConfig({
       input: {
         app: "index.html",
         grok: "grok.html",
+        deepseek: "deepseek.html",
+        pi: "pi.html",
         "server/index": "src/worker.js",
       },
       output: {

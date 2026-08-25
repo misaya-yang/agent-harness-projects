@@ -3,7 +3,7 @@ import "./styles/layout.css";
 import "./styles/machine.css";
 
 import { initReveal } from "./modules/reveal";
-import { initSpy } from "./modules/spy";
+import { initChapterReader } from "./modules/chapter-reader";
 import { initNavMenu } from "./modules/navmenu";
 import { initHeroPause } from "./modules/hero-pause";
 import { initLoopMachine } from "./modules/loop-machine";
@@ -23,7 +23,6 @@ function boot(): void {
   initTheme();
   initSeriesNav();
   initReveal(reducedMotion.matches);
-  initSpy();
   initNavMenu();
   initHeroPause();
 
@@ -35,6 +34,7 @@ function boot(): void {
   initStateModel(document.querySelector("#machine-state"));
   initExtensionAtlas(document.querySelector("#machine-extensions"));
   initSurfaceSwitchboard(document.querySelector("#machine-surfaces"));
+  initChapterReader();
 }
 
 if (document.readyState === "loading") {

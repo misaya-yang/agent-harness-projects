@@ -6,8 +6,9 @@ import "./styles/pi.css";
 import { initNavMenu } from "./modules/navmenu";
 import { initReveal } from "./modules/reveal";
 import { initSeriesNav } from "./modules/series-nav";
-import { initSpy } from "./modules/spy";
+import { initChapterReader } from "./modules/chapter-reader";
 import { initTheme } from "./modules/theme";
+import { initHeroPause } from "./modules/hero-pause";
 
 type Detail = { title: string; body: string; status?: string };
 type SurfaceData = Record<string, Array<[string, string]>>;
@@ -76,11 +77,22 @@ function initSurface(id: string, data: SurfaceData): void {
 }
 
 function boot(): void {
-  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)"); initTheme(); initSeriesNav(); initReveal(reduced.matches); initSpy(); initNavMenu(); initState(); initLoop(); initQueues(); initTools(); initSessionTree();
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+  initTheme();
+  initSeriesNav();
+  initReveal(reduced.matches);
+  initNavMenu();
+  initHeroPause();
+  initState();
+  initLoop();
+  initQueues();
+  initTools();
+  initSessionTree();
   initChoiceDetail("#pi-layers", { provider: { title: "packages/ai · API adapter", body: "检查目标 model.api 的 payload conversion、auth、SSE mapping 与 in-band error event。", status: "PI AI" }, loop: { title: "packages/agent · runLoop", body: "查看 committed assistant、tool batch、steering/follow-up drain 与 stopReason。", status: "AGENT CORE" }, session: { title: "coding-agent · SessionManager", body: "检查 leaf、parentId、buildContextEntries 与 branch/compaction projection。", status: "SESSION TREE" }, render: { title: "packages/tui · differential renderer", body: "比较 previousLines/previousScreen、viewport width 与 full redraw 条件。", status: "TUI" } });
   initSurface("#pi-providers", { anthropic: [["统一层", "Model + Context + AssistantMessageEventStream"], ["Adapter", "system block、thinking signature、tool_result"], ["Auth", "Provider auth resolution"], ["Wire", "Anthropic Messages SSE"]], openai: [["统一层", "同一 Agent / Pi AI contracts"], ["Adapter", "system/developer role、image URL、tool ids"], ["Compat", "endpoint-specific stop/toolUse mapping"], ["Wire", "OpenAI-compatible streaming"]], google: [["统一层", "同一 provider-neutral events"], ["Adapter", "Google content parts 与 reasoning options"], ["模型", "catalog 由 Provider 提供"], ["Wire", "Google API-specific payload"]], faux: [["用途", "确定性测试"], ["响应", "scripted tool call / text / error"], ["网络", "不访问真实 Provider"], ["证据", "验证标准事件与最终 Message"]] });
   initChoiceDetail("#pi-extensions", { tool: { title: "ExtensionAPI.registerTool", body: "注册 TypeBox schema、execute、progress 与 TUI renderers；异常才成为 isError。" }, skill: { title: "ResourceLoader + Skill", body: "System Prompt 先暴露 name/description，模型按需用 read 加载完整 SKILL.md。" }, hook: { title: "tool_call event", body: "执行前可改参数或 block；这是一项 Extension policy，不是 Pi 内建 Sandbox。" }, state: { title: "Session custom entry", body: "custom 持久扩展状态但不进 LLM；custom_message 才会进入 context。" } });
   initSurface("#pi-surfaces", { sdk: [["消费者", "Node / TypeScript 应用"], ["入口", "createAgentSession"], ["进程", "同进程"], ["状态", "AgentSession + SessionManager"]], json: [["消费者", "日志与轻量观察器"], ["入口", "--mode json"], ["协议", "逐行 Agent events"], ["控制", "没有 RPC command plane"]], rpc: [["消费者", "IDE / 跨语言子进程"], ["Framing", "LF-only JSONL"], ["响应", "accepted / queued"], ["结果", "后续 events / messages"]], protocol: [["消费者", "自建远程服务"], ["Framing", "uint32-be + definite CBOR"], ["状态", "Server / Session snapshots 权威"], ["边界", "experimental；Transport 负责认证"]], client: [["消费者", "远程 Pi session client"], ["连接", "Transport-neutral ByteTransport"], ["所有权", "shared / exclusive SessionLease"], ["恢复", "不自动 reconnect"]] });
+  initChapterReader();
 }
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, { once: true }); else boot();

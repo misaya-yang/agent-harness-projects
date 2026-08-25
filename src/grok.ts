@@ -4,10 +4,11 @@ import "./styles/machine.css";
 import "./styles/grok.css";
 
 import { initReveal } from "./modules/reveal";
-import { initSpy } from "./modules/spy";
+import { initChapterReader } from "./modules/chapter-reader";
 import { initNavMenu } from "./modules/navmenu";
 import { initTheme } from "./modules/theme";
 import { initSeriesNav } from "./modules/series-nav";
+import { initHeroPause } from "./modules/hero-pause";
 
 type Detail = { title: string; body: string; status?: string };
 
@@ -143,7 +144,16 @@ function initSurface(id: string, data: Record<string, Array<[string, string]>>):
 
 function boot(): void {
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
-  initTheme(); initSeriesNav(); initReveal(reduced.matches); initSpy(); initNavMenu(); initTurn(); initEvents(); initSafety(); initSession(); initContext();
+  initTheme();
+  initSeriesNav();
+  initReveal(reduced.matches);
+  initNavMenu();
+  initHeroPause();
+  initTurn();
+  initEvents();
+  initSafety();
+  initSession();
+  initContext();
   initChoiceDetail("#grok-architecture", {
     render: { title: "xai-grok-pager", body: "先检查 scrollback block、布局约束和 render snapshot；Session 事件可能完全正确。", status: "PAGER" },
     stall: { title: "xai-grok-shell / sampling", body: "核对 stop reason、pending tool call、取消状态和回合完成事件。", status: "SHELL" },
@@ -177,6 +187,7 @@ function boot(): void {
     serve: [["消费者", "本地网络客户端"], ["输入", "WebSocket"], ["输出", "ACP 会话流"], ["关键边界", "本地 server 生命周期与访问边界"]],
     leader: [["消费者", "多个 CLI/会话"], ["输入", "本地传输协议"], ["输出", "复用常驻宿主"], ["关键边界", "锁、认证刷新与进程生命周期"]],
   });
+  initChapterReader();
 }
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, { once: true }); else boot();

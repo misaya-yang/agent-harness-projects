@@ -71,15 +71,108 @@
             <ul class="hero-outcomes" aria-label="学完本课程你将能够"><li>从有效配置读出真正运行的插件树</li><li>沿事件日志重建模型看到的输入与工具结果</li><li>把问题定位到插件、事件或 Definition / Provider / Consumer</li></ul>
             <div class="hero-cta"><a class="btn-primary" href="#composition">从插件树开始 <span class="arrow" aria-hidden="true">→</span></a><a class="btn-secondary" href="#deepseek-source-route">先看源码路线</a></div>
           </div>
-          <div class="plugin-tree" data-reveal data-reveal-delay="120" aria-label="DeepSeek Harness 插件组合树">
-            <div class="plugin-root"><span>PROFILE</span><strong>web / headless</strong></div>
-            <div class="plugin-row depth-1"><span>COMPOSE</span><strong>Bundle → Patch</strong><small>entry tree</small></div>
-            <div class="plugin-row depth-2"><span>DRIVE</span><strong>Agent Loop</strong><small>turn / step</small></div>
-            <div class="plugin-row depth-2"><span>CAPABILITY</span><strong>Tools + Providers</strong><small>scoped seams</small></div>
-            <div class="plugin-row depth-1"><span>EVIDENCE</span><strong>Session Event Log</strong><small>replay / projection</small></div>
-          </div>
+          <figure class="hero-loop" data-hero-loop data-reveal data-reveal-delay="120">
+            <svg viewBox="0 0 480 360" role="img" aria-labelledby="deepseek-hero-title deepseek-hero-desc">
+              <title id="deepseek-hero-title">DeepSeek Harness 插件树与循环图</title>
+              <desc id="deepseek-hero-desc">Profile 组合、Cordis 容器、Turn/Step 驱动、工具缝与 Session Log 投影。</desc>
+              <circle class="ring" cx="240" cy="180" r="128" />
+              <g class="hnode"><circle cx="240" cy="48" r="38"/><text x="240" y="44" text-anchor="middle">配置</text><text class="hno" x="240" y="61" text-anchor="middle">PROF</text></g>
+              <g class="hnode"><circle cx="365" cy="140" r="38"/><text x="365" y="136" text-anchor="middle">容器</text><text class="hno" x="365" y="153" text-anchor="middle">CTX</text></g>
+              <g class="hnode"><circle cx="318" cy="288" r="38"/><text x="318" y="284" text-anchor="middle">步进</text><text class="hno" x="318" y="301" text-anchor="middle">STEP</text></g>
+              <g class="hnode"><circle cx="162" cy="288" r="38"/><text x="162" y="284" text-anchor="middle">能力</text><text class="hno" x="162" y="301" text-anchor="middle">SEAM</text></g>
+              <g class="hnode"><circle cx="115" cy="140" r="38"/><text x="115" y="136" text-anchor="middle">事实</text><text class="hno" x="115" y="153" text-anchor="middle">LOG</text></g>
+              <circle class="packet" cx="240" cy="52" r="5">
+                <animateTransform attributeName="transform" type="rotate" from="0 240 180" to="360 240 180" dur="7s" repeatCount="indefinite" />
+              </circle>
+            </svg>
+            <figcaption>
+              <span>cordis_ctx / harness map</span>
+              <button class="pause-btn" type="button" data-loop-pause aria-pressed="false">⏸ 暂停</button>
+            </figcaption>
+          </figure>
         </div>
         <div class="hero-meta label-mono" aria-label="课程范围"><span>SOURCE SNAPSHOT · b150a55</span><span>12 章 · 08 个实验</span><span>读配置 → 追事件 → 换 Provider</span></div>
+
+        <section class="lesson-brief" id="kernel-atlas" data-reveal>
+          <span class="label-mono">KERNEL ATLAS · 4-AGENT PANORAMIC SYNTHESIS</span>
+          <h3>四大主流开源 Agent 全景架构对比与技术选型指南</h3>
+          <p>横向打通 Codex (`codex-rs`)、Grok Build (`xai-org/grok-build`)、DeepSeek Harness (`deepseek-harness`) 与 Pi Agent (`pi-mono`) 六大核心维度。选型结论是基于本地源码快照的教学归纳，不代表各上游项目的官方定位。</p>
+
+          <div class="environment-matrix">
+            <div class="matrix-head"><strong>对比维度</strong><span>四大主流 Agent 架构实现与技术取舍</span><code>核心特征</code></div>
+            <div>
+              <strong>1. 会话与状态模型</strong>
+              <span><strong>Codex</strong>: Thread / Turn / Item 三层层级容器，状态由内存 Actor + 外部存储双重建模。<br>
+              <strong>Grok Build</strong>: Tokio LocalSet 独立线程 Actor（`SessionActor` + `ChatStateActor`），追加持久化到 `updates.jsonl`。<br>
+              <strong>DeepSeek</strong>: 纯追加型不可变 Session Log，由 `SurfaceManager` 实时投影出当前模型可见历史。<br>
+              <strong>Pi Agent</strong>: 追加型 JSONL Session 树（`id` / `parentId`），通过移动叶节点指针实现非破坏性分支与回退。</span>
+              <code>State vs Tree</code>
+            </div>
+            <div>
+              <strong>2. 通信协议与交互</strong>
+              <span><strong>Codex</strong>: App Server 双向 JSON-RPC 协议，规范化 Request 与 started / delta / completed 通知。<br>
+              <strong>Grok Build</strong>: 采用 Agent Client Protocol (ACP) 标准协议，扩展 XAI 专有事件（`rewind`, `compaction`）。<br>
+              <strong>DeepSeek</strong>: 面向自动化与工具管线的 JSON-RPC stdio / NDJSON 协议，流式提交 committed assistant 消息。<br>
+              <strong>Pi Agent</strong>: LF-only JSONL Coding-Agent RPC 与 4 字节大端前缀 + 定长 CBOR 独立 Server Protocol 双协议面。</span>
+              <code>JSON-RPC / ACP / CBOR</code>
+            </div>
+            <div>
+              <strong>3. 沙箱与权限控制</strong>
+              <span><strong>Codex</strong>: `SandboxPolicy` (`ro`/`ww`/`dfa`) × `ApprovalPolicy` (`untrusted`/`on-request`/`never`) 正交二维决策矩阵。<br>
+              <strong>Grok Build</strong>: `PermissionManager` (4种模式) × `SandboxProfile` (`workspace`/`read-only`/`strict`/`devbox`)，分层合并。<br>
+              <strong>DeepSeek</strong>: 3 种文件效果模式 (`ro`/`ww`/`dfa`) × 独立审批通道，不可用时强制 fail-closed。<br>
+              <strong>Pi Agent</strong>: 默认采用宿主进程全量权限；`Project Trust` 控制配置加载，真正安全隔离依托外部 Docker/VM。</span>
+              <code>Sandbox × Approval</code>
+            </div>
+            <div>
+              <strong>4. 上下文工程与压缩</strong>
+              <span><strong>Codex</strong>: 达到预算阈值触发 CompactionSummary 折叠，保留关键目标与 Diff 事实。<br>
+              <strong>Grok Build</strong>: 85% 上下文压力触发全量替换压缩，专用 Sampler 生成摘要并记录 `CompactionCheckpoint`。<br>
+              <strong>DeepSeek</strong>: `compaction/start` 耐久锁机制，在稳定日志区间生成摘要并通过 Surface Replacement 原子替换。<br>
+              <strong>Pi Agent</strong>: `firstKeptEntryId` 动态截断点选择，后向搜索绝不切断 toolResult，单回合支持超长前缀摘要。</span>
+              <code>Compaction & Summary</code>
+            </div>
+            <div>
+              <strong>5. 执行世界抽象</strong>
+              <span><strong>Codex</strong>: Local / Git Worktree / Cloud 容器 / 远程宿主多环境适配。<br>
+              <strong>Grok Build</strong>: `WorkspaceSession` 统一封装 FS、PTY、ProcessManager、VCS 与检查点，解耦上层调用。<br>
+              <strong>DeepSeek</strong>: 严格三元解耦（Service Definition / Provider / Consumer），支持 Local、Sandbox 与 E2B 云沙箱热插拔。<br>
+              <strong>Pi Agent</strong>: 原生 Node.js 宿主接口，支持 Gondolin 微虚拟机路由与 OpenShell 容器化封装。</span>
+              <code>Workspace Seam</code>
+            </div>
+            <div>
+              <strong>6. 扩展体系与生态</strong>
+              <span><strong>Codex</strong>: 定制六边形（AGENTS.md、Memories、Skills、MCP、Hooks、Subagents）。<br>
+              <strong>Grok Build</strong>: 规则文件、Skills、MCP 服务、Plugins 分发包、生命周期 Hooks 与跨会话 Memory。<br>
+              <strong>DeepSeek</strong>: Cordis 插件树、Profile 继承、Agent Presets 作用域与 Dynamic Cordis 内存自修改运行时。<br>
+              <strong>Pi Agent</strong>: Jiti 动态加载 TypeScript 模块（`ExtensionAPI`）、ResourceLoader 与统一 Provider 适配器。</span>
+              <code>Extension Hexagon</code>
+            </div>
+          </div>
+
+          <div class="custom-stack">
+            <div>
+              <span class="custom-key">DEEPSEEK 适用</span>
+              <strong>极致插件化与执行环境热插拔</strong>
+              <p>追求“Everything is a Plugin”架构，需通过 Cordis IoC 容器无缝切换本地执行、E2B 云沙箱与自修改运行时的场景。</p>
+            </div>
+            <div>
+              <span class="custom-key">CODEX 适用</span>
+              <strong>企业级多端与富客户端集成</strong>
+              <p>需要严密 App Server 双向协议、细粒度正交权限矩阵与 Thread/Turn/Item 完整生命周期的生产级开发平台。</p>
+            </div>
+            <div>
+              <span class="custom-key">GROK 适用</span>
+              <strong>高性能 Rust 终端与深度版本控制</strong>
+              <p>追求极致终端响应速度、全屏 TUI 交互、ACP 标准支持以及原子级 Git Workspace Checkpoint / Rewind 恢复能力。</p>
+            </div>
+            <div>
+              <span class="custom-key">PI AGENT 适用</span>
+              <strong>轻量嵌入式与非线性分支探索</strong>
+              <p>需要极简轻量 TypeScript 内核、非破坏性 JSONL 树形分支探索（`/tree`）与 CSI 2026 同步差分渲染的应用。</p>
+            </div>
+          </div>
+        </section>
       </section>
 
       <section class="chapter shell" id="composition" data-spy>
@@ -146,6 +239,90 @@
         <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 10 · EXTENSION RUNTIME</span><h2>Skills、Web、Subagent、Workflow 与 Hooks 都是独立能力，不是 Loop 特例。</h2><p class="lede">每个扩展通过自己的 Service 或事件加入组合；Dynamic Cordis 还能在 opt-in 运行时定义和切换临时 Package，但它的 VM 不是恶意代码安全边界。</p></header>
         <div class="custom-stack" data-reveal><div><span class="custom-key">LEARN</span><strong>Skills</strong><p>Provider-neutral catalog 与 loader tool，把流程知识带入当前 Agent。</p></div><div><span class="custom-key">ACCESS</span><strong>Web</strong><p>Search / fetch Provider 可替换，tool-web 只消费 <code>ctx.web</code>。</p></div><div><span class="custom-key">DELEGATE</span><strong>Subagent</strong><p>one-shot 或 continuable child；Provider 决定进程与产品边界。</p></div><div><span class="custom-key">ORCHESTRATE</span><strong>Workflow</strong><p>worker thread 隔离事件循环，不构成安全隔离。</p></div><div><span class="custom-key">INTERCEPT</span><strong>Hooks</strong><p>把外部 hook 协议桥接到 pre-step、tools 与 turn-stopping。</p></div><div><span class="custom-key">SELF-MODIFY</span><strong>Dynamic Cordis</strong><p>临时 Package 仅存当前进程；VM 受限但明确不是恶意代码安全边界。</p></div></div>
         <div class="fact-boundary" data-reveal><span class="label-mono">POC / OPT-IN</span><strong>包存在，不等于当前 Profile 已挂载。</strong><span>E2B 是 provider-composition POC；Dynamic Cordis 是 deliberate opt-in。任何部署结论都应先读取有效插件树。</span></div>
+
+        <article class="lesson-brief" id="dsh-dynamic-cordis-code" data-reveal>
+          <span class="label-mono">SOURCE-ALIGNED TEACHING SKELETON · DYNAMIC CORDIS HOST RUNNER</span>
+          <h3>Dynamic Cordis 内存自修改沙箱运行器 (`DynamicCordisRunner`)</h3>
+          <p>下面是根据 `packages/extensions/cordis-host-runner` 与 `tool-cordis` 整理的教学骨架，不是上游源码复制。真实实现通过 `sandbox.ts` 的 Node API traps、`createSandbox()` / `evaluateHostCode()` 与 Cordis 生命周期共同完成，而且明确不是恶意代码隔离边界。</p>
+
+          <div class="stream-log elog" style="max-height: 480px; overflow-y: auto; padding: 16px; border-radius: var(--r-control); background: var(--surface-console); border: 1px solid var(--line-on-console);">
+<span class="k-sys">// packages/extensions/cordis-host-runner/src/index.ts</span>
+<span class="k-user">import</span> { Context, Service } <span class="k-user">from</span> <span class="k-model">"cordis"</span>;
+<span class="k-user">import</span> * <span class="k-user">as</span> vm <span class="k-user">from</span> <span class="k-model">"node:vm"</span>;
+
+<span class="k-user">export interface</span> <span class="k-model">PackageDefinition</span> {
+  id: string;
+  version: number;
+  code: string;
+  declaredServices: string[];
+}
+
+<span class="k-user">export class</span> <span class="k-model">DynamicCordisRunner</span> <span class="k-user">extends</span> <span class="k-tool">Service</span> {
+  <span class="k-user">private</span> packages = <span class="k-user">new</span> Map&lt;string, PackageDefinition&gt;();
+  <span class="k-user">private</span> activePackageId: string | <span class="k-user">null</span> = <span class="k-user">null</span>;
+  <span class="k-user">private</span> activeDisposer: (() =&gt; <span class="k-user">void</span>) | <span class="k-user">null</span> = <span class="k-user">null</span>;
+
+  <span class="k-user">constructor</span>(ctx: Context) {
+    <span class="k-user">super</span>(ctx, <span class="k-model">"dynamicCordis"</span>, <span class="k-user">true</span>);
+  }
+
+  <span class="k-sys">/// 步骤 1: 注册动态包（语法解析校验与版本递增注册）</span>
+  <span class="k-user">public</span> <span class="k-tool">definePackage</span>(id: string, code: string, declaredServices: string[] = []): { success: boolean; error?: string } {
+    <span class="k-user">try</span> {
+      <span class="k-user">new</span> vm.Script(code, { filename: `<span class="k-model">dynamic-cordis://${id}.js</span>` });
+      <span class="k-user">const</span> version = (this.packages.get(id)?.version ?? 0) + 1;
+      this.packages.set(id, { id, version, code, declaredServices });
+      <span class="k-user">return</span> { success: <span class="k-user">true</span> };
+    } <span class="k-user">catch</span> (err: any) {
+      <span class="k-user">return</span> { success: <span class="k-user">false</span>, error: err.message };
+    }
+  }
+
+  <span class="k-sys">/// 步骤 2: 激活动态包（创建白名单 Façade，执行并热挂载 Cordis Plugin 作用域）</span>
+  <span class="k-user">public async</span> <span class="k-tool">activatePackage</span>(id: string): Promise&lt;{ success: boolean; error?: string }&gt; {
+    <span class="k-user">const</span> pkg = this.packages.get(id);
+    <span class="k-user">if</span> (!pkg) <span class="k-user">throw new</span> Error(`Package ${id} not found`);
+
+    <span class="k-sys">// 白名单 Façade：隔离 Node 全局危险对象，仅受控暴露 Cordis 服务</span>
+    <span class="k-user">const</span> sandboxFaçade = {
+      console,
+      ctx: {
+        on: this.ctx.on.bind(this.ctx),
+        get: (name: string) =&gt; (this.ctx <span class="k-user">as any</span>)[name],
+        provide: (name: string, impl: any) =&gt; this.ctx.provide(name, impl),
+      },
+      harness: {
+        registerTool: (toolDef: any) =&gt; (this.ctx <span class="k-user">as any</span>).tools?.register(toolDef),
+      },
+    };
+
+    <span class="k-user">const</span> vmContext = vm.createContext(sandboxFaçade);
+    <span class="k-user">const</span> script = <span class="k-user">new</span> vm.Script(`(function(ctx, harness) { ${pkg.code}\n })`);
+
+    <span class="k-user">try</span> {
+      <span class="k-user">const</span> entryFn = script.runInContext(vmContext, { timeout: 1000 });
+
+      <span class="k-sys">// 原子热替换：注销旧 Fork，挂载新 Plugin 作用域</span>
+      <span class="k-user">if</span> (this.activeDisposer) {
+        this.activeDisposer();
+        this.activeDisposer = <span class="k-user">null</span>;
+      }
+
+      <span class="k-user">const</span> fork = this.ctx.plugin((subCtx: Context) =&gt; {
+        entryFn(subCtx, sandboxFaçade.harness);
+      });
+
+      this.activeDisposer = () =&gt; fork.dispose();
+      this.activePackageId = id;
+      <span class="k-user">return</span> { success: <span class="k-user">true</span> };
+    } <span class="k-user">catch</span> (err: any) {
+      <span class="k-user">return</span> { success: <span class="k-user">false</span>, error: `Activation failed: ${err.message}` };
+    }
+  }
+}
+          </div>
+          <p class="lesson-result"><strong>架构精要：</strong>Dynamic Cordis 允许 Agent 在运行时自主编写并加载 Cordis 插件，但 `node:vm` 仅提供独立上下文而非恶意代码防御边界；动态包只存在于当前进程内存，重启自动销毁。</p>
+        </article>
       </div></section>
 
       <section class="chapter shell" id="surfaces" data-spy>
@@ -155,7 +332,76 @@
 
       <section class="chapter band-edge" id="practice" data-spy><div class="shell">
         <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 12 · PRACTICE & INTERVIEW</span><h2>用“组合、事件、能力、证据”解释一个 Agent Harness。</h2><p class="lede">真正掌握 DeepSeek Harness，不是背 package 列表，而是能从有效树找到拥有者、从日志重建状态、从能力缝解释 Provider 替换，并清楚指出 POC 与安全限制。</p></header>
-        <div class="spread"><article class="prose" data-reveal><h3>五步诊断法</h3><p>先 dump 有效 Profile；再确认 Agent 的 Preset 与 scope；沿 turn/step/session events 找最后一个持久事实；把失败归到 Prompt、LLM、Tool、Provider 或 Policy；最后用一个能推翻假设的最小实验验证。</p><div class="decision"><span class="label-mono">SOURCE BOUNDARY · b150a55</span><p>本课基于本地开发者预览快照。静态源码能证明实现关系，不能替代真实平台 probe、E2B 运行、生产安全验收或当前部署的有效 composition。</p></div></article><div class="interview" data-reveal><span class="label-mono">90-SECOND ANSWER</span><h4>“DeepSeek Harness 为什么说 everything is a plugin？”</h4><div class="qa"><details><summary>展开答题骨架</summary><div class="ans">它用 Cordis Profile 把插件行组合成 Context：Agent Loop、Session、Prompt、Tools、LLM 和持久化都由服务与事件连接。一次 Turn 由多个 Step 构成，模型输入从 Session Log 投影，工具经过可插拔策略管线后把唯一结果写回日志。Definition / Provider / Consumer 让本地、沙箱或远程执行世界可替换，Web、Headless、ACP 与 SDK 只是不同入口。因此新能力优先新增插件或 Provider，而不是修改 Loop。</div></details></div></div></div>
+        <div class="spread"><article class="prose" data-reveal><h3>五步诊断法</h3><p>先 dump 有效 Profile；再确认 Agent 的 Preset 与 scope；沿 turn/step/session events 找最后一个持久事实；把失败归到 Prompt、LLM、Tool、Provider 或 Policy；最后用一个能推翻假设的最小实验验证。</p><div class="decision"><span class="label-mono">SOURCE BOUNDARY · b150a55</span><p>本课基于本地开发者预览快照。静态源码能证明实现关系，不能替代真实平台 probe、E2B 运行、生产安全验收或当前部署的有效 composition。</p></div></article></div>
+
+        <div class="interview" data-reveal>
+          <span class="label-mono">PROBLEM SET 01 · 架构设计题</span>
+          <h4>“为什么说 DeepSeek Harness 的核心是 Everything is a Plugin？如何将底层执行环境无缝迁移至 E2B 云端沙箱？”</h4>
+          <div class="qa">
+            <details>
+              <summary>展开答题骨架与解耦推演</summary>
+              <div class="ans">
+                <p><strong>【场景定义】</strong> 团队需要将原本运行在本地开发机上的 DeepSeek Harness 运行时迁移至远程 E2B 云端安全隔离沙箱中，要求上层数十个模型工具（文件读写、Bash 命令、PTY 终端、LSP 诊断）代码零改动、零分叉。</p>
+                <p><strong>【归属层/故障机理分析】</strong> 属于 Cordis 插件树组合（`Chapter 01: Cordis Composition`）与能力缝架构（`Chapter 06: Capability Seams`）。核心机理在于通过 IoC（控制反转）与依赖注入，将能力严格拆分为三元组：Service Definition（`ctx.fs`, `ctx.subprocess`）、Service Provider（`fs-local` vs `fs-e2b`）与 Tool Consumer（`tool-fs`, `tool-bash`）。上层工具只面向抽象 Service 契约编程。</p>
+                <p><strong>【关键证据链/判定条件】</strong>
+                  <br>1. <em>定义抽象</em>：`FileSystem` 接口固定标准路径规范与操作签名。
+                  <br>2. <em>配置热插拔</em>：在 Profile Patch 文件（`cordis.patch.yml`）中将 `packages/fs/fs-local` 替换为 `packages/e2b/fs-e2b`。
+                  <br>3. <em>消费者透明</em>：`tool-fs` 在执行 `ctx.fs.readFile()` 时自动路由至 E2B 容器，Agent Loop 与工具逻辑完全无感。
+                </p>
+                <p><strong>【解决方案与系统级防线】</strong>
+                  <br>• 坚持纯粹的 Provider 隔离设计，禁止在 Agent Loop 或具体工具内部编写针对特定执行环境的 `if-else` 分支。
+                  <br>• 进程启动时由 Cordis Bundle 解析有效插件树，保证执行世界的替换只发生在 Provider 边界，不扩散至会话与模型层。
+                </p>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <div class="interview" data-reveal>
+          <span class="label-mono">PROBLEM SET 02 · 故障排查题</span>
+          <h4>“宿主进程崩溃重启后，Session Log 加载恢复的会话为什么与 UI 呈现不一致并出现重复工具调用？”</h4>
+          <div class="qa">
+            <details>
+              <summary>展开答题骨架与修复管线</summary>
+              <div class="ans">
+                <p><strong>【场景定义】</strong> 宿主进程执行耗时测试时意外断电或被 OOM 杀掉，重启后加载持久化日志，发现 UI 上显示最后一步工具执行成功，但模型在下一轮对话时却重新发起了一模一样的工具调用。</p>
+                <p><strong>【归属层/故障机理分析】</strong> 属于事件日志投影与崩溃修复机制（`Chapter 03: Session Event Log` & 崩溃尾部修复）。故障机理为：进程崩溃时物理日志中仅写入了 `tool/call` 事件，尚未写入对应的 `tool/result`，形成了悬空的未闭合 Crash Tail；恢复引擎若未执行合成修复，将导致 `SurfaceManager.deriveMessages()` 无法正确派生模型历史。</p>
+                <p><strong>【关键证据链/判定条件】</strong>
+                  <br>1. 查阅 Session Log 尾部：定位到孤立的 `tool/call` 事件，其后缺失 `tool/result`。
+                  <br>2. 检查 `interruptedTurnClosers()`：恢复引擎应自动为悬空工具合成 `synthetic tool/result { error: "interrupted" }` 并闭合 `turn/end`。
+                  <br>3. 检查模型输入投影：确认修补后的事件日志是否正确投影为包含失败标记的历史节点。
+                </p>
+                <p><strong>【解决方案与系统级防线】</strong>
+                  <br>• 牢记“UI 不是真相源，Session Log 才是唯一事实源”。
+                  <br>• 严格执行崩溃恢复管线（Repair Pipeline），对未确认结果的工具调用显式注入合成失败标记，禁止未闭合的悬空状态进入模型推理。
+                </p>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <div class="interview" data-reveal>
+          <span class="label-mono">PROBLEM SET 03 · 安全攻防题</span>
+          <h4>“Dynamic Cordis 自修改机制带来了哪些严重安全隐患？为什么不能将其作为恶意代码防御边界？”</h4>
+          <div class="qa">
+            <details>
+              <summary>展开答题骨架与安全边界</summary>
+              <div class="ans">
+                <p><strong>【场景定义】</strong> 允许 Agent 在运行时使用 `cordis_define` 和 `cordis_run` 自主编写并安装新插件，以动态扩展当前任务所需的能力。</p>
+                <p><strong>【归属层/故障机理分析】</strong> 属于自修改运行时与扩展安全边界（`Chapter 10: Extension Runtime`）。核心事实：Dynamic Cordis 基于 Node.js `node:vm` 构建，而 Node 官方明确声明 `node:vm` 仅提供独立的全局对象和作用域，**不是针对恶意不可信代码的安全沙箱**。</p>
+                <p><strong>【关键证据链/判定条件】</strong>
+                  <br>1. 原型链逃逸：在 `node:vm` 内可通过 `this.constructor.constructor("return process")()` 轻易获取宿主 `process` 对象并越权执行。
+                  <br>2. 内存常驻与提权：动态加载的包直接运行在宿主主进程内，能够直接调用注入的 `ctx.provide()` 覆盖核心系统服务。
+                  <br>3. 策略绕过：未受审批的动态包可静默注册具备网络外联或文件破坏能力的未受限工具。
+                </p>
+                <p><strong>【解决方案与系统级防线】</strong>
+                  <br>• Dynamic Cordis 必须设定为显式 Opt-in 特性，严禁在多租户或不可信输入环境下默认启用。
+                  <br>• 动态插件的挂载必须接入 `UserApproval` 一次性人工审批通道，且动态包仅保留在内存中，进程重启自动销毁。
+                </p>
+              </div>
+            </details>
+          </div>
+        </div>
         <dl class="gloss" data-reveal><div><dt>Plugin Tree</dt><dd>Profile、Bundle 与 Patch 组合出的有效 Cordis entry 树。</dd></div><div><dt>Turn / Step</dt><dd>Turn 是完整用户工作；Step 是一次模型请求及其工具批次。</dd></div><div><dt>Session Event</dt><dd>append-only、可持久化和可投影的运行事实。</dd></div><div><dt>Surface</dt><dd>从事件序列维护的当前可见消息节点集合。</dd></div><div><dt>Capability Seam</dt><dd>Service Definition、Provider 与 Consumer 的完整可替换能力。</dd></div><div><dt>Preset</dt><dd>挂在 Agent scope 下的 per-session 插件组合。</dd></div><div><dt>Waterfall</dt><dd>监听器必须调用 next 才继续的可拦截事件链。</dd></div><div><dt>Compaction</dt><dd>对稳定日志区间生成摘要并以 replacement 更新 Surface。</dd></div></dl>
         <section class="source-notes" aria-labelledby="deepseek-sources" data-reveal><span class="label-mono">PRIMARY SOURCES</span><h3 id="deepseek-sources">继续查证</h3><p>课程事实来自本地 DeepSeek Harness 快照的架构文档、package README 与 TypeScript / native 源码。</p><div><a href="https://github.com/deepseek-ai/deepseek-harness">开源仓库</a><a href="https://github.com/cordiverse/cordis">Cordis</a></div></section>
       </div></section>

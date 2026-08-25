@@ -1288,3 +1288,33 @@
   font-size: var(--step-small);
   font-weight: 600;
 }
+
+/* Native Fullscreen API keeps the live machine DOM and lets the browser own Escape. */
+.machine-fullscreen-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  margin-inline-start: auto;
+  color: var(--text-on-console-mute);
+  font-size: .72rem;
+}
+
+.machine:fullscreen {
+  margin: 0;
+  overflow: auto;
+  border: 0;
+  border-radius: 0;
+  background: var(--surface-console);
+}
+
+.machine:fullscreen .machine-bar {
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 2;
+}
+
+.machine:fullscreen .machine-body {
+  min-height: calc(100vh - 58px);
+  padding: clamp(18px, 4vw, 48px);
+}

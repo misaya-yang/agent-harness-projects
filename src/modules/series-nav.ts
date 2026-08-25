@@ -1,3 +1,5 @@
+import { getCourseProgress } from "./learning-progress";
+
 type AgentCourse = {
   id: string;
   name: string;
@@ -44,12 +46,24 @@ const courses: AgentCourse[] = [
 ];
 
 function courseItems(currentId: string): string {
-  return courses.map((course, index) => `
+  return courses
+    .map((course, index) => {
+      const stats = getCourseProgress(course.id);
+      return `
     <a class="series-option" href="${course.path}" ${course.id === currentId ? 'aria-current="page"' : ""}>
       <span class="series-index">${String(index + 1).padStart(2, "0")}</span>
-      <span class="series-copy"><strong>${course.name}</strong><small>${course.description}</small></span>
-      <span class="series-meta"><small>${course.code}</small><b>${course.chapters} 章</b></span>
-    </a>`).join("");
+      <span class="series-copy">
+        <strong>${course.name}</strong>
+        <small>${course.description}</small>
+      </span>
+      <span class="series-meta">
+        <small>${course.code}</small>
+        <b>${course.chapters} 章</b>
+        <span class="series-progress-pill ${stats.percent === 100 ? "is-complete" : ""}" data-course-progress="${course.id}">${stats.completedCount}/${course.chapters} (${stats.percent}%)</span>
+      </span>
+    </a>`;
+    })
+    .join("");
 }
 
 function courseTabs(currentId: string): string {
@@ -63,43 +77,58 @@ export function initSeriesNav(): void {
   const currentId = document.body.dataset.agent ?? "codex";
   const current = courses.find((course) => course.id === currentId) ?? courses[0];
 
-  document.querySelectorAll<HTMLElement>("[data-series-nav]").forEach((root) => {
-    const variant = root.dataset.variant ?? "top";
-    root.className = `series-nav series-nav-${variant}`;
+  const renderNav = () => {
+    document.querySelectorAll<HTMLElement>("[data-series-nav]").forEach((root) => {
+      const variant = root.dataset.variant ?? "top";
+      root.className = `series-nav series-nav-${variant}`;
 
-    if (variant === "tabs") {
-      root.innerHTML = `<nav class="course-tabs" aria-label="选择 Agent 课程"><span class="label-mono">课程</span>${courseTabs(currentId)}</nav>`;
-      return;
-    }
+      if (variant === "tabs") {
+        root.innerHTML = `<nav class="course-tabs" aria-label="选择 Agent 课程"><span class="label-mono">课程</span>${courseTabs(currentId)}</nav>`;
+        return;
+      }
 
-    root.innerHTML = `
-      <details class="series-menu">
-        <summary aria-label="选择 Agent 课程">
-          <span class="series-summary-label">Agent 系列</span>
-          <strong>${current.name}</strong>
-          <span class="series-chevron" aria-hidden="true">⌄</span>
-        </summary>
-        <div class="series-panel">
-          <div class="series-panel-head"><span>顶级开源 Agent 教学系列</span><small>${courses.length} 门已上线</small></div>
-          <nav aria-label="选择 Agent 课程">${courseItems(currentId)}</nav>
-          <p>持续增加新的开源 Agent · 统一采用源码事实与交互实验</p>
-        </div>
-      </details>`;
+      root.innerHTML = `
+        <details class="series-menu">
+          <summary aria-label="选择 Agent 课程">
+            <span class="series-summary-label">Agent 系列</span>
+            <strong>${current.name}</strong>
+            <span class="series-chevron" aria-hidden="true">⌄</span>
+          </summary>
+          <div class="series-panel">
+            <div class="series-panel-head"><span>顶级开源 Agent 教学系列</span><small>${courses.length} 门已上线</small></div>
+            <nav aria-label="选择 Agent 课程">${courseItems(currentId)}</nav>
+            <p>持续增加新的开源 Agent · 统一采用源码事实与交互实验</p>
+          </div>
+        </details>`;
 
-    const details = root.querySelector<HTMLDetailsElement>("details");
-    details?.addEventListener("toggle", () => {
-      if (!details.open) return;
-      document.querySelectorAll<HTMLDetailsElement>(".series-menu[open]").forEach((other) => {
-        if (other !== details) other.open = false;
+      const details = root.querySelector<HTMLDetailsElement>("details");
+      details?.addEventListener("toggle", () => {
+        if (!details.open) return;
+        document.querySelectorAll<HTMLDetailsElement>(".series-menu[open]").forEach((other) => {
+          if (other !== details) other.open = false;
+        });
       });
     });
-  });
+  };
+
+  renderNav();
 
   document.addEventListener("click", (event) => {
     const target = event.target;
     if (!(target instanceof Node)) return;
     document.querySelectorAll<HTMLDetailsElement>(".series-menu[open]").forEach((details) => {
       if (!details.contains(target)) details.open = false;
+    });
+  });
+
+  // 学习进度变化时只刷新课程下拉中的摘要；顶部 Tabs 保持安静。
+  window.addEventListener("learning-progress-update", () => {
+    courses.forEach((c) => {
+      const stats = getCourseProgress(c.id);
+      document.querySelectorAll<HTMLElement>(`[data-course-progress="${c.id}"]`).forEach((el) => {
+        el.textContent = `${stats.completedCount}/${c.chapters} (${stats.percent}%)`;
+        el.classList.toggle("is-complete", stats.percent === 100);
+      });
     });
   });
 }

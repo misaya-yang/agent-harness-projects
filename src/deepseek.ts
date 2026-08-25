@@ -6,8 +6,9 @@ import "./styles/deepseek.css";
 import { initNavMenu } from "./modules/navmenu";
 import { initReveal } from "./modules/reveal";
 import { initSeriesNav } from "./modules/series-nav";
-import { initSpy } from "./modules/spy";
+import { initChapterReader } from "./modules/chapter-reader";
 import { initTheme } from "./modules/theme";
+import { initHeroPause } from "./modules/hero-pause";
 
 type Detail = { title: string; body: string; status?: string };
 type SurfaceData = Record<string, Array<[string, string]>>;
@@ -127,7 +128,14 @@ function initSurface(id: string, data: SurfaceData): void {
 
 function boot(): void {
   const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
-  initTheme(); initSeriesNav(); initReveal(reduced.matches); initSpy(); initNavMenu(); initLoop(); initSessionProjection(); initSafety();
+  initTheme();
+  initSeriesNav();
+  initReveal(reduced.matches);
+  initNavMenu();
+  initHeroPause();
+  initLoop();
+  initSessionProjection();
+  initSafety();
   initChoiceDetail("#dsh-composition", {
     model: { title: "ctx.llm · LlmAdapter", body: "注册或替换 Provider adapter；Loop 只通过 LLM service 发起流式调用。", status: "LLM PROVIDER" },
     prompt: { title: "ctx.systemPrompt · section/context", body: "新增 Prompt plugin 或 scoped section；模型可见内容必须同时留下可重建事实。", status: "SYSTEM PROMPT" },
@@ -158,6 +166,7 @@ function boot(): void {
     sdk: [["消费者", "TypeScript 产品集成"], ["传输", "newline-delimited JSON-RPC"], ["运行", "启动完整 runtime 子进程"], ["生命周期", "initialize settle / shutdown flush"]],
     python: [["消费者", "Python 调用方"], ["传输", "同一 JSON-RPC runtime"], ["运行", "bundled runtime 子进程"], ["收集", "prompt admission 至 Agent idle 的活动区间"]],
   });
+  initChapterReader();
 }
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, { once: true }); else boot();

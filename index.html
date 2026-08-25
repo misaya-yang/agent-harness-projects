@@ -103,6 +103,87 @@
           </figure>
         </div>
         <div class="hero-meta label-mono" aria-label="课程范围"><span>SOURCE SNAPSHOT · 2df6705</span><span>12 章 · 08 个实验</span><span>读链路 → 动手操作 → 回到源码</span></div>
+
+        <section class="lesson-brief" id="kernel-atlas" data-reveal>
+          <span class="label-mono">KERNEL ATLAS · 4-AGENT PANORAMIC SYNTHESIS</span>
+          <h3>四大主流开源 Agent 全景架构对比与技术选型指南</h3>
+          <p>横向打通 Codex (`codex-rs`)、Grok Build (`xai-org/grok-build`)、DeepSeek Harness (`deepseek-harness`) 与 Pi Agent (`pi-mono`) 六大核心维度。选型结论是基于本地源码快照的教学归纳，不代表各上游项目的官方定位。</p>
+
+          <div class="environment-matrix">
+            <div class="matrix-head"><strong>对比维度</strong><span>四大主流 Agent 架构实现与技术取舍</span><code>核心特征</code></div>
+            <div>
+              <strong>1. 会话与状态模型</strong>
+              <span><strong>Codex</strong>: Thread / Turn / Item 三层层级容器，状态由内存 Actor + 外部存储双重建模。<br>
+              <strong>Grok Build</strong>: Tokio LocalSet 独立线程 Actor（`SessionActor` + `ChatStateActor`），追加持久化到 `updates.jsonl`。<br>
+              <strong>DeepSeek</strong>: 纯追加型不可变 Session Log，由 `SurfaceManager` 实时投影出当前模型可见历史。<br>
+              <strong>Pi Agent</strong>: 追加型 JSONL Session 树（`id` / `parentId`），通过移动叶节点指针实现非破坏性分支与回退。</span>
+              <code>State vs Tree</code>
+            </div>
+            <div>
+              <strong>2. 通信协议与交互</strong>
+              <span><strong>Codex</strong>: App Server 双向 JSON-RPC 协议，规范化 Request 与 started / delta / completed 通知。<br>
+              <strong>Grok Build</strong>: 采用 Agent Client Protocol (ACP) 标准协议，扩展 XAI 专有事件（`rewind`, `compaction`）。<br>
+              <strong>DeepSeek</strong>: 面向自动化与工具管线的 JSON-RPC stdio / NDJSON 协议，流式提交 committed assistant 消息。<br>
+              <strong>Pi Agent</strong>: LF-only JSONL Coding-Agent RPC 与 4 字节大端前缀 + 定长 CBOR 独立 Server Protocol 双协议面。</span>
+              <code>JSON-RPC / ACP / CBOR</code>
+            </div>
+            <div>
+              <strong>3. 沙箱与权限控制</strong>
+              <span><strong>Codex</strong>: `SandboxPolicy` (`ro`/`ww`/`dfa`) × `ApprovalPolicy` (`untrusted`/`on-request`/`never`) 正交二维决策矩阵。<br>
+              <strong>Grok Build</strong>: `PermissionManager` (4种模式) × `SandboxProfile` (`workspace`/`read-only`/`strict`/`devbox`)，分层合并。<br>
+              <strong>DeepSeek</strong>: 3 种文件效果模式 (`ro`/`ww`/`dfa`) × 独立审批通道，不可用时强制 fail-closed。<br>
+              <strong>Pi Agent</strong>: 默认采用宿主进程全量权限；`Project Trust` 控制配置加载，真正安全隔离依托外部 Docker/VM。</span>
+              <code>Sandbox × Approval</code>
+            </div>
+            <div>
+              <strong>4. 上下文工程与压缩</strong>
+              <span><strong>Codex</strong>: 达到预算阈值触发 CompactionSummary 折叠，保留关键目标与 Diff 事实。<br>
+              <strong>Grok Build</strong>: 85% 上下文压力触发全量替换压缩，专用 Sampler 生成摘要并记录 `CompactionCheckpoint`。<br>
+              <strong>DeepSeek</strong>: `compaction/start` 耐久锁机制，在稳定日志区间生成摘要并通过 Surface Replacement 原子替换。<br>
+              <strong>Pi Agent</strong>: `firstKeptEntryId` 动态截断点选择，后向搜索绝不切断 toolResult，单回合支持超长前缀摘要。</span>
+              <code>Compaction & Summary</code>
+            </div>
+            <div>
+              <strong>5. 执行世界抽象</strong>
+              <span><strong>Codex</strong>: Local / Git Worktree / Cloud 容器 / 远程宿主多环境适配。<br>
+              <strong>Grok Build</strong>: `WorkspaceSession` 统一封装 FS、PTY、ProcessManager、VCS 与检查点，解耦上层调用。<br>
+              <strong>DeepSeek</strong>: 严格三元解耦（Service Definition / Provider / Consumer），支持 Local、Sandbox 与 E2B 云沙箱热插拔。<br>
+              <strong>Pi Agent</strong>: 原生 Node.js 宿主接口，支持 Gondolin 微虚拟机路由与 OpenShell 容器化封装。</span>
+              <code>Workspace Seam</code>
+            </div>
+            <div>
+              <strong>6. 扩展体系与生态</strong>
+              <span><strong>Codex</strong>: 定制六边形（AGENTS.md、Memories、Skills、MCP、Hooks、Subagents）。<br>
+              <strong>Grok Build</strong>: 规则文件、Skills、MCP 服务、Plugins 分发包、生命周期 Hooks 与跨会话 Memory。<br>
+              <strong>DeepSeek</strong>: Cordis 插件树、Profile 继承、Agent Presets 作用域与 Dynamic Cordis 内存自修改运行时。<br>
+              <strong>Pi Agent</strong>: Jiti 动态加载 TypeScript 模块（`ExtensionAPI`）、ResourceLoader 与统一 Provider 适配器。</span>
+              <code>Extension Hexagon</code>
+            </div>
+          </div>
+
+          <div class="custom-stack">
+            <div>
+              <span class="custom-key">CODEX 适用</span>
+              <strong>企业级多端与富客户端集成</strong>
+              <p>需要严密 App Server 双向协议、细粒度正交权限矩阵与 Thread/Turn/Item 完整生命周期的生产级开发平台。</p>
+            </div>
+            <div>
+              <span class="custom-key">GROK 适用</span>
+              <strong>高性能 Rust 终端与深度版本控制</strong>
+              <p>追求极致终端响应速度、全屏 TUI 交互、ACP 标准支持以及原子级 Git Workspace Checkpoint / Rewind 恢复能力。</p>
+            </div>
+            <div>
+              <span class="custom-key">DEEPSEEK 适用</span>
+              <strong>极致插件化与执行环境热插拔</strong>
+              <p>追求“Everything is a Plugin”架构，需通过 Cordis IoC 容器无缝切换本地执行、E2B 云沙箱与自修改运行时的场景。</p>
+            </div>
+            <div>
+              <span class="custom-key">PI AGENT 适用</span>
+              <strong>轻量嵌入式与非线性分支探索</strong>
+              <p>需要极简轻量 TypeScript 内核、非破坏性 JSONL 树形分支探索（`/tree`）与 CSI 2026 同步差分渲染的应用。</p>
+            </div>
+          </div>
+        </section>
       </section>
       <section class="chapter shell" id="loop" data-spy>
         <header class="chapter-head" data-reveal>
@@ -230,6 +311,75 @@
             <div class="machine-bar"><span class="title"><span class="led is-done"></span><strong>扩展边界图谱</strong></span><span class="label-mono">select a capability</span></div>
             <div class="machine-body atlas-layout"><div class="atlas-choices"><button class="layer-row" type="button" data-atlas="agents">AGENTS.md</button><button class="layer-row" type="button" data-atlas="memory">Memories</button><button class="layer-row" type="button" data-atlas="skill">Skills</button><button class="layer-row" type="button" data-atlas="mcp">MCP</button><button class="layer-row" type="button" data-atlas="app">Apps</button><button class="layer-row" type="button" data-atlas="dynamic">Dynamic tools</button><button class="layer-row" type="button" data-atlas="hook">Hooks</button><button class="layer-row" type="button" data-atlas="subagent">Subagents</button></div><div class="atlas-detail"><span class="label-mono">SELECTED CAPABILITY</span><h3 data-atlas-title></h3><p data-atlas-role></p><div class="stage-note"><span class="label-mono">TRUST BOUNDARY</span><span data-atlas-boundary></span></div></div></div>
           </div>
+
+          <article class="lesson-brief" id="codex-mcp-elicitation-code" data-reveal>
+            <span class="label-mono">SOURCE-ALIGNED TEACHING SKELETON · MCP ELICITATION</span>
+            <h3>MCP 交互式表单提示与参数补全运行时 (`CodexTurnElicitationHandler`)</h3>
+            <p>下面是帮助理解控制流的教学骨架，不是上游源码复制，也不能直接用于生产。真实入口请查 `codex-rs/core/src/session/mcp.rs` 的 `request_mcp_server_elicitation()` / `resolve_elicitation()`，以及 `codex-rs/app-server/tests/suite/v2/mcp_server_elicitation.rs`。</p>
+
+            <div class="stream-log elog" style="max-height: 480px; overflow-y: auto; padding: 16px; border-radius: var(--r-control); background: var(--surface-console); border: 1px solid var(--line-on-console);">
+<span class="k-sys">// teaching bridge; source anchors: core/src/session/mcp.rs</span>
+<span class="k-user">use</span> std::collections::HashMap;
+<span class="k-user">use</span> serde::{Deserialize, Serialize};
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+<span class="k-user">pub struct</span> <span class="k-model">McpFormField</span> {
+    <span class="k-user">pub</span> name: String,
+    <span class="k-user">pub</span> label: String,
+    <span class="k-user">pub</span> field_type: String, <span class="k-sys">// "string" | "secret" | "select"</span>
+    <span class="k-user">pub</span> required: bool,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+<span class="k-user">pub struct</span> <span class="k-model">McpElicitationRequest</span> {
+    <span class="k-user">pub</span> elicitation_id: String,
+    <span class="k-user">pub</span> server_name: String,
+    <span class="k-user">pub</span> message: String,
+    <span class="k-user">pub</span> fields: Vec&lt;McpFormField&gt;,
+}
+
+<span class="k-user">pub struct</span> <span class="k-model">CodexTurnElicitationHandler</span> {
+    <span class="k-user">pub</span> pending_elicitations: HashMap&lt;String, tokio::sync::oneshot::Sender&lt;HashMap&lt;String, String&gt;&gt;&gt;,
+}
+
+<span class="k-user">impl</span> <span class="k-model">CodexTurnElicitationHandler</span> {
+    <span class="k-user">pub fn</span> <span class="k-tool">new</span>() -&gt; Self {
+        Self { pending_elicitations: HashMap::new() }
+    }
+
+    <span class="k-sys">/// 步骤 1: MCP 工具在执行中请求用户结构化表单输入，挂起当前 Turn</span>
+    <span class="k-user">pub async fn</span> <span class="k-tool">request_user_elicitation</span>(
+        &amp;<span class="k-user">mut</span> self,
+        turn_id: &amp;str,
+        req: McpElicitationRequest,
+    ) -&gt; Result&lt;HashMap&lt;String, String&gt;, String&gt; {
+        <span class="k-user">let</span> (tx, rx) = tokio::sync::oneshot::channel();
+        <span class="k-user">let</span> elicitation_id = req.elicitation_id.clone();
+        self.pending_elicitations.insert(elicitation_id.clone(), tx);
+
+        <span class="k-sys">// 向 App Server 客户端广播双向通知: item/mcp_elicitation_request</span>
+        println!(<span class="k-model">"[App Server -&gt; Client] Turn: {}, Elicitation: {}"</span>, turn_id, elicitation_id);
+
+        <span class="k-sys">// 异步等待客户端提交表单并唤醒</span>
+        rx.<span class="k-user">await</span>.map_err(|_| <span class="k-model">"Elicitation cancelled or client disconnected"</span>.to_string())
+    }
+
+    <span class="k-sys">/// 步骤 2: 客户端提交用户表单结果，唤醒挂起工具继续执行</span>
+    <span class="k-user">pub fn</span> <span class="k-tool">submit_elicitation_response</span>(
+        &amp;<span class="k-user">mut</span> self,
+        elicitation_id: &amp;str,
+        form_data: HashMap&lt;String, String&gt;,
+    ) -&gt; Result&lt;(), String&gt; {
+        <span class="k-user">if let</span> Some(tx) = self.pending_elicitations.remove(elicitation_id) {
+            tx.send(form_data).map_err(|_| <span class="k-model">"Failed to resume suspended tool"</span>.to_string())
+        } <span class="k-user">else</span> {
+            Err(<span class="k-model">"Elicitation ID not found or already completed"</span>.to_string())
+        }
+    }
+}
+            </div>
+            <p class="lesson-result"><strong>架构精要：</strong>MCP Elicitation 允许在模型运行回合中安全发起结构化人机交互，通过 `oneshot::channel` 保持异步 Turn 不中断，表单数据提交后直接回注工具上下文而无需重置整个会话。</p>
+          </article>
         </div>
       </section>
 
@@ -273,7 +423,76 @@
       <section class="chapter band-edge" id="practice" data-spy>
         <div class="shell">
           <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 12 · PRACTICE & INTERVIEW</span><h2>把架构知识变成诊断顺序。</h2><p class="lede">真正有用的掌握，不是能背组件名，而是面对失败时知道先看哪一条证据、归属哪一层、做哪一个最小实验。</p></header>
-          <div class="spread"><div><h3>五步诊断</h3><ol class="kp-list"><li data-no="A"><span><strong>定位容器</strong>：Thread、Turn 还是 Item 出了问题？</span></li><li data-no="B"><span><strong>读事件</strong>：事实停在 started、approval、delta 还是 completed？</span></li><li data-no="C"><span><strong>查边界</strong>：工具可见性、权限、沙箱、网络还是环境？</span></li><li data-no="D"><span><strong>查上下文</strong>：规则、历史、Skill 和结果回注是否完整？</span></li><li data-no="E"><span><strong>最小验证</strong>：设计一个能推翻当前假设的检查。</span></li></ol></div><div class="interview"><span class="label-mono">90-SECOND ANSWER</span><h4>如何解释当前 Codex 的完整运行时？</h4><div class="qa"><details><summary>展开参考答案</summary><div class="ans">Codex 以 Thread 保存对话与状态，以 Turn 承载一次请求的执行，以 Item 表示消息、命令、文件变更和工具调用。回合内模型流式决定行动，工具经过能力、审批与沙箱边界后执行并回注；App Server 用双向事件协议连接 CLI、IDE 与自定义客户端。AGENTS、Memories、Skills、MCP、Hooks 和 Subagents 分别承担指导、持久上下文、复用流程、外部连接、确定性控制与专业委派。平台可以在外围增加身份、持久化、租约和服务生命周期，但不应改写内核语义。</div></details></div></div></div>
+          <div class="spread"><div><h3>五步诊断</h3><ol class="kp-list"><li data-no="A"><span><strong>定位容器</strong>：Thread、Turn 还是 Item 出了问题？</span></li><li data-no="B"><span><strong>读事件</strong>：事实停在 started、approval、delta 还是 completed？</span></li><li data-no="C"><span><strong>查边界</strong>：工具可见性、权限、沙箱、网络还是环境？</span></li><li data-no="D"><span><strong>查上下文</strong>：规则、历史、Skill 和结果回注是否完整？</span></li><li data-no="E"><span><strong>最小验证</strong>：设计一个能推翻当前假设的检查。</span></li></ol></div></div>
+
+          <div class="interview" data-reveal>
+            <span class="label-mono">PROBLEM SET 01 · 架构设计题</span>
+            <h4>“如何设计企业级高可用 Codex App Server 双向 JSON-RPC 会话管理体系？”</h4>
+            <div class="qa">
+              <details>
+                <summary>展开答题骨架与解耦推演</summary>
+                <div class="ans">
+                  <p><strong>【场景定义】</strong> 为支持数千名开发者同时在 Web IDE、桌面客户端与命令行中使用 Codex，需要构建一套高并发、支持长连接热迁移与流式双向通信的 App Server 架构。</p>
+                  <p><strong>【归属层/故障机理分析】</strong> 属于协议与服务解耦层（`Chapter 07: Thread / Turn / Item` & `Chapter 11: Client Surfaces`）。核心机理在于：Codex 状态模型严格拆分为 Thread（持久化状态容器）、Turn（执行生命周期）与 Item（最小可观察更新粒度）。App Server 采用双向 JSON-RPC 协议，将长连接管理与无状态执行引擎分离，实现流式通知与增量事件广播。</p>
+                  <p><strong>【关键证据链/判定条件】</strong>
+                    <br>1. <em>握手与协商</em>：客户端连接后必须通过 `initialize` / `initialized` 交换协议版本与 capability 集合。
+                    <br>2. <em>三层生命周期映射</em>：`thread/start` $\to$ `turn/start` $\to$ `item/agentMessage/delta` $\to$ `item/completed` $\to$ `turn/completed`。
+                    <br>3. <em>中断与恢复</em>：支持通过 `turn/interrupt` 触发取消令牌，后续通过 `turn/start` 增量续跑，不丢失已提交的 Item。
+                  </p>
+                  <p><strong>【解决方案与系统级防线】</strong>
+                    <br>• 客户端严禁私自维护业务状态镜像，所有 UI 渲染与进度推进均以 App Server 推送的 `item/*` 事件为准。
+                    <br>• 在 App Server 外围构建平台租约（Lease）与签名验权，实现会话多租户安全隔离与横向负载均衡。
+                  </p>
+                </div>
+              </details>
+            </div>
+          </div>
+
+          <div class="interview" data-reveal>
+            <span class="label-mono">PROBLEM SET 02 · 故障排查题</span>
+            <h4>“Turn 执行中收到 `mcp_elicitation_request` 后，为什么下游工具无法获取参数并发生超时？”</h4>
+            <div class="qa">
+              <details>
+                <summary>展开答题骨架与排查路径</summary>
+                <div class="ans">
+                  <p><strong>【场景定义】</strong> 模型调用外部 MCP 数据库迁移工具，该工具触发结构化密码填写表单，但用户在前端输入并提交后，后端工具迟迟没有恢复执行，最终因 30s 超时报错中断。</p>
+                  <p><strong>【归属层/故障机理分析】</strong> 属于 MCP 交互式表单总线（`Chapter 08: Extension Bus`）。故障机理为：App Server 内部维护的 `pending_elicitations` 回调映射表在多工作线程环境下发生竞争，或客户端在调用 `submit_elicitation_response` 时提交了错误的 `elicitation_id`，导致 `oneshot::Sender` 无法成功唤醒挂起工具。</p>
+                  <p><strong>【关键证据链/判定条件】</strong>
+                    <br>1. 协议抓包：检查 App Server 是否成功广播了包含 `elicitation_id` 的 `item/mcp_elicitation_request`。
+                    <br>2. 回包匹配：检查客户端提交响应时附带的 `elicitation_id` 与注册表键值是否完全一致。
+                    <br>3. 唤醒通道状态：检查 `oneshot::channel` 是否在提交前已被异常 drop 或由于超时提前关闭。
+                  </p>
+                  <p><strong>【解决方案与系统级防线】</strong>
+                    <br>• 使用带线程安全锁的 `Arc<Mutex<HashMap<String, oneshot::Sender>>>` 严格保护未决请求映射。
+                    <br>• 为交互式 Elicitation 设置独立的长超时策略（如 300s），并支持客户端显式取消（Cancel）优雅退出。
+                  </p>
+                </div>
+              </details>
+            </div>
+          </div>
+
+          <div class="interview" data-reveal>
+            <span class="label-mono">PROBLEM SET 03 · 安全攻防题</span>
+            <h4>“在正交权限矩阵中，`SandboxPolicy::WorkspaceWrite` 与 `ApprovalPolicy::OnRequest` 发生冲突时如何判定？”</h4>
+            <div class="qa">
+              <details>
+                <summary>展开答题骨架与权限决策</summary>
+                <div class="ans">
+                  <p><strong>【场景定义】</strong> 用户设置了允许工作区写（`WorkspaceWrite`），但命令审批策略配置为按需询问（`OnRequest`）。模型发起了跨越工作区根目录的编辑操作（如修改 `/etc/hosts` 或用户全局配置文件）。</p>
+                  <p><strong>【归属层/故障机理分析】</strong> 属于权限与沙箱正交决策体系（`Chapter 04: Permissions & Sandboxing`）。核心认知：<strong>`SandboxPolicy`（沙箱物理能力）与 `ApprovalPolicy`（人机交互策略）是正交独立的二维矩阵</strong>。物理越权必须在沙箱层被绝对拦截，即使审批策略设置为自动放行也无法越界。</p>
+                  <p><strong>【关键证据链/判定条件】</strong>
+                    <br>1. 审批判定：`ApprovalPolicy` 评估目标动作是否需要发起人机交互审批弹窗。
+                    <br>2. 沙箱判定：`SandboxPolicy` 评估该路径是否在可写根目录允许列表中。
+                    <br>3. 冲突决议：若动作超出 `WorkspaceWrite` 范围，系统直接拒绝执行或降级报错，绝不因用户点击批准而静默关闭底层沙箱隔离。
+                  </p>
+                  <p><strong>【解决方案与系统级防线】</strong>
+                    <br>• 坚守“最小特权原则”：沙箱层负责硬性物理隔离（OS 命名空间 / Landlock / Seatbelt），审批层仅负责策略偏好。
+                    <br>• 任何需要突破当前沙箱边界的临时越权操作，必须通过显式重新配置沙箱 Profile 完成，禁止隐式动态提权。
+                  </p>
+                </div>
+              </details>
+            </div>
+          </div>
           <section aria-labelledby="glossary-title" data-reveal><h3 id="glossary-title">速查术语</h3><dl class="gloss"><div><dt>Thread</dt><dd>包含多个 Turn 的对话与持久状态容器。</dd></div><div><dt>Turn</dt><dd>一次用户请求及 Agent 随后完成的全部工作。</dd></div><div><dt>Item</dt><dd>消息、命令、文件变更或工具调用等最小输入输出单元。</dd></div><div><dt>SandboxPolicy</dt><dd>命令实际可访问的文件系统与网络边界。</dd></div><div><dt>ApprovalPolicy</dt><dd>何时暂停并请求越界授权的交互策略。</dd></div><div><dt>Compaction</dt><dd>把旧历史折叠成保留关键状态的摘要。</dd></div><div><dt>Elicitation</dt><dd>MCP 在 Turn 中请求结构化表单输入或 URL 流程的机制。</dd></div><div><dt>Hook</dt><dd>在 Codex 生命周期节点运行的确定性脚本。</dd></div></dl></section>
           <section class="source-notes" aria-labelledby="sources-title" data-reveal><span class="label-mono">SOURCE BOUNDARY · UPDATED 2026-08-23</span><h3 id="sources-title">继续查证</h3><p>协议字段与实验性 API 会随版本变化；生产集成应以当前版本生成的 schema 和官方文档为准。</p><div><a href="https://learn.chatgpt.com/docs/app-server">App Server 协议</a><a href="https://learn.chatgpt.com/docs/customization/overview">定制体系</a><a href="https://learn.chatgpt.com/docs/hooks">Hooks</a><a href="https://learn.chatgpt.com/docs/sandboxing">沙箱与审批</a><a href="https://learn.chatgpt.com/docs/config-file/config-reference">配置参考</a><a href="https://learn.chatgpt.com/docs/open-source">开源组件</a></div></section>
         </div>

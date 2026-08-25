@@ -71,15 +71,108 @@
             <ul class="hero-outcomes" aria-label="学完本课程你将能够"><li>画出 Session、采样、工具与 Workspace 的调用链</li><li>按症状找到负责状态或副作用的 crate</li><li>用 ACP 更新、检查点与源码验证判断</li></ul>
             <div class="hero-cta"><a class="btn-primary" href="#architecture">从真实任务开始 <span class="arrow" aria-hidden="true">→</span></a><a class="btn-secondary" href="#grok-source-route">先看源码路线</a></div>
           </div>
-          <div class="grok-core" data-reveal data-reveal-delay="120" aria-label="Grok Build 五层运行时">
-            <div><span>01</span><strong>TUI / ACP / Headless</strong><small>呈现与入口</small></div>
-            <div><span>02</span><strong>Shell Session Host</strong><small>编排与事件</small></div>
-            <div><span>03</span><strong>Agent + Sampling</strong><small>提示词与推理</small></div>
-            <div><span>04</span><strong>Tools Registry</strong><small>能力与调用</small></div>
-            <div><span>05</span><strong>Workspace</strong><small>文件、进程与检查点</small></div>
-          </div>
+          <figure class="hero-loop" data-hero-loop data-reveal data-reveal-delay="120">
+            <svg viewBox="0 0 480 360" role="img" aria-labelledby="grok-hero-title grok-hero-desc">
+              <title id="grok-hero-title">Grok Build Actor 运行时循环</title>
+              <desc id="grok-hero-desc">ACP、SessionActor、Sampling、ToolBridge 与 Workspace 检查点构成的 Actor 运行闭环。</desc>
+              <circle class="ring" cx="240" cy="180" r="128" />
+              <g class="hnode"><circle cx="240" cy="48" r="38"/><text x="240" y="44" text-anchor="middle">入口</text><text class="hno" x="240" y="61" text-anchor="middle">ACP</text></g>
+              <g class="hnode"><circle cx="365" cy="140" r="38"/><text x="365" y="136" text-anchor="middle">会话</text><text class="hno" x="365" y="153" text-anchor="middle">HOST</text></g>
+              <g class="hnode"><circle cx="318" cy="288" r="38"/><text x="318" y="284" text-anchor="middle">采样</text><text class="hno" x="318" y="301" text-anchor="middle">LLM</text></g>
+              <g class="hnode"><circle cx="162" cy="288" r="38"/><text x="162" y="284" text-anchor="middle">能力</text><text class="hno" x="162" y="301" text-anchor="middle">TOOL</text></g>
+              <g class="hnode"><circle cx="115" cy="140" r="38"/><text x="115" y="136" text-anchor="middle">空间</text><text class="hno" x="115" y="153" text-anchor="middle">VCS</text></g>
+              <circle class="packet" cx="240" cy="52" r="5">
+                <animateTransform attributeName="transform" type="rotate" from="0 240 180" to="360 240 180" dur="7s" repeatCount="indefinite" />
+              </circle>
+            </svg>
+            <figcaption>
+              <span>grok_actor / runtime map</span>
+              <button class="pause-btn" type="button" data-loop-pause aria-pressed="false">⏸ 暂停</button>
+            </figcaption>
+          </figure>
         </div>
         <div class="hero-meta label-mono" aria-label="课程范围"><span>SOURCE SNAPSHOT · 07b2f71</span><span>12 章 · 10 个实验</span><span>找拥有层 → 看事件 → 做最小验证</span></div>
+
+        <section class="lesson-brief" id="kernel-atlas" data-reveal>
+          <span class="label-mono">KERNEL ATLAS · 4-AGENT PANORAMIC SYNTHESIS</span>
+          <h3>四大主流开源 Agent 全景架构对比与技术选型指南</h3>
+          <p>横向打通 Codex (`codex-rs`)、Grok Build (`xai-org/grok-build`)、DeepSeek Harness (`deepseek-harness`) 与 Pi Agent (`pi-mono`) 六大核心维度。选型结论是基于本地源码快照的教学归纳，不代表各上游项目的官方定位。</p>
+
+          <div class="environment-matrix">
+            <div class="matrix-head"><strong>对比维度</strong><span>四大主流 Agent 架构实现与技术取舍</span><code>核心特征</code></div>
+            <div>
+              <strong>1. 会话与状态模型</strong>
+              <span><strong>Codex</strong>: Thread / Turn / Item 三层层级容器，状态由内存 Actor + 外部存储双重建模。<br>
+              <strong>Grok Build</strong>: Tokio LocalSet 独立线程 Actor（`SessionActor` + `ChatStateActor`），追加持久化到 `updates.jsonl`。<br>
+              <strong>DeepSeek</strong>: 纯追加型不可变 Session Log，由 `SurfaceManager` 实时投影出当前模型可见历史。<br>
+              <strong>Pi Agent</strong>: 追加型 JSONL Session 树（`id` / `parentId`），通过移动叶节点指针实现非破坏性分支与回退。</span>
+              <code>State vs Tree</code>
+            </div>
+            <div>
+              <strong>2. 通信协议与交互</strong>
+              <span><strong>Codex</strong>: App Server 双向 JSON-RPC 协议，规范化 Request 与 started / delta / completed 通知。<br>
+              <strong>Grok Build</strong>: 采用 Agent Client Protocol (ACP) 标准协议，扩展 XAI 专有事件（`rewind`, `compaction`）。<br>
+              <strong>DeepSeek</strong>: 面向自动化与工具管线的 JSON-RPC stdio / NDJSON 协议，流式提交 committed assistant 消息。<br>
+              <strong>Pi Agent</strong>: LF-only JSONL Coding-Agent RPC 与 4 字节大端前缀 + 定长 CBOR 独立 Server Protocol 双协议面。</span>
+              <code>JSON-RPC / ACP / CBOR</code>
+            </div>
+            <div>
+              <strong>3. 沙箱与权限控制</strong>
+              <span><strong>Codex</strong>: `SandboxPolicy` (`ro`/`ww`/`dfa`) × `ApprovalPolicy` (`untrusted`/`on-request`/`never`) 正交二维决策矩阵。<br>
+              <strong>Grok Build</strong>: `PermissionManager` (4种模式) × `SandboxProfile` (`workspace`/`read-only`/`strict`/`devbox`)，分层合并。<br>
+              <strong>DeepSeek</strong>: 3 种文件效果模式 (`ro`/`ww`/`dfa`) × 独立审批通道，不可用时强制 fail-closed。<br>
+              <strong>Pi Agent</strong>: 默认采用宿主进程全量权限；`Project Trust` 控制配置加载，真正安全隔离依托外部 Docker/VM。</span>
+              <code>Sandbox × Approval</code>
+            </div>
+            <div>
+              <strong>4. 上下文工程与压缩</strong>
+              <span><strong>Codex</strong>: 达到预算阈值触发 CompactionSummary 折叠，保留关键目标与 Diff 事实。<br>
+              <strong>Grok Build</strong>: 85% 上下文压力触发全量替换压缩，专用 Sampler 生成摘要并记录 `CompactionCheckpoint`。<br>
+              <strong>DeepSeek</strong>: `compaction/start` 耐久锁机制，在稳定日志区间生成摘要并通过 Surface Replacement 原子替换。<br>
+              <strong>Pi Agent</strong>: `firstKeptEntryId` 动态截断点选择，后向搜索绝不切断 toolResult，单回合支持超长前缀摘要。</span>
+              <code>Compaction & Summary</code>
+            </div>
+            <div>
+              <strong>5. 执行世界抽象</strong>
+              <span><strong>Codex</strong>: Local / Git Worktree / Cloud 容器 / 远程宿主多环境适配。<br>
+              <strong>Grok Build</strong>: `WorkspaceSession` 统一封装 FS、PTY、ProcessManager、VCS 与检查点，解耦上层调用。<br>
+              <strong>DeepSeek</strong>: 严格三元解耦（Service Definition / Provider / Consumer），支持 Local、Sandbox 与 E2B 云沙箱热插拔。<br>
+              <strong>Pi Agent</strong>: 原生 Node.js 宿主接口，支持 Gondolin 微虚拟机路由与 OpenShell 容器化封装。</span>
+              <code>Workspace Seam</code>
+            </div>
+            <div>
+              <strong>6. 扩展体系与生态</strong>
+              <span><strong>Codex</strong>: 定制六边形（AGENTS.md、Memories、Skills、MCP、Hooks、Subagents）。<br>
+              <strong>Grok Build</strong>: 规则文件、Skills、MCP 服务、Plugins 分发包、生命周期 Hooks 与跨会话 Memory。<br>
+              <strong>DeepSeek</strong>: Cordis 插件树、Profile 继承、Agent Presets 作用域与 Dynamic Cordis 内存自修改运行时。<br>
+              <strong>Pi Agent</strong>: Jiti 动态加载 TypeScript 模块（`ExtensionAPI`）、ResourceLoader 与统一 Provider 适配器。</span>
+              <code>Extension Hexagon</code>
+            </div>
+          </div>
+
+          <div class="custom-stack">
+            <div>
+              <span class="custom-key">CODEX 适用</span>
+              <strong>企业级多端与富客户端集成</strong>
+              <p>需要严密 App Server 双向协议、细粒度正交权限矩阵与 Thread/Turn/Item 完整生命周期的生产级开发平台。</p>
+            </div>
+            <div>
+              <span class="custom-key">GROK 适用</span>
+              <strong>高性能 Rust 终端与深度版本控制</strong>
+              <p>追求极致终端响应速度、全屏 TUI 交互、ACP 标准支持以及原子级 Git Workspace Checkpoint / Rewind 恢复能力。</p>
+            </div>
+            <div>
+              <span class="custom-key">DEEPSEEK 适用</span>
+              <strong>极致插件化与执行环境热插拔</strong>
+              <p>追求“Everything is a Plugin”架构，需通过 Cordis IoC 容器无缝切换本地执行、E2B 云沙箱与自修改运行时的场景。</p>
+            </div>
+            <div>
+              <span class="custom-key">PI AGENT 适用</span>
+              <strong>轻量嵌入式与非线性分支探索</strong>
+              <p>需要极简轻量 TypeScript 内核、非破坏性 JSONL 树形分支探索（`/tree`）与 CSI 2026 同步差分渲染的应用。</p>
+            </div>
+          </div>
+        </section>
       </section>
 
       <section class="chapter shell" id="architecture" data-spy>
@@ -122,6 +215,102 @@
         <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 05 · WORKSPACE</span><h2>Workspace 才是副作用的拥有者。</h2><p class="lede">Shell 不直接假装自己执行了命令。Workspace 封装文件、终端、VCS、MCP、工作树、权限和会话上下文，使本地与远程执行共享工具契约。</p></header>
         <div class="custom-stack" data-reveal><div><strong>Handle / Hub</strong><p>工具调用必须带已绑定的 Session，才进入该会话的 FinalizedToolset。</p></div><div><strong>Filesystem / VCS</strong><p>读取、编辑、状态、diff、worktree 与文件快照。</p></div><div><strong>Process Manager</strong><p>前台命令、长任务、日志、BackgroundHandle 与取消。</p></div><div><strong>Checkpoint</strong><p>按 prompt index 记录 FS 与可选 hunk/git 状态；rewind 按顺序恢复。</p></div></div>
         <div class="machine" id="grok-workspace" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>副作用路由台</strong></span><span class="label-mono">LOCAL / REMOTE READY</span></div><div class="machine-body pmap-layout"><div class="layer-stack" data-layers><button class="layer-row" type="button" data-key="file"><span>编辑文件</span><span class="label-mono">FS</span></button><button class="layer-row" type="button" data-key="command"><span>运行测试</span><span class="label-mono">PTY</span></button><button class="layer-row" type="button" data-key="background"><span>后台服务</span><span class="label-mono">TASK</span></button><button class="layer-row" type="button" data-key="rewind"><span>回退修改</span><span class="label-mono">CHECKPOINT</span></button></div><div class="pmap-detail" data-detail><span class="label-mono">ROUTE</span><h4>选择一种副作用</h4><p>观察它经过的 Workspace 组件与可恢复证据。</p></div></div></div>
+
+        <article class="lesson-brief" id="grok-vcs-code" data-reveal>
+          <span class="label-mono">SOURCE-ALIGNED TEACHING SKELETON · RUST WORKSPACE VCS</span>
+          <h3>VCS Checkpoint 检查点捕获与原子回滚算法 (`WorkspaceSession`)</h3>
+          <p>下面是根据 `xai-grok-workspace`、hunk tracker 与 rewind checkpoint 数据结构整理的教学骨架，不是上游源码复制，也不承诺可独立编译；真实恢复还包含持久化、路径校验、hunk/git 状态与失败处理。</p>
+
+          <div class="stream-log elog" style="max-height: 480px; overflow-y: auto; padding: 16px; border-radius: var(--r-control); background: var(--surface-console); border: 1px solid var(--line-on-console);">
+<span class="k-sys">// crates/codegen/xai-grok-workspace/src/session/mod.rs</span>
+<span class="k-user">use</span> std::collections::HashMap;
+<span class="k-user">use</span> std::path::{Path, PathBuf};
+
+<span class="k-sys">/// 文件修改前快照</span>
+#[derive(Clone, Debug)]
+<span class="k-user">pub struct</span> <span class="k-model">FileSnapshot</span> {
+    <span class="k-user">pub</span> path: PathBuf,
+    <span class="k-user">pub</span> original_content: Option&lt;String&gt;,
+    <span class="k-user">pub</span> git_head_sha: Option&lt;String&gt;,
+}
+
+<span class="k-sys">/// 绑定到特定 Prompt 索引的压缩/回滚检查点</span>
+#[derive(Clone, Debug)]
+<span class="k-user">pub struct</span> <span class="k-model">CompactionCheckpoint</span> {
+    <span class="k-user">pub</span> prompt_index: usize,
+    <span class="k-user">pub</span> update_seq: u64,
+    <span class="k-user">pub</span> snapshots: HashMap&lt;PathBuf, FileSnapshot&gt;,
+}
+
+<span class="k-user">pub struct</span> <span class="k-model">WorkspaceSession</span> {
+    <span class="k-user">pub</span> root_dir: PathBuf,
+    <span class="k-user">pub</span> checkpoints: Vec&lt;CompactionCheckpoint&gt;,
+}
+
+<span class="k-user">impl</span> <span class="k-model">WorkspaceSession</span> {
+    <span class="k-user">pub fn</span> <span class="k-tool">new</span>(root_dir: PathBuf) -&gt; Self {
+        Self { root_dir, checkpoints: Vec::new() }
+    }
+
+    <span class="k-sys">/// 步骤 1: 在执行可能产生破坏性文件修改的工具前捕获 Checkpoint</span>
+    <span class="k-user">pub fn</span> <span class="k-tool">create_checkpoint</span>(
+        &amp;<span class="k-user">mut</span> self,
+        prompt_index: usize,
+        update_seq: u64,
+        touched_paths: &amp;[PathBuf],
+    ) -&gt; std::io::Result&lt;()&gt; {
+        <span class="k-user">let mut</span> snapshots = HashMap::new();
+        <span class="k-user">for</span> path <span class="k-user">in</span> touched_paths {
+            <span class="k-user">let</span> full_path = self.root_dir.join(path);
+            <span class="k-user">let</span> content = <span class="k-user">if</span> full_path.exists() {
+                Some(std::fs::read_to_string(&amp;full_path)?)
+            } <span class="k-user">else</span> {
+                None <span class="k-sys">// 新建文件在回滚时对应删除操作</span>
+            };
+            snapshots.insert(path.clone(), FileSnapshot {
+                path: path.clone(),
+                original_content: content,
+                git_head_sha: None,
+            });
+        }
+        self.checkpoints.push(CompactionCheckpoint { prompt_index, update_seq, snapshots });
+        Ok(())
+    }
+
+    <span class="k-sys">/// 步骤 2: 将工作区文件系统原子回退到指定的 Prompt Checkpoint</span>
+    <span class="k-user">pub fn</span> <span class="k-tool">rewind_to_checkpoint</span>(
+        &amp;<span class="k-user">mut</span> self,
+        target_prompt_index: usize,
+    ) -&gt; std::io::Result&lt;Vec&lt;PathBuf&gt;&gt; {
+        <span class="k-user">let</span> cp_idx = self.checkpoints.iter().position(|cp| cp.prompt_index == target_prompt_index)
+            .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "Checkpoint not found"))?;
+
+        <span class="k-user">let</span> checkpoint = &amp;self.checkpoints[cp_idx];
+        <span class="k-user">let mut</span> restored_files = Vec::new();
+
+        <span class="k-user">for</span> (rel_path, snapshot) <span class="k-user">in</span> &amp;checkpoint.snapshots {
+            <span class="k-user">let</span> full_path = self.root_dir.join(rel_path);
+            <span class="k-user">match</span> &amp;snapshot.original_content {
+                Some(content) =&gt; {
+                    std::fs::write(&amp;full_path, content)?;
+                }
+                None =&gt; {
+                    <span class="k-user">if</span> full_path.exists() {
+                        std::fs::remove_file(&amp;full_path)?;
+                    }
+                }
+            }
+            restored_files.push(rel_path.clone());
+        }
+
+        <span class="k-sys">// 截断目标检查点之后的所有历史检查点</span>
+        self.checkpoints.truncate(cp_idx + 1);
+        Ok(restored_files)
+    }
+}
+          </div>
+          <p class="lesson-result"><strong>架构精要：</strong>Grok 的 `rewind` 绝非简单的丢弃聊天气泡，而是由 `WorkspaceSession` 将文件内容、删除状态与 Git Hunk 实施物理还原，再由 `SessionActor` 向客户端广播 `RewindMarker` 同步刷新视图。</p>
+        </article>
       </section>
 
       <section class="chapter band-deep" id="safety" data-spy><div class="shell">
@@ -162,7 +351,75 @@
       <section class="chapter band-edge" id="practice" data-spy><div class="shell">
         <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 12 · PRACTICE & INTERVIEW</span><h2>用“边界、事件、证据”回答系统设计题。</h2><p class="lede">真正掌握 Grok Build，不是记住 crate 名，而是能从症状定位拥有层、从事件重建状态、从安全边界解释为什么某次行动被允许或拒绝。</p></header>
         <div class="spread"><article class="prose" data-reveal><h3>五步诊断法</h3><p>先复现并标记 Session/turn 边界；再判断是入口、Shell、Agent、Tool 还是 Workspace；沿 ACP/XAI update 与 ToolNotification 找最后一个可靠事实；核对权限、沙箱与取消状态；最后用最小测试锁住 owning layer。</p><div class="decision"><span class="label-mono">SOURCE BOUNDARY · 2026-08-23</span><p>本课基于本地 `grok-build` 开源快照及其随仓用户指南。协议、模型目录、默认配置和实验性模块会变化；具体部署应以当前 `SOURCE_REV`、源码与官方文档为准。</p></div></article><ol class="kp-list" data-reveal><li data-no="01"><span>谁拥有状态？Session 还是 UI？</span></li><li data-no="02"><span>谁拥有副作用？Tool 还是 Workspace？</span></li><li data-no="03"><span>哪个事件证明动作已经发生？</span></li><li data-no="04"><span>恢复靠 replay、checkpoint 还是重新推理？</span></li><li data-no="05"><span>安全由 permission、sandbox 还是 org policy 控制？</span></li></ol></div>
-        <div class="interview" data-reveal><span class="label-mono">INTERVIEW LENS</span><h4>“如何设计一个支持 TUI、IDE 与 CI 的 Agent 运行时？”</h4><div class="qa"><details><summary>展开答题骨架</summary><div class="ans">把 Session host 与客户端呈现解耦，用事件协议承载消息、工具与状态；Agent 对象封装模型、提示词和能力，Workspace 统一真实副作用；加入取消、权限、沙箱、持久化、压缩和 checkpoint。TUI、ACP 与 headless 只适配输入输出，不复制内核状态。</div></details></div></div>
+
+        <div class="interview" data-reveal>
+          <span class="label-mono">PROBLEM SET 01 · 架构设计题</span>
+          <h4>“如何设计支持全屏 TUI、IDE 插件与自动化 CI 共享的 Grok Rust Agent 运行时？”</h4>
+          <div class="qa">
+            <details>
+              <summary>展开答题骨架与深度推演</summary>
+              <div class="ans">
+                <p><strong>【场景定义】</strong> 构建一套高性能企业级 Agent 运行时，要求既能在终端提供 60fps 全屏交互式 TUI，又能作为子进程服务于 VSCode/Cursor 等现代编辑器（通过 ACP 协议），还能在 CI 环境下执行无人值守的 headless 批处理重构脚本。</p>
+                <p><strong>【归属层/故障机理分析】</strong> 属于 Rust 架构分层（`Chapter 01: Rust Architecture`）与运行表面解耦层（`Chapter 11: Execution Surfaces`）。核心机理在于将会话状态、事件驱动与交互呈现彻底解耦：`SessionActor` 运行于独立的 Tokio LocalSet 线程维持纯粹状态机，`WorkspaceSession` 封装全部真实世界副作用，上层各 Surface 仅作为输入适配器与 `SessionUpdate` 事件消费者。</p>
+                <p><strong>【关键证据链/判定条件】</strong>
+                  <br>1. <em>TUI 模式</em>：`xai-grok-pager` 订阅 `SessionUpdate` 流并驱动局部差分终端重绘，UI 崩溃不影响会话。
+                  <br>2. <em>IDE 模式</em>：`xai-grok-shell` 暴露标准 ACP stdio 传输层，双向收发 `PromptRequest` 与 `SessionUpdate`。
+                  <br>3. <em>CI 模式</em>：`grok -p` 以 Headless 模式运行，配置非交互式授权（如 `acceptEdits` 或受限 `dontAsk`），完成时直接输出结构化 NDJSON。
+                </p>
+                <p><strong>【解决方案与系统级防线】</strong>
+                  <br>• 严格遵循单一事实源原则：UI 呈现层严禁维护任何会话业务状态，所有变更均通过规范化事件总线广播。
+                  <br>• `WorkspaceSession` 封装底层文件读写、PTY 命令与 VCS 快照，保证无论从哪个表面触发，底层副作用与恢复语义严格一致。
+                </p>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <div class="interview" data-reveal>
+          <span class="label-mono">PROBLEM SET 02 · 故障排查题</span>
+          <h4>“自动上下文压缩（Auto-Compaction）后，Agent 为什么丢失了先前的代码修改记忆并出现重复修改？”</h4>
+          <div class="qa">
+            <details>
+              <summary>展开答题骨架与排查路径</summary>
+              <div class="ans">
+                <p><strong>【场景定义】</strong> 在长时间的多轮代码重构任务中，会话达到 85% 上下文阈值触发自动压缩，随后 Agent 开始重复修改已经修复过的文件，甚至否定之前的架构设计决策。</p>
+                <p><strong>【归属层/故障机理分析】</strong> 属于上下文压缩机制（`Chapter 08: Context & Compaction`）与会话持久化层（`Chapter 07: Session State`）。故障机理为：专用 Sampler 在生成摘要 Prompt 时未强制提取 `Workspace.diff_summary` 与已修改文件清单，且 `ChatStateActor` 在全量替换历史时将包含关键事实的 `ToolResult` 彻底丢弃，导致代码不变量事实断裂。</p>
+                <p><strong>【关键证据链/判定条件】</strong>
+                  <br>1. 查阅 `updates.jsonl`：定位 `CompactionCheckpoint` 事件及其包含的摘要文本。
+                  <br>2. 检查摘要生成 Prompt：确认是否遗漏了 `Workspace.diff_summary` 与已修改文件列表。
+                  <br>3. 检查后续采样的 `conversation` 消息：确认是否仅包含模糊的语义泛化描述而丢失了精确的文件路径与修改哈希。
+                </p>
+                <p><strong>【解决方案与系统级防线】</strong>
+                  <br>• 压缩摘要生成器必须强制包含 `Modified Files & Invariants` 结构化必填段落，将文件状态固化为显式上下文。
+                  <br>• 引入两阶段增量压缩机制，在替换会话前与 `WorkspaceSession` 当前文件真实状态进行对齐校验。
+                </p>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <div class="interview" data-reveal>
+          <span class="label-mono">PROBLEM SET 03 · 安全攻防题</span>
+          <h4>“在 `--yolo`（全自动审批）模式下，如何防止恶意或越权脚本破坏开发宿主机？”</h4>
+          <div class="qa">
+            <details>
+              <summary>展开答题骨架与防御体系</summary>
+              <div class="ans">
+                <p><strong>【场景定义】</strong> 开发者在本地开启全自动批准模式执行批量任务，模型生成的构建脚本中意外包含了恶意命令（如 `rm -rf /` 或覆写系统 `.bashrc` / `.ssh` 目录）。</p>
+                <p><strong>【归属层/故障机理分析】</strong> 属于权限与沙箱边界层（`Chapter 06: Permissions & Sandbox`）。核心认知：<strong>`--yolo` / `dontAsk` 仅改变 `PermissionManager` 的交互询问策略，绝不等于关闭底层操作系统 Sandbox</strong>。</p>
+                <p><strong>【关键证据链/判定条件】</strong>
+                  <br>1. 权限流转：`PermissionManager` 在 `dontAsk` 或自动放行模式下跳过交互弹窗。
+                  <br>2. 底层沙箱拦截：观察 `SandboxProfile`（如 `workspace` 或 `strict`）。底层沙箱依然拦截跨根目录的 `unlinkat` / `rename` 系统调用并返回 `EPERM`。
+                  <br>3. 恢复点验证：检查在破坏性命令执行前是否触发了 `WorkspaceSession.create_checkpoint`。
+                </p>
+                <p><strong>【解决方案与系统级防线】</strong>
+                  <br>• 在 `WorkspaceSession` 建立双重断路器：上层策略放行后，底层依然执行基于 OS 命名空间/特权级的路径约束。
+                  <br>• 关键文件修改前自动捕获 VCS Checkpoint，支持通过 `RewindMarker` 一键无损回滚工作区文件与会话状态。
+                </p>
+              </div>
+            </details>
+          </div>
+        </div>
         <dl class="gloss" data-reveal><div><dt>ACP</dt><dd>Agent Client Protocol，编辑器与 Agent 之间的会话协议。</dd></div><div><dt>SessionUpdate</dt><dd>消息、工具与会话信息的流式事实。</dd></div><div><dt>ToolBridge</dt><dd>把模型侧调用接到注册表与执行层的桥。</dd></div><div><dt>Checkpoint</dt><dd>可恢复的工作区与会话边界。</dd></div><div><dt>Compaction</dt><dd>把长历史重写成可继续工作的紧凑状态。</dd></div><div><dt>AgentBuilder</dt><dd>把定义、提示词、工具和策略组装成 Agent。</dd></div></dl>
         <section class="source-notes" aria-labelledby="grok-sources" data-reveal><span class="label-mono">PRIMARY SOURCES</span><h3 id="grok-sources">继续查证</h3><p>课程事实来自 Grok Build 开源仓库中的 README、用户指南与 Rust 源码。</p><div><a href="https://docs.x.ai/build/overview">Grok Build 官方文档</a><a href="https://github.com/xai-org/grok-build">开源仓库</a><a href="https://agentclientprotocol.com/">Agent Client Protocol</a></div></section>
       </div></section>

@@ -69,6 +69,44 @@
 .pi-lanes span { color: var(--accent); font-family: var(--ff-mono); font-size: .66rem; }
 .pi-lanes strong { font-family: var(--ff-mono); font-size: clamp(.75rem, 1.4vw, .9rem); }
 .pi-page .loop-layout { grid-template-columns: minmax(180px, .8fr) minmax(180px, .65fr) minmax(230px, 1fr); }
+
+.pi-page .pi-cut-strip { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.pi-page .pi-chip {
+  padding: 3px 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-pill);
+  background: var(--canvas);
+  color: var(--text-2);
+  font-family: var(--ff-mono);
+  font-size: .66rem;
+}
+.pi-page .pi-chip.is-user { border-color: var(--line-strong); color: var(--text); }
+.pi-page .pi-chip.is-assistant { border-color: var(--accent-line); }
+.pi-page .pi-chip.is-tool { border-color: var(--accent-line); }
+.pi-page .pi-chip.is-cut { text-decoration: line-through; opacity: .45; }
+.pi-page .pi-chip.is-summary { border-color: var(--accent); color: var(--accent-vivid); }
+
+.pi-page .pi-tui-panels { display: grid; align-content: start; gap: 10px; min-width: 0; }
+.pi-page .pi-term {
+  display: block;
+  padding: 10px 12px;
+  border: 1px solid var(--line-on-console);
+  border-radius: var(--r-control);
+  background: var(--surface-console);
+  color: var(--text-on-console);
+  font-family: var(--ff-mono);
+  font-size: .72rem;
+  line-height: 1.7;
+}
+.pi-page .pi-term .pi-row {
+  display: block;
+  padding: 1px 6px;
+  border-inline-start: 2px solid transparent;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.pi-page .pi-term .pi-row .t { margin-inline-end: 8px; color: var(--text-on-console-mute); }
+.pi-page .pi-term .pi-row.is-changed { border-inline-start-color: var(--accent); background: var(--accent-wash); }
 .pi-page .m-steps { grid-template-columns: 1fr; }
 .pi-page .state-counters { grid-template-columns: repeat(3, 1fr); }
 .pi-page .surface-detail { grid-template-columns: repeat(2, minmax(0, 1fr)); }

@@ -43,6 +43,30 @@ const courses: AgentCourse[] = [
     description: "Agent Loop、统一 LLM、Session Tree 与扩展运行时",
     chapters: 12,
   },
+  {
+    id: "opencode",
+    name: "OpenCode",
+    path: "/opencode",
+    code: "OPENCODE / BUN",
+    description: "服务器即内核：事件投影、审批与子代理",
+    chapters: 12,
+  },
+  {
+    id: "openclaw",
+    name: "OpenClaw",
+    path: "/openclaw",
+    code: "OPENCLAW / TYPESCRIPT",
+    description: "有界 run 预算、持久状态与记忆唤醒",
+    chapters: 12,
+  },
+  {
+    id: "hermes",
+    name: "Hermes Agent",
+    path: "/hermes",
+    code: "HERMES / PYTHON",
+    description: "自演化学习闭环、窄腰工具与六面同核",
+    chapters: 12,
+  },
 ];
 
 function courseItems(currentId: string): string {

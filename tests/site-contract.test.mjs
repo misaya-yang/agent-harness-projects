@@ -4,7 +4,7 @@ import path from "node:path";
 import { describe, it } from "node:test";
 
 const root = path.resolve(import.meta.dirname, "..");
-const pages = ["index.html", "grok.html", "deepseek.html", "pi.html"];
+const pages = ["index.html", "grok.html", "deepseek.html", "pi.html", "opencode.html", "openclaw.html", "hermes.html"];
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 
 describe("published course contract", () => {
@@ -19,6 +19,15 @@ describe("published course contract", () => {
       assert.doesNotMatch(html, /<button(?![^>]*\btype="button")/);
     });
   }
+
+  it("aliases every course route in the production worker", () => {
+    const source = read("scripts/embed-worker.mjs");
+    const expected = ["/", "/codex", ...pages.filter((p) => p !== "index.html").map((p) => `/${p.replace(/\.html$/, "")}`)];
+    for (const alias of expected) {
+      const target = alias === "/" || alias === "/codex" ? "/index.html" : `${alias}.html`;
+      assert.match(source, new RegExp(`"${alias}": "${target}"`), `missing production route alias ${alias}`);
+    }
+  });
 
   it("labels authored walkthroughs as teaching skeletons", () => {
     const html = pages.map(read).join("\n");
@@ -35,7 +44,7 @@ describe("published course contract", () => {
   });
 
   it("keeps the no-JS document and enables the shared reader once", () => {
-    const entries = ["src/main.ts", "src/grok.ts", "src/deepseek.ts", "src/pi.ts"].map(read);
+    const entries = ["src/main.ts", "src/grok.ts", "src/deepseek.ts", "src/pi.ts", "src/opencode.ts", "src/openclaw.ts", "src/hermes.ts"].map(read);
     entries.forEach((source) => {
       assert.equal((source.match(/initChapterReader\(\)/g) ?? []).length, 1);
       assert.doesNotMatch(source, /initSpy/);

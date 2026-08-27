@@ -18,6 +18,9 @@ export default defineConfig({
         grok: "grok.html",
         deepseek: "deepseek.html",
         pi: "pi.html",
+        opencode: "opencode.html",
+        openclaw: "openclaw.html",
+        hermes: "hermes.html",
         "server/index": "src/worker.js",
       },
       output: {

@@ -1,0 +1,283 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="从学习闭环、缓存宪法到七执行后端与消息网关，交互式拆解 Hermes Agent 内核，并对照 OpenClaw 两代谱系。" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Hermes Agent 内核图谱 · 顶级 Agent 教学系列" />
+    <meta property="og:description" content="沿着 conversation loop、Footprint Ladder、SessionDB 血统链与 session key，读懂单体 Python 写成的自演化个人助理内核。" />
+    <meta property="og:url" content="https://codex-kernel-atlas.lvy-u.chatgpt.site/hermes" />
+    <link rel="canonical" href="https://codex-kernel-atlas.lvy-u.chatgpt.site/hermes" />
+    <meta name="twitter:card" content="summary" />
+    <title>Hermes Agent 内核图谱 · 顶级 Agent 教学系列</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=Noto+Sans+SC:wght@400;500;700&amp;family=Noto+Serif+SC:wght@700;900&amp;display=swap" rel="stylesheet" />
+    <link href="/src/styles/tokens.css" rel="stylesheet" />
+    <script>
+      document.documentElement.classList.add("js");
+      try { const t = localStorage.getItem("codex-atlas-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch {}
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) document.documentElement.classList.add("rm");
+    </script>
+  </head>
+  <body class="hermes-page" data-agent="hermes">
+    <a class="skip-link" href="#main">跳到正文</a>
+    <div class="progress-line" aria-hidden="true"></div>
+    <header class="topbar">
+      <a class="brand" href="#top"><span class="brand-long">Hermes Agent</span><span class="brand-short">HMS</span> 内核图谱 <span class="label-mono">FIELD GUIDE</span></a>
+      <div class="topbar-actions"><div data-series-nav data-variant="top"><a class="series-fallback" href="/codex">Agent 系列</a></div><button class="theme-btn" type="button" data-theme-toggle aria-label="切换到深色模式"><span aria-hidden="true" data-theme-icon>◐</span><span data-theme-label>深色模式</span></button><button class="menu-btn" type="button" data-menu-btn aria-expanded="false" aria-controls="chapter-nav">章节</button></div>
+    </header>
+    <nav class="chapter-nav" id="chapter-nav" data-menu-panel hidden aria-label="课程章节">
+      <a href="#top" data-spy-link><span class="no">00</span>课程入口</a>
+      <a href="#loop" data-spy-link><span class="no">01</span>执行循环</a>
+      <a href="#transports" data-spy-link><span class="no">02</span>模型传输</a>
+      <a href="#tools" data-spy-link><span class="no">03</span>窄腰工具</a>
+      <a href="#environments" data-spy-link><span class="no">04</span>七个执行后端</a>
+      <a href="#state" data-spy-link><span class="no">05</span>状态与会话</a>
+      <a href="#learning" data-spy-link><span class="no">06</span>学习闭环</a>
+      <a href="#skills" data-spy-link><span class="no">07</span>技能生态</a>
+      <a href="#compaction" data-spy-link><span class="no">08</span>压缩与缓存宪法</a>
+      <a href="#gateway" data-spy-link><span class="no">09</span>消息网关</a>
+      <a href="#cron" data-spy-link><span class="no">10</span>定时与自动化</a>
+      <a href="#surfaces" data-spy-link><span class="no">11</span>多表面与委托</a>
+      <a href="#practice" data-spy-link><span class="no">12</span>实践与面试</a>
+    </nav>
+    <aside class="rail" aria-label="课程章节">
+      <a class="brand" href="#top">Hermes Agent 图谱</a>
+      <a href="#top" data-spy-link><span class="no">00</span>课程入口</a>
+      <a href="#loop" data-spy-link><span class="no">01</span>执行循环</a>
+      <a href="#transports" data-spy-link><span class="no">02</span>模型传输</a>
+      <a href="#tools" data-spy-link><span class="no">03</span>窄腰工具</a>
+      <a href="#environments" data-spy-link><span class="no">04</span>七个执行后端</a>
+      <a href="#state" data-spy-link><span class="no">05</span>状态与会话</a>
+      <a href="#learning" data-spy-link><span class="no">06</span>学习闭环</a>
+      <a href="#skills" data-spy-link><span class="no">07</span>技能生态</a>
+      <a href="#compaction" data-spy-link><span class="no">08</span>压缩与缓存宪法</a>
+      <a href="#gateway" data-spy-link><span class="no">09</span>消息网关</a>
+      <a href="#cron" data-spy-link><span class="no">10</span>定时与自动化</a>
+      <a href="#surfaces" data-spy-link><span class="no">11</span>多表面与委托</a>
+      <a href="#practice" data-spy-link><span class="no">12</span>实践与面试</a>
+      <button class="theme-btn rail-theme" type="button" data-theme-toggle aria-label="切换到深色模式"><span aria-hidden="true" data-theme-icon>◐</span><span data-theme-label>深色模式</span></button>
+    </aside>
+    <main id="main">
+      <div data-series-nav data-variant="tabs"><nav class="course-tabs" aria-label="选择 Agent 课程"><a href="/codex">Codex</a><a href="/grok">Grok Build</a><a href="/deepseek">DeepSeek Harness</a><a href="/pi">Pi Agent</a><a href="/opencode">OpenCode</a><a href="/openclaw">OpenClaw</a><a href="/hermes" aria-current="page">Hermes Agent</a></nav></div>
+      <section class="hero shell" id="top" data-spy>
+        <div class="hero-grid">
+          <div data-reveal>
+            <p class="eyebrow label-mono">SELF-IMPROVING AGENT · PYTHON MONOLITH · TWO-GENE LINEAGE</p>
+            <h1>看懂一个 43 万字符的 Python 类，如何<span class="alt">边跑任务，边把自己写得更好。</span></h1>
+            <p class="sub">跟踪一个回合的完整生命周期：两条宪法（prompt 缓存神圣 + 核心窄腰）压住同步主循环，回合尾的 nudge fork 出后台 review agent 写回记忆与技能；同一个内核同时驱动 CLI、23+ 平台消息网关、TUI、Zed ACP、MCP server 与 Electron 桌面六面——并且与 OpenClaw 互为两代，共享 SOUL.md / MEMORY.md / SKILL.md 文件族谱系（<code>§</code> 记忆条目是 Hermes 侧约定，见第 07 章）。</p>
+            <ul class="hero-outcomes" aria-label="学完本课程你将能够"><li>沿 agent/conversation_loop.py 的 while 指出一个回合在哪一行终止</li><li>用五步诊断法排查缓存破裂、工具消失、血统超链与定时失火</li><li>解释 SOUL.md / MEMORY.md / SKILL.md 为何是两代产品的共同血统协议</li></ul>
+            <div class="hero-cta"><a class="btn-primary" href="#loop">从执行循环开始 <span class="arrow" aria-hidden="true">→</span></a><a class="btn-secondary" href="#hm-source-route">先看源码路线</a></div>
+          </div>
+          <figure class="hero-loop" data-hero-loop data-reveal data-reveal-delay="120">
+            <svg viewBox="0 0 480 360" role="img" aria-labelledby="hm-hero-title hm-hero-desc">
+              <title id="hm-hero-title">Hermes 学习闭环签名图</title>
+              <desc id="hm-hero-desc">对话执行、回合计数、后台自省、蒸馏写入与下轮注入构成的五节点闭环。</desc>
+              <circle class="ring" cx="240" cy="180" r="128" />
+              <g class="hnode"><circle cx="240" cy="48" r="38"/><text x="240" y="44" text-anchor="middle">对话执行</text><text class="hno" x="240" y="61" text-anchor="middle">EXEC</text></g>
+              <g class="hnode"><circle cx="365" cy="140" r="38"/><text x="365" y="136" text-anchor="middle">回合计数</text><text class="hno" x="365" y="153" text-anchor="middle">NUDGE</text></g>
+              <g class="hnode"><circle cx="318" cy="288" r="38"/><text x="318" y="284" text-anchor="middle">后台自省</text><text class="hno" x="318" y="301" text-anchor="middle">REVIEW</text></g>
+              <g class="hnode"><circle cx="162" cy="288" r="38"/><text x="162" y="284" text-anchor="middle">蒸馏写入</text><text class="hno" x="162" y="301" text-anchor="middle">WRITE</text></g>
+              <g class="hnode"><circle cx="115" cy="140" r="38"/><text x="115" y="136" text-anchor="middle">下轮注入</text><text class="hno" x="115" y="153" text-anchor="middle">INJECT</text></g>
+              <circle class="packet" cx="240" cy="52" r="5">
+                <animateTransform attributeName="transform" type="rotate" from="0 240 180" to="360 240 180" dur="7s" repeatCount="indefinite" />
+              </circle>
+            </svg>
+            <figcaption>
+              <span>learning loop · closed by design</span>
+              <button class="pause-btn" type="button" data-loop-pause aria-pressed="false">⏸ 暂停</button>
+            </figcaption>
+          </figure>
+        </div>
+        <div class="hero-meta label-mono" aria-label="课程范围"><span>SOURCE SNAPSHOT · a0ca7c1</span><span>12 章 · 09 个实验</span><span>读宪法 → 追循环 → 比两代</span></div>
+      </section>
+
+      <section class="chapter shell" id="loop" data-spy>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 01 · CONVERSATION LOOP</span><h2>回合终止的唯一正常条件是“模型不再请求工具”——预算、中断、重试都只是异常出口。</h2><p class="lede">从 <code>run_agent.py:8546</code> 的转发器出发，进入 <code>agent/conversation_loop.py:1822</code> 的真实 while 循环，看清一个完全同步的内核如何用 daemon 工作线程假装异步。中断语义分三级：interrupt 只掐当前请求、redirect 改写本回合、steer 注入下一个安全边界——三者都保留角色交替，不破坏缓存前缀。</p></header>
+        <article class="lesson-brief" id="hm-source-route" data-reveal>
+          <span class="label-mono">SOURCE ROUTE · HERMES AGENT a0ca7c1</span><h3>先读四个入口，再操作下面的循环步进机。</h3><p>四处源码分别回答“宪法写了什么、内核是什么形状、循环在哪行终止、命令怎样路由到六个表面”。身份卡：<strong>v0.20.5 · MIT · Python</strong>（pyproject.toml:5/:17）；直接依赖全部精确 pin 到 <code>==X.Y.Z</code>——注释自述这是对 Mini Shai-Hulud 供应链 worm 的收紧（:20-27）。</p>
+          <ol class="source-route">
+            <li><span><code>AGENTS.md</code>（95KB 仓库根）“What Hermes Is” + “Footprint Ladder”：:24 narrow waist、:71 六级阶梯。</span></li>
+            <li><span><code>run_agent.py</code><strong>class AIAgent</strong> :421；<strong>run_conversation</strong> :8546；console script <code>hermes-agent = "run_agent:main"</code>。</span></li>
+            <li><span><code>agent/conversation_loop.py</code><strong>run_conversation</strong> :1822；while :2017；final-response 分支 :7667。</span></li>
+            <li><span><code>hermes_cli/main.py</code><strong>main()</strong> :12650；45 个 subcommands/*.py；chat 延迟 import <code>from cli import main</code> :3235。</span></li>
+          </ol>
+          <p class="lesson-result"><strong>学完本章你能：</strong>在事件流里指出“缓存前缀恢复 → 压缩 preflight → API 工作线程 → 工具批 → 结果回注 → finalize_turn”的真实顺序，并说出每步的源码位置。</p>
+        </article>
+        <div class="custom-stack" data-reveal><div><span class="custom-key">WAIST</span><strong>同步内核</strong><p>核心循环完全同步，异步只存在于网关外围；API 调用在 daemon 线程，主线程 <code>t.join(timeout=0.3)</code> 轮询中断标志（chat_completion_helpers.py:5105-5107）。</p></div><div><span class="custom-key">BUDGET</span><strong>IterationBudget</strong><p><code>max_iterations</code> 默认 <code>sys.maxsize</code>（run_agent.py:455），真实约束是 agent/iteration_budget.py 的预算对象；预算耗尽走 <code>budget_exhausted</code>（:2064）异常出口。</p></div><div><span class="custom-key">REDIRECT</span><strong>interrupt-and-redirect</strong><p><code>AIAgent.redirect</code>（run_agent.py:3542）只掐当前请求，下一迭代注入真实 user 修正消息（conversation_loop.py:373）；不打断的 <code>steer()</code> 在 :3506。</p></div></div>
+        <div class="machine" id="hm-loop" data-reveal><div class="machine-bar"><span class="title"><span class="led" data-led></span><strong>回合生命周期步进机</strong></span><span class="label-mono" data-phase>idle</span></div><div class="machine-body loop-layout"><ol class="m-steps" data-steps><li data-no="01">run_conversation()</li><li data-no="02">_restore_or_build_system_prompt()</li><li data-no="03">should_compress()</li><li data-no="04">while(api_calls&lt;max &amp;&amp; budget&gt;0)</li><li data-no="05">interruptible_streaming_api_call()</li><li data-no="06">_fire_stream_delta()</li><li data-no="07">_execute_tool_calls()</li><li data-no="08">check_all_command_guards()</li><li data-no="09">make_tool_result_message()</li><li data-no="10">finalize_turn()</li></ol><div><div class="m-controls"><button class="cbtn primary" type="button" data-run>▶ 连续</button><button class="cbtn" type="button" data-step>单步 →</button><button class="cbtn" type="button" data-reset>重置</button></div><p class="stage-note" data-note>逐步观察一个回合怎样在“无 tool_calls”处正常终结。</p></div><div class="loop-logwrap stream-log elog" data-log aria-live="polite"></div></div></div>
+        <div class="fact-boundary" data-reveal><span class="label-mono">SNAPSHOT BOUNDARY</span><strong>行号随 god-file 重构漂移。</strong><span>cli.py 21,510 行、run_agent.py 43 万字符均为重构进行时的快照（AGENTS.md 明说正在拆）；本课的行号引用适合教学定位，不适合当长期链接使用。“六面同核”“两代谱系”等章节叙事是本课程作者的教学框架，不代表 Hermes Agent 官方定位。</span></div>
+      </section>
+
+      <section class="chapter band-deep" id="transports" data-spy><div class="shell">
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 02 · TRANSPORT LAYER</span><h2>四种 wire 协议归一成一个 OpenAI 形状的 response，循环只认 <code>assistant_message.tool_calls</code>。</h2><p class="lede">Hermes 不绑死任何供应商：注册表 <code>register_transport(api_mode, cls)</code>（agent/transports/__init__.py:21/:26，miss 时惰性 import 四模块 :54-66）把 chat_completions、Anthropic Messages、Codex Responses、Bedrock Converse 翻译成同一内部形状。<code>providers/</code> 目录只是画像层（providers/base.py:39 <code>ProviderProfile</code> 存 hostname / aux model 元数据），不是 wire 层。</p></header>
+        <div class="primitive-grid" data-reveal><article><span class="primitive-no">01 / ABC</span><h3>ProviderTransport</h3><p>transports/base.py:16 定义 <code>convert_messages</code> / <code>convert_tools</code> / <code>build_kwargs</code> / <code>normalize_response</code> / <code>map_finish_reason</code> / <code>extract_cache_stats</code> 六件套。</p></article><article><span class="primitive-no">02 / DISPATCH</span><h3>运行时分发</h3><p><code>_dispatch_nonstreaming_api_request</code>（chat_completion_helpers.py:926）：codex→<code>_run_codex_stream</code>（Responses SSE，codex_runtime.py）、anthropic→create_anthropic_message、bedrock→boto3 converse 归一为 OpenAI 形状、默认 openai SDK（:1000）。</p></article><article><span class="primitive-no">03 / CACHE</span><h3>换供应商重贴标记</h3><p><code>_redecorate_prompt_cache_for_provider</code>（conversation_loop.py:1607）在 provider 切换时重贴缓存标记——短痛一次，不破宪法。</p></article></div>
+        <div class="decision" data-reveal><span class="label-mono">LAYERING RULE</span><p>要接一个新协议，改的是 transports/ 注册表与 ABC 实现；要接一个新_hostname/新画像，才碰 providers/。循环体里不应出现任何按供应商分支的 if——那是 transport 的职责。</p></div>
+      </div></section>
+
+      <section class="chapter shell" id="tools" data-spy>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 03 · NARROW WAIST TOOLS</span><h2>每个模型工具都在每次 API 调用上付费，所以核心 60 个（快照计数）、注册点 102+，且新能力有六级阶梯可走。</h2><p class="lede"><code>tools/registry.py</code> 用 AST 扫描 <code>tools/*.py</code> 找 <code>registry.register(</code> 完成自动发现（<code>discover_builtin_tools</code> :111 + mtime 缓存 :116；<code>ToolRegistry.register</code> :763；<code>get_definitions</code> :1044）。<code>_HERMES_CORE_TOOLS</code> 60 个名字（快照计数，toolsets.py:31-92），而 tools/ 全目录有 102+ 处注册——差额全靠 Footprint Ladder（AGENTS.md:71）消化。</p></header>
+        <ol class="kp-list" data-reveal><li data-no="01"><span><strong>阶梯 1-2</strong>：现有代码能扩 → 不新增注册点；模型可学会的操作序列 → CLI 命令 + SKILL.md（零核心足迹）。</span></li><li data-no="02"><span><strong>阶梯 3</strong>：需要 schema 但按服务可用性开关 → service-gated tool（<code>check_fn</code>，例 homeassistant_tool.py:485）。</span></li><li data-no="03"><span><strong>阶梯 4-5</strong>：带凭据/多工具的新服务 → plugin（provides_tools，例 plugins/spotify 7 工具）；第三方维护 → MCP 目录自动生成 toolset 别名（registry.py:572）。</span></li><li data-no="04"><span><strong>阶梯 6</strong>：以上皆非 → new core tool，last resort，需书面理由（toolsets.py:68 注释 “narrow waist”）。</span></li><li data-no="05"><span><strong>门控弹性</strong>：check_fn 30s TTL 缓存 + 瞬态失败 last-good 60s（registry.py:269/:256-273）——注释明言防 Docker daemon 抖动剥掉整套工具。</span></li><li data-no="06"><span><strong>渐进披露</strong>：超过上下文 10% 的外围工具折叠进 Tool Search 三桥工具（model_tools.py:627-650 + tools/tool_search.py），但 “Core Hermes tools are NEVER deferred”。</span></li></ol>
+        <div class="machine" id="hm-decision" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>Footprint Ladder 判定器</strong></span><span class="label-mono" data-status>选择一个新能力</span></div><div class="machine-body atlas-layout"><div class="atlas-choices"><button class="layer-row" type="button" data-key="spotify" aria-pressed="false">加 Spotify 播放</button><button class="layer-row" type="button" data-key="ha" aria-pressed="false">加 HomeAssistant 控制</button><button class="layer-row" type="button" data-key="seq" aria-pressed="false">重复的操作序列</button><button class="layer-row" type="button" data-key="mcp" aria-pressed="false">接第三方 MCP server</button><button class="layer-row" type="button" data-key="codeexec" aria-pressed="false">加 execute_code</button></div><div class="atlas-detail" data-detail><span class="label-mono">LADDER TRACE</span><h3>点击一种想加的能力</h3><p>沿六级阶梯走一遍判定 trace，看它最终落在哪一层。</p></div></div></div>
+        <div class="decision" data-reveal><span class="label-mono">TRAINER-ONLY</span><p><code>toolset_distributions.py:29</code> 用概率采样组合 toolset——唯一用途是给训练数据造多样性，运行时不消费。名字像运行时配置，职责完全不同。</p></div>
+      </section>
+
+      <section class="chapter band-edge" id="environments" data-spy><div class="shell">
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 04 · SEVEN EXECUTION BACKENDS</span><h2>模板方法 BaseEnvironment 把 local / Docker / SSH / Singularity / Modal / Daytona / Vercel 压成同一个 <code>execute()</code>。</h2><p class="lede">terminal 工具的一次调用经过固定流水线：sudo 改写 → 复合后台命令重写 → cd 包裹 → <code>_run_bash</code> → 有界输出收集 → <code>_update_cwd</code>。ABC 在 tools/environments/base.py:650，公开 <code>execute()</code> :1453，子类只实现 <code>_run_bash</code> / <code>init_session</code> / <code>cleanup</code> / <code>get_temp_dir</code>；工厂 <code>_create_environment</code>（terminal_tool.py:1816）按配置选后端。</p></header>
+        <div class="custom-stack" data-reveal><div><span class="custom-key">LOCAL</span><strong>LocalEnvironment</strong><p>local.py:1716 为类定义；“每次调用新进程”见 <code>_run_bash</code>→Popen（:1788/:1834），cwd/env 状态按会话快照延续。</p></div><div><span class="custom-key">DOCKER</span><strong>DockerEnvironment</strong><p>docker.py:860；配 s6 镜像部署。daemon 抖动时靠 check_fn 的 last-good 60s 撑过（见第 03 章）。</p></div><div><span class="custom-key">SSH</span><strong>SSHEnvironment</strong><p>ssh.py:46，ControlMaster 连接复用，远端执行同一 <code>_run_bash</code> 协议。</p></div><div><span class="custom-key">SINGULARITY</span><strong>SingularityEnvironment</strong><p>singularity.py:162，<code>--containall --no-home</code>：HPC 集群上的最小可见文件系统。</p></div><div><span class="custom-key">MODAL</span><strong>ModalEnvironment</strong><p>modal.py:164，文件系统快照 id 持久于 <code>~/.hermes/modal_snapshots.json</code>（:34），销毁前 <code>snapshot_filesystem</code>（:453）——闲时休眠、按需唤醒。</p></div><div><span class="custom-key">DAYTONA</span><strong>DaytonaEnvironment</strong><p>daytona.py:30，<code>stop()</code>/:229 与 <code>resume()</code>/:93 实现 serverless 挂起。</p></div><div><span class="custom-key">VERCEL</span><strong>VercelSandboxEnvironment</strong><p>vercel_sandbox.py:243，<code>sandbox.snapshot()</code>（:448）同族快照语义。</p></div><div><span class="custom-key">SYNC</span><strong>FileSyncManager</strong><p>tools/environments/file_sync.py（daytona.py:20-26 引入）双向同步，read_file / write_file 因此跨后端工作。</p></div></div>
+        <div class="machine" id="hm-envs" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>后端交换台</strong></span><span class="label-mono" data-status>选择一个后端</span></div><div class="machine-body atlas-layout"><div class="atlas-choices"><button class="layer-row" type="button" data-key="local" aria-pressed="false">Local</button><button class="layer-row" type="button" data-key="docker" aria-pressed="false">Docker</button><button class="layer-row" type="button" data-key="ssh" aria-pressed="false">SSH</button><button class="layer-row" type="button" data-key="singularity" aria-pressed="false">Singularity</button><button class="layer-row" type="button" data-key="modal" aria-pressed="false">Modal</button><button class="layer-row" type="button" data-key="daytona" aria-pressed="false">Daytona</button><button class="layer-row" type="button" data-key="vercel" aria-pressed="false">Vercel</button></div><div class="atlas-detail" data-detail><span class="label-mono">BACKEND FACTS</span><h3>点击一个执行后端</h3><p>同一个 <code>execute()</code>，看这条命令最终落在哪个 file:line。</p></div></div></div>
+        <div class="decision" data-reveal><span class="label-mono">SLEEP AS A FEATURE</span><p>三个 serverless 后端（Modal / Daytona / Vercel）用同一种“快照-唤醒”语义兑现 README 的部署叙事（$5 VPS、GPU 集群、serverless 休眠；“costs nearly nothing” 为文档声明，未运行验证）。后端是 Python 栈 Hermes 的独门特色：同一台助理的“手”可以活在口袋里（Termux/Android）也可以活在云上。</p></div>
+      </div></section>
+
+      <section class="chapter shell" id="state" data-spy>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 05 · SESSIONDB & LINEAGE</span><h2>一个 <code>~/.hermes/state.db</code> SQLite 用 WAL 承接多进程共享，FTS5+trigram 让 agent 搜索自己的过去。</h2><p class="lede">65 万字符的 <code>hermes_state.py</code> 是“一主类三 Mixin”：<code>class SessionDB(SessionSearchMixin, SessionSchemaMixin, SessionPortabilityMixin)</code>（:4045）+ <code>AsyncSessionDB</code>（:14297），<code>DEFAULT_DB_PATH = get_hermes_home() / "state.db"</code>（:362）。resume 不是简单读回——压缩过的会话要沿 <code>parent_session_id</code> 链找最近活后代（<code>resolve_resume_session_id</code> :11556），沿链超 20,000 条直接拒绝（<code>MAX_SAFE_RESUME_MESSAGES</code> :107；<code>assert_resume_safe</code> :11930 抛 <code>SessionResumeTooLargeError</code>）。</p></header>
+        <div class="machine" id="hm-state" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>SessionDB 血统投影台</strong></span><span class="label-mono">teaching projection</span></div><div class="machine-body state-layout"><div><div class="state-counters"><div><span class="label-mono">ACTIVE</span><strong data-active>0</strong></div><div><span class="label-mono">LINEAGE</span><strong data-lineage>0</strong></div><div><span class="label-mono">DB KB</span><strong data-bytes>0</strong></div></div><div class="state-actions"><button class="cbtn primary" type="button" data-event="msg">+ msg.append</button><button class="cbtn" type="button" data-event="bulk">+ 20k 导入</button><button class="cbtn" type="button" data-event="compact">compact → fork</button><button class="cbtn" type="button" data-event="resume">resume(id)</button><button class="cbtn" type="button" data-event="export">export(lineage)</button><button class="cbtn" type="button" data-event="reset">重置</button></div><div class="verdict-badge" data-verdict="ask"><span data-verdict-label aria-live="polite">待操作</span></div></div><div class="stream-log elog" data-log aria-live="polite"></div></div></div>
+        <dl class="gloss" data-reveal><div><dt>sessions</dt><dd>50+ 列主表（hermes_state_common.py:369），带 parent_session_id 血统指针。</dd></div><div><dt>messages</dt><dd>含 <code>active</code> / <code>compacted</code> 软删除位（:430）——压缩不抹除原文，只翻位。</dd></div><div><dt>system_prompts</dt><dd>按 hash 去重（:364）：压缩 fork 的子会话继承冻结 prompt，不重复存。</dd></div><div><dt>FTS5 + trigram</dt><dd>messages_fts + 3 触发器（common.py:594-625）；CJK trigram 索引（:663，注释称 state.db 最贵索引 ~2.6x），原生分词器在 native/fts5_cjk/fts5_cjk.c；LLM 侧入口是 <code>session_search</code> 工具（tools/session_search_tool.py:1065）。</dd></div></dl>
+        <div class="fact-boundary" data-reveal><span class="label-mono">CROSS-PROCESS REALITY</span><strong>多进程共享 sqlite 是有代价的。</strong><span>WAL fallback（apply_wal_with_fallback :1077）、macOS WAL-reset bug 防护（:942）、跨进程修复锁（_cross_process_repair_lock :1751）三处补丁就是证据；外部会话还能经 <code>--resume @claude/@codex</code> 导入（hermes_cli/main.py:2988-3034），JSON 血统导出见 hermes_state_portability.py:277。</span></div>
+      </section>
+
+      <section class="chapter band-deep" id="learning" data-spy><div class="shell">
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 06 · LEARNING LOOP</span><h2>每 10 个回合的 nudge 不注入用户消息，而是 fork 一个后台 review agent 去写记忆和技能——学习是回合收尾的异步副作用。</h2><p class="lede">这是 Hermes 区别于所有“聊天完就忘”内核的机制：turn 计数触发（<code>memory.nudge_interval</code> 默认 10，agent_init.py:1827；检查点 turn_context.py:732-737，:728 注释明确原始用户消息不被注入 nudge 文本）→ <code>_spawn_background_review</code>（turn_finalizer.py:796-803）→ <code>spawn_background_review_thread</code>（agent/background_review.py:1595）→ review agent 带着 “Review the conversation above and update the skill library. Be ACTIVE” 的提示词（:454-455）更新 MEMORY.md / USER.md / skill 库。</p></header>
+        <div class="custom-stack" data-reveal><div><span class="custom-key">SOUL</span><strong>身份层</strong><p>SOUL.md：首启种子模板 <code>hermes_cli/default_soul.py</code> → <code>load_soul_md</code>（prompt_builder.py:2319）→ system prompt stable 首要身份（system_prompt.py:377-386，附防跨 profile 泄漏注释）。</p></div><div><span class="custom-key">MEMORY</span><strong>记忆语义</strong><p>memory_tool.py:6-8：MEMORY.md = agent 环境/项目笔记，USER.md = 用户画像；条目用 <code>§</code> 分隔（:78）。</p></div><div><span class="custom-key">GATE</span><strong>写审批</strong><p>学习不是免检：记忆/技能落盘前过 <code>tools/write_approval.py:253 evaluate_gate</code>。</p></div><div><span class="custom-key">RECURSE</span><strong>自我禁用</strong><p>review agent 自身 nudge 计数器清零（background_review.py:1257-1258），防止自省触发自省。</p></div><div><span class="custom-key">PLUGINS</span><strong>外部记忆</strong><p>exclusive 插件类别 plugins/memory/：honcho、mem0、hindsight、supermemory 等；基类 <code>MemoryProvider</code>（agent/memory_provider.py），HonchoMemoryProvider（plugins/memory/honcho/__init__.py:262）。Honcho “dialectic user modeling” 的效果本身只有文档声明。</p></div></div>
+        <article class="lesson-brief" id="hm-skeleton-code" data-reveal>
+          <span class="label-mono">SOURCE-ALIGNED TEACHING SKELETON · NUDGE → BACKGROUND REVIEW</span>
+          <h3>回合尾学习闭环（<code>TurnLoop</code>）教学骨架</h3>
+          <p>下面是依据真实源码整理的教学骨架，<strong>不是上游代码复制</strong>：与 <code>agent/turn_context.py:732-737</code>、<code>agent/turn_finalizer.py:796-803</code>、<code>agent/background_review.py:1595 / :454</code> 对齐。</p>
+          <div class="stream-log elog" style="max-height: 480px; overflow-y: auto; padding: 16px; border-radius: var(--r-control); background: var(--surface-console); border: 1px solid var(--line-on-console);">
+<span class="k-sys"># hermes-learning-loop — 教学骨架（非上游代码）</span>
+<span class="k-sys"># 对齐真实源码：agent/turn_context.py / turn_finalizer.py / background_review.py</span>
+<span class="k-user">import</span> threading
+
+<span class="k-user">class</span> <span class="k-model">TurnLoop</span>:
+    <span class="k-user">def</span> <span class="k-tool">__init__</span>(self, agent, nudge_interval=10):        <span class="k-sys"># 真源: agent_init.py:1827</span>
+        self.agent = agent
+        self.nudge_interval = nudge_interval
+        self.turns_since_memory = 0
+        self.turns_since_skill = 0
+
+    <span class="k-user">def</span> <span class="k-tool">run_turn</span>(self, user_text):
+        <span class="k-sys"># 关键不变量：nudge 绝不注入用户消息（turn_context.py:728 注释）</span>
+        original_user_message = user_text                  <span class="k-sys"># 原样入库</span>
+        snapshot = self.agent.conversation_snapshot()
+
+        should_review = <span class="k-user">False</span>
+        self.turns_since_memory += 1
+        <span class="k-user">if</span> self.turns_since_memory &gt;= self.nudge_interval: <span class="k-sys"># turn_context.py:732-737</span>
+            should_review = <span class="k-user">True</span>
+
+        answer = self.agent.execute_loop(original_user_message)
+
+        <span class="k-sys"># 回合收尾：学习是异步副作用，不阻塞用户（turn_finalizer.py:796-803）</span>
+        <span class="k-user">if</span> should_review:
+            self.turns_since_memory = 0
+            self._spawn_background_review(snapshot, review_memory=<span class="k-user">True</span>,
+                                          review_skills=self._skills_nudged())
+        <span class="k-user">return</span> answer
+
+    <span class="k-user">def</span> <span class="k-tool">_spawn_background_review</span>(self, snapshot, **flags):  <span class="k-sys"># background_review.py:1595</span>
+        <span class="k-sys"># fork 一个自我禁用的 review agent：快照 + "Be ACTIVE" 提示词</span>
+        <span class="k-sys"># review agent 自身 nudge 计数器清零，防止递归自省（:1257-1258）</span>
+        t = threading.Thread(target=self._review, args=(snapshot, flags), daemon=<span class="k-user">True</span>)
+        t.start()
+
+    <span class="k-user">def</span> <span class="k-tool">_review</span>(self, snapshot, flags):
+        reviewer = self.agent.fork(quiet=<span class="k-user">True</span>, skip_memory=<span class="k-user">False</span>)
+        <span class="k-sys"># 写路径不是裸写：记忆/技能落盘前必须过审批闸门</span>
+        <span class="k-sys"># 真源 tools/write_approval.py:253 evaluate_gate</span>
+        gate = self.agent.write_gate.evaluate(
+            target=<span class="k-model">"MEMORY.md"</span> <span class="k-user">if</span> flags.get(<span class="k-model">"review_memory"</span>) <span class="k-user">else</span> <span class="k-model">"SKILL.md"</span>,
+            author=<span class="k-model">"background_review"</span>)
+        <span class="k-user">if</span> gate.allow:
+            reviewer.update_memory_and_skills(snapshot)     <span class="k-sys"># prompt: background_review.py:454</span>
+        <span class="k-sys"># skill 写还要过 security scan / pinned guard（skill_manager_tool.py:125/:274）</span>
+
+    <span class="k-user">def</span> <span class="k-tool">_skills_nudged</span>(self):
+        self.turns_since_skill += 1
+        <span class="k-user">if</span> self.turns_since_skill &gt;= self.agent.skill_nudge_interval:  <span class="k-sys"># agent_init.py:1956</span>
+            self.turns_since_skill = 0
+            <span class="k-user">return</span> <span class="k-user">True</span>
+        <span class="k-user">return</span> <span class="k-user">False</span>
+          </div>
+          <p class="lesson-result"><strong>三处最容易被忽略的设计决定：</strong>nudge 不碰用户原文（保缓存、保真实）；review 在 fork 中自我禁用（防递归）；写盘走审批（学习不是免检）。</p>
+        </article>
+        <div class="machine" id="hm-learn" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>什么时候被推着学习</strong></span><span class="label-mono" data-status>待两段选择</span></div><div class="machine-body sim-layout"><div><div class="sim-group"><span class="label-mono">STAGE 1 · 回合数 vs 间隔</span><div class="seg-row"><button class="cbtn" type="button" data-turns="under" aria-pressed="false">回合 &lt; 间隔</button><button class="cbtn" type="button" data-turns="over" aria-pressed="false">回合 ≥ 间隔</button></div></div><div class="sim-group"><span class="label-mono">STAGE 2 · 工具册</span><div class="seg-row"><button class="cbtn" type="button" data-tools="in" aria-pressed="false">skill_manage 在册</button><button class="cbtn" type="button" data-tools="out" aria-pressed="false">skill_manage 不在册</button></div></div><div class="state-actions"><button class="cbtn" type="button" data-clear>重置</button></div><div class="verdict-badge" data-verdict="ask"><span data-verdict-label aria-live="polite">待两段选择</span></div></div><ul class="trace-list" data-trace aria-live="polite"><li>间隔来自 skills.creation_nudge_interval，默认 10（agent_init.py:1955/:1959）。</li><li>判定处 codex_runtime.py:885-891，三条件 AND。用左侧两段按钮配条件。</li></ul></div></div>
+        <div class="decision" data-reveal><span class="label-mono">边界</span><p>学习闭环的产物是人可读的 markdown 技能与记忆条目，不是权重更新——可 diff、可回滚、可手改。nudge 只是提议：写什么由 review agent 决定，落笔前还要过闸门——security scan（<code>skill_manager_tool.py:125</code>）、pinned guard（<code>:274</code>），后台写比前台删更严（<code>:301</code>）。写出来的技能好不好，没有任何代码路径保证。</p></div>
+      </div></section>
+
+      <section class="chapter shell" id="skills" data-spy>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 07 · SKILL ECOSYSTEM</span><h2>SKILL.md 是 agentskills.io 开放标准 + Hermes 扩展字段，三层渐进披露让 150+ 技能不炸上下文。</h2><p class="lede">技能不进 system prompt 正文——prompt 里只有索引（volatile 层），模型用 <code>skills_list</code>（skills_tool.py:804）看元数据、<code>skill_view</code>（:1072）读全文；索引构建在 <code>build_skills_system_prompt</code>（prompt_builder.py:1828）。格式为 <code>skills/&lt;category&gt;/&lt;name&gt;/SKILL.md</code> + references/templates/assets，YAML frontmatter 兼容 agentskills.io（skills_tool.py:27-44：name≤64 / description≤1024 + <code>platforms</code> 扩展）。</p></header>
+        <ol class="kp-list" data-reveal><li data-no="01"><span><strong>写路径</strong>：agent 用 <code>skill_manage</code> 创建/更新/删除技能（skill_manager_tool.py:1543），写入前过 security scan 与 pinned guard（:125/:274）——学习闭环的落笔处就在这条通道。</span></li><li data-no="02"><span><strong>/learn 编纂</strong>：<code>build_learn_prompt</code>（agent/learn_prompt.py:165）把用户材料编纂成技能，内置写作标准。</span></li><li data-no="03"><span><strong>技能侧 nudge</strong>：<code>skills.creation_nudge_interval</code>（agent_init.py:1956-1959）计数到点、且 <code>skill_manage</code> 在工具册上时置 <code>should_review_skills</code>（codex_runtime.py:885-891）。</span></li></ol>
+        <div class="machine" id="hm-lineage" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>Hermes ↔ OpenClaw 两代概念映射</strong></span><span class="label-mono" data-status>选择一个概念</span></div><div class="machine-body atlas-layout"><div class="atlas-choices"><button class="layer-row" type="button" data-key="soul" aria-pressed="false">人格 SOUL.md</button><button class="layer-row" type="button" data-key="memory" aria-pressed="false">记忆 § 条目</button><button class="layer-row" type="button" data-key="skills" aria-pressed="false">技能 SKILL.md</button><button class="layer-row" type="button" data-key="config" aria-pressed="false">模型配置</button><button class="layer-row" type="button" data-key="cron" aria-pressed="false">定时 / 进程</button><button class="layer-row" type="button" data-key="migrate" aria-pressed="false">双向迁移器</button><button class="layer-row" type="button" data-key="notmine" aria-pressed="false">不带走的东西</button></div><div class="atlas-detail" data-detail><span class="label-mono">LINEAGE MAP</span><h3>点击一个概念</h3><p>对照 Hermes（Python）与 OpenClaw（TypeScript）两侧的实现与演化。</p></div></div></div>
+        <div class="fact-boundary" data-reveal><span class="label-mono">LINEAGE BOUNDARY</span><strong>两代先后无法本地裁决。</strong><span><code>ENTRY_DELIMITER = "\n§\n"</code> 的字节级一致（memory_tool.py:78 == openclaw_to_hermes.py:30）发生在 <b>hermes 仓库内部</b>——迁移脚本写目标 store 时对齐自家记忆工具，构不成“两代共享格式”的证据；openclaw 仓对 <code>§</code> 零命中，其 <code>extensions/migrate-hermes</code> 只原样搬运文件。可核的共享资产是文件族谱系（SOUL.md / MEMORY.md / SKILL.md）+ 双向迁移脚本。“谁是源头”只有合理推断——本地仓库还是单 commit（squash 导入），git 历史不可用于演化叙事。</span></div>
+      </section>
+
+      <section class="chapter band-edge" id="compaction" data-spy><div class="shell">
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 08 · COMPACTION & CACHE CONSTITUTION</span><h2>压缩是“缓存神圣”的唯一合法破例；micro-compaction 敢把这个 tradeoff 写成文档并默认关闭。</h2><p class="lede"><code>ContextCompressor</code>（agent/context_compressor.py:2070）在 50% 有效窗口触发（<code>threshold_percent=0.50</code> :3103；有效窗口 = ctx − max_tokens :3075-3099；小窗兜底 0.85 :2973），带防抖：连续两次收益 &lt;10% 就跳过。<code>docs/micro-compaction.md</code> 罕见地诚实：逐回合摊薄压缩账单的代价是“每回合重写已发送历史，打破 provider 缓存前缀”，所以 off by default。</p></header>
+        <ol class="kp-list" data-reveal><li data-no="01"><span><strong>接线</strong>：preflight <code>should_compress(request_pressure_tokens)</code>（conversation_loop.py:2684）→ <code>compress_context</code>（agent/conversation_compression.py:2255），含 <code>CompressionCommitFence</code>（:469）与冷却。</span></li><li data-no="02"><span><strong>原生路线</strong>：agent/native_compaction.py 管理 server-side compaction checkpoint。</span></li><li data-no="03"><span><strong>缓存标记</strong>：Anthropic cache markers = static 前缀 + prompt 尾 + 最后 2 条非 system 消息（prompt_caching.py docstring:4-8，:170）；稳定前缀注册 prompt_cache_boundary.py:56；跨会话 cache scope prompt_cache_scope.py:67。</span></li><li data-no="04"><span><strong>宪法出处</strong>：ground rule 记录在 docs/rfcs/2026-07-plugin-architecture-lessons-pi-opencode.md:5——additive-only、prompt-cache sacred、observer-first、fail-closed。</span></li><li data-no="05"><span><strong>同名陷阱</strong>：<code>trajectory_compressor.py</code>（:332）是离线训练数据工具，不是运行时组件——名字像，职责完全不同。</span></li></ol>
+        <div class="decision" data-reveal><span class="label-mono">DON'T SAY “DELETE HISTORY”</span><p>压缩翻的是 messages 表的 <code>active/compacted</code> 位并 fork 子会话（第 05 章血统链）；原始事件仍在 state.db 里，agent 还能用 session_search 搜回自己的过去。</p></div>
+      </div></section>
+
+      <section class="chapter shell" id="gateway" data-spy>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 09 · MESSAGE GATEWAY</span><h2>一个 asyncio 进程用 <code>agent:main:&lt;platform&gt;:&lt;chat_type&gt;:&lt;chat_id&gt;</code> 字符串做会话坐标系，23+ 平台适配器与内置枚举双轨注册。</h2><p class="lede"><code>gateway/run.py</code>（3 万行）里 <code>GatewayRunner</code>（:6729）由三 Mixin 拼装，<code>start_gateway()</code> :30478 或 <code>python -m gateway.run</code> 启动。消息路由的精髓全在 <code>build_session_key</code>（gateway/session.py:1090，docstring 自称 single source of truth）：群聊按用户拆、thread 默认共享、WhatsApp 归一 JID、Slack 带 workspace scope——跨平台连续性由这一个函数裁决。</p></header>
+        <ol class="kp-list" data-reveal><li data-no="01"><span><strong>平台三层</strong>：内置 <code>Platform</code> 枚举（gateway/config.py:325-360，含 TELEGRAM/DISCORD/SLACK/WHATSAPP/SIGNAL/FEISHU/WEIXIN/QQBOT…）+ <code>_missing_()</code>（:358）允许插件造成员 + <code>plugins/platforms/</code> 22 个目录；实例化 <code>_create_adapter</code>（run.py:16015）。</span></li><li data-no="02"><span><strong>路由链</strong>：adapter <code>handle_message</code>（platforms/base.py:6045）→ <code>set_message_handler</code>（:3636）注入 → <code>_handle_message</code>（run.py:16692）→ <code>_handle_message_with_agent</code>（:19031）。</span></li><li data-no="03"><span><strong>命名空间</strong>：profile 命名空间（session.py:1070）与多用户会话判定（:1049）决定 key 的前缀与拆分。</span></li><li data-no="04"><span><strong>语音</strong>：中枢 <code>_enrich_message_with_transcription</code>（run.py:24884）+ 六家 STT 后端（transcription_tools.py:1931-2608：本地 mlx-whisper / whisper.cpp / faster-whisper、groq、openai、mistral、xai、elevenlabs）。</span></li><li data-no="05"><span><strong>唤醒</strong>：“Hey Hermes” wake word 监听（tools/wake_word.py + tools/wakewords/hey_hermes.onnx）——它是监听器，不是模型工具。</span></li></ol>
+        <div class="decision" data-reveal><span class="label-mono">NARROW WAIST AT THE EDGE</span><p>网关是唯一 asyncio 的部分，但它不复制内核：23+ 平台的消息最终都汇入同一 SessionDB 与同一个 AIAgent。session key 就是“窄腰”在消息层的投影——换平台不换会话，换会话才换上下文。</p></div>
+      </section>
+
+      <section class="chapter band-deep" id="cron" data-spy><div class="shell">
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 10 · CRON & AUTOMATION</span><h2>jobs.json 而非 sqlite、croniter 懒 import 省 15ms、19 平台白名单防 env 枚举攻击——处处是省出来的性能和堵出来的安全。</h2><p class="lede">Hermes 自带调度器：cron 表达式 / interval / one-shot 三形态，交付复用 gateway 适配器。快照 commit（a0ca7c1）本身就是 “feat(cron): add explicit one-shot re-arm”——最新 feature 是 <code>rearm_oneshot</code>（cron/jobs.py:2422）：只许 <code>kind=="once"</code>（:2431）复活、拒绝覆盖活体 run_claim/fire_claim（:2449-2454）、重置 completed 并写 <code>rearmed_at</code>（:1014）。</p></header>
+        <dl class="gloss" data-reveal><div><dt>存储</dt><dd><code>~/.hermes/cron/jobs.json</code>（jobs.py:4, :85）+ 跨进程锁（:273）；每 profile 独立 store（:70-84 注释，issue #4707 安全隔离）；执行历史独立 sqlite（cron/executions.py:36）。</dd></div><div><dt>one-shot</dt><dd><code>30m/2h/1d</code> 时长语法（jobs.py:778）、自动 <code>repeat=1</code>（:1983）、过期超 <code>ONESHOT_GRACE_SECONDS</code> 拒绝（:2055）。</dd></div><div><dt>调度循环</dt><dd><code>tick</code>（cron/scheduler.py:7196）→ <code>run_one_job</code>（:6596）；崩溃恢复 <code>mark_running_jobs_interrupted</code>（:1075）；防抢跑靠 fire/run 双 claim 栅栏。</dd></div><div><dt>交付</dt><dd><code>_KNOWN_DELIVERY_PLATFORMS</code> 19 平台白名单（scheduler.py:500-505，注释明言防 env 变量枚举攻击）；<code>_deliver_result</code>（:2856）复用 gateway router；<code>[SILENT]</code> 抑制标记（:552）。</dd></div><div><dt>可插拔调度器</dt><dd>ABC <code>CronScheduler</code>（scheduler_provider.py:67）、内置 <code>InProcessCronScheduler</code>（:512）、Nous 云 <code>ChronosCronScheduler</code>（plugins/cron_providers/chronos/__init__.py:47，回调 JWKS 验签 verify.py:79）。</dd></div></dl>
+        <div class="machine" id="hm-cron" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>这条任务能送到哪</strong></span><span class="label-mono" data-status>选择平台探测</span></div><div class="machine-body state-layout"><div><div class="state-counters"><div><span class="label-mono">白名单</span><strong>19</strong></div><div><span class="label-mono">插件目录</span><strong>22</strong></div><div><span class="label-mono">已探测</span><strong data-checked>0</strong></div></div><div class="state-actions"><button class="cbtn primary" type="button" data-event="telegram" aria-pressed="false">telegram</button><button class="cbtn" type="button" data-event="qqbot" aria-pressed="false">qqbot</button><button class="cbtn" type="button" data-event="ntfy" aria-pressed="false">ntfy</button><button class="cbtn" type="button" data-event="homeassistant" aria-pressed="false">homeassistant</button><button class="cbtn" type="button" data-event="raft" aria-pressed="false">raft</button><button class="cbtn" type="button" data-event="reset">重置</button></div><div class="verdict-badge" data-verdict="ask"><span data-verdict-label aria-live="polite">待探测</span></div></div><div class="stream-log elog" data-log aria-live="polite"></div></div></div>
+        <div class="fact-boundary" data-reveal><span class="label-mono">EVIDENCE BOUNDARY</span><strong>“最新 feature”只能以代码存在为证。</strong><span>整库仅 1 个 squash commit（a0ca7c1，2026-08-19），无增量历史；re-arm 的存在由 jobs.py:2422 证明，但“演化时间线”不能用 commit 序列叙事。</span></div>
+      </div></section>
+
+      <section class="chapter shell" id="surfaces" data-spy>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 11 · SIX SURFACES & DELEGATION</span><h2><code>tui_gateway.dispatch</code> 一个函数同时服务 Ink 终端、Electron 桌面、iOS/web WS；Zed 编辑器走 ACP；其他 agent 走 MCP——六面共享同一 SessionDB。</h2><p class="lede">React+Ink 拥有屏幕、Python 拥有会话：ui-tui/src/gatewayClient.ts spawn <code>python -m tui_gateway.entry</code>，stdio 换行分隔 JSON-RPC 进 <code>dispatch()</code>（tui_gateway/server.py:2463）；<code>handle_ws</code>（tui_gateway/ws.py）逐字复用 dispatch 供桌面/iOS/web。Electron spawn <code>hermes serve</code>（apps/desktop/electron/backend-command.ts:18-21），已有 gateway 时经其路由而非本地起进程（connection-config.ts:692）。子代理 delegate 是同进程新建完整 AIAgent。</p></header>
+        <div class="machine" id="hm-surfaces" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>六表面交换台</strong></span><span class="label-mono" data-status>选择表面</span></div><div class="machine-body surface-layout"><div class="surface-choices"><button class="cbtn" type="button" data-key="cli" aria-pressed="false">CLI hermes</button><button class="cbtn" type="button" data-key="gateway" aria-pressed="false">消息网关</button><button class="cbtn" type="button" data-key="tui" aria-pressed="false">TUI ui-tui</button><button class="cbtn" type="button" data-key="desktop" aria-pressed="false">Desktop</button><button class="cbtn" type="button" data-key="acp" aria-pressed="false">编辑器 ACP</button><button class="cbtn" type="button" data-key="mcp" aria-pressed="false">MCP 服务</button></div><dl class="surface-detail" data-detail><div><dt>消费者</dt><dd>选择一种运行表面</dd></div><div><dt>共享核心</dt><dd>同一 AIAgent + 同一 state.db</dd></div></dl></div></div>
+        <div class="custom-stack" data-reveal><div><span class="custom-key">DELEGATE</span><strong>子代理</strong><p><code>delegate_task</code>（tools/delegate_tool.py:3625）spawn 子 <code>AIAgent</code>（:1965），独立 SessionDB / 预算 / 工具集，<code>MAX_DEPTH=1</code>（:129）默认扁平；leaf/orchestrator 角色，可 steer/interrupt（:290/:266）。</p></div><div><span class="custom-key">CODE-EXEC</span><strong>execute_code RPC</strong><p>模型写 Python 脚本经 RPC 调工具（tools/code_execution_tool.py：本地 Unix socket <code>_rpc_server_loop</code> :652；远程 backend 用 req_*/res_* 文件轮询 :921）：白名单 7 工具（:63-71）、env 脱敏（:152）、300s / 50 调用 / 50KB 限额（:74-77）。多步管道折叠成零上下文成本回合。</p></div><div><span class="custom-key">TRAIN</span><strong>训练管线</strong><p><code>batch_runner.py:529 BatchRunner</code> 多进程池跑 AIAgent 产 jsonl 轨迹 + checkpoint 续跑；mini_swe_runner.py 同款轨迹；evals/{readtool,compaction,browser_use} 是独立离线评测 harness（不被 batch_runner import，共用 AIAgent）。</p></div><div><span class="custom-key">INSTALL</span><strong>安装形态</strong><p>Termux / Android、Docker(s6)、Nix(flake.nix)、原生 Windows 是同批表面的安装形态，不算独立表面；constraints-termux.txt 与 .[termux] extra 证明移动端是一等公民。</p></div></div>
+        <div class="fact-boundary" data-reveal><span class="label-mono">NAMING DRIFT</span><strong>协议名在仓库内自己打架。</strong><span>acp_adapter/__init__.py:1 写 “Agent Communication Protocol”，server.py:1 写 “Agent Client Protocol”（Zed 主导者是后者的正确名称）。mcp_serve.py:623 暴露的 10 工具（conversations_list / messages_read / events_wait / messages_send / permissions_respond…，:645-1003）把 Hermes 的消息面开放给别的 agent。</span></div>
+      </section>
+
+      <section class="chapter band-edge" id="practice" data-spy><div class="shell">
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 12 · PRACTICE & INTERVIEW</span><h2>诊断一个 Hermes 症状，先问三个问题：缓存坏没坏、nudge 到没到、锁在哪一层。</h2><p class="lede">五步诊断法 + 三套面试题（架构、故障、谱系对比），把前十一章变成可操作的手感。docs/ 下有现成 RCA 样本可作教材：docs/rca-ssl-cacert-post-git-pull.md、session-lifecycle.md、micro-compaction.md。</p></header>
+        <div class="spread"><article class="prose" data-reveal><h3>五步诊断法（Hermes 症状通用）</h3><ol class="kp-list"><li data-no="01"><span><strong>表面定位</strong>：症状在哪个表面？先分清是 cli.py、gateway/run.py 还是 tui_gateway/server.py 的进程——session key 是跨表面串线索的缰绳。</span></li><li data-no="02"><span><strong>缓存检查</strong>：成本/延迟异常先查 prompt cache 边界（prompt_caching.py markers、stable 前缀是否被中途重建），合法破例只有压缩。</span></li><li data-no="03"><span><strong>状态检查</strong>：<code>~/.hermes/state.db</code> 里 sessions 的 active/compacted 位、parent_session_id 血统、compression_locks、gateway_routing；cron 单独看 jobs.json 的 claim 字段。</span></li><li data-no="04"><span><strong>门控检查</strong>：工具不见 → check_fn TTL/last-good；命令被拒 → tools/approval.py 分级（hardline 拒 / 危险 ask / cron·gateway 非交互降级不同，approval.py:96/:293/:252）；记忆没写 → write_approval.py 闸门。</span></li><li data-no="05"><span><strong>后台线程检查</strong>：学习没发生 → nudge 计数与 _spawn_background_review 是否触发、review agent 是否被 nudge 清零逻辑短路；cron 没跑 → tick 是否活着、mark_running_jobs_interrupted 是否有遗留。</span></li></ol><div class="decision"><span class="label-mono">SOURCE BOUNDARY · a0ca7c1</span><p>本课基于只读源码快照：Honcho “dialectic user modeling”、serverless “costs nearly nothing”、$5 VPS 可跑等均为文档声明，本次研究未运行任何代码；静态源码能证明实现关系，不能替代真实运行验证。</p></div></article></div>
+        <div class="machine" id="hm-atlas" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>四症状定位器</strong></span><span class="label-mono" data-status>选择症状</span></div><div class="machine-body atlas-layout"><div class="atlas-choices"><button class="layer-row" type="button" data-key="cost" aria-pressed="false">成本异常</button><button class="layer-row" type="button" data-key="vanish" aria-pressed="false">工具消失</button><button class="layer-row" type="button" data-key="resume" aria-pressed="false">恢复失败</button><button class="layer-row" type="button" data-key="cron" aria-pressed="false">定时不跑</button></div><div class="atlas-detail" data-detail><span class="label-mono">FIRST EVIDENCE</span><h3>选择一种故障</h3><p>看第一步该查哪个文件、哪一行。</p></div></div></div>
+        <div class="interview" data-reveal>
+          <span class="label-mono">PROBLEM SET 01 · 架构设计题</span>
+          <h4>“只用一个进程内对象图描述 Hermes：AIAgent、SessionDB、ToolRegistry、BaseEnvironment、GatewayRunner 各自职责与依赖方向；为什么核心循环是同步的而网关是 asyncio？”</h4>
+          <div class="qa"><details><summary>展开答题骨架与解耦推演</summary><div class="ans">
+            <p><strong>【场景定义】</strong> 面试者需要在白板上画出 Hermes 的进程内对象图，并论证同步内核 + asyncio 外围这一反直觉组合的合理性。</p>
+            <p><strong>【组合关系/依赖方向】</strong> AIAgent（run_agent.py:421）组合而非继承——tools 来自 <code>registry.get_definitions</code>，持久化委托 SessionDB（:4045），执行后端工厂化（terminal_tool.py:1816）；依赖全部指向 agent/ 子模块：god-file 是门面不是泥球，agent/ 目录正是被反向提取出来的模块群。</p>
+            <p><strong>【关键证据链】</strong> ① 循环同步换来工作线程中断模型（chat_completion_helpers.py:1335 的 <code>owner_tid</code> socket-abort 设计）——比 asyncio 嵌套回调更容易做 interrupt/redirect；② asyncio 留给 I/O 密集的网关适配器层；③ session key（gateway/session.py:1090）是唯一跨面坐标，六个表面经它汇入同一 state.db——“narrow waist” 在状态层的投影。</p>
+            <p><strong>【反方追问/代价】</strong> 这种设计的坏处：多进程共享 sqlite 需要 WAL fallback 与修复锁（hermes_state.py:1077/:1751）；TUI dispatch 的慢 handler 要单独线程池，否则一格卡满屏。</p>
+          </div></details></div>
+        </div>
+        <div class="interview" data-reveal>
+          <span class="label-mono">PROBLEM SET 02 · 故障排查题</span>
+          <h4>“用户报告：Telegram 上的 agent 突然不认识上周教它的技能了，而且这周 API 费用翻倍。给出两个症状的独立根因假设与排查路径。”</h4>
+          <div class="qa"><details><summary>展开答题骨架与排查路径</summary><div class="ans">
+            <p><strong>【场景定义】</strong> 同一用户、同一 gateway 会话上出现“能力退化 + 成本飙升”双症状，要求先拆分独立假设再谈关联。</p>
+            <p><strong>【技能消失假设】</strong> skill_manage 写路径守卫拒绝过更新（security scan / pinned / quarantine）？还是 skills 属 volatile 层、focus 模式降级为 name-only（system_prompt.py:535）导致模型“看不见”正文？</p>
+            <p><strong>【费用翻倍假设】</strong> gateway 侧某处每轮重建工具集破缓存（宪法禁止，AGENTS.md:24-29）；或用户切换 provider 触发 <code>_redecorate_prompt_cache_for_provider</code>（conversation_loop.py:1607，正常但短痛）；或 compression.micro_compact 被打开（docs/micro-compaction.md 明示每回合重写历史会破前缀）。</p>
+            <p><strong>【同源假设与证伪命令】</strong> 两症状可同源：一次失败的 compaction 留下 compression_locks 半状态，fork 出的子会话丢了 skills volatile 段重建——先查 messages.active/compacted 位。每个假设配一条证伪命令：hermes doctor / state.db SQL / cache_stats 字段（transports 的 extract_cache_stats）。</p>
+          </div></details></div>
+        </div>
+        <div class="interview" data-reveal>
+          <span class="label-mono">PROBLEM SET 03 · 两代演化对比题</span>
+          <h4>“Hermes 与 OpenClaw 双向都能迁移对方数据。作为架构师，解释为什么迁移协议是文件目录而不是 API；并评估两代共享文件格式的策略对第三代意味着什么。”</h4>
+          <div class="qa"><details><summary>展开答题骨架与谱系推演</summary><div class="ans">
+            <p><strong>【场景定义】</strong> <code>openclaw migrate apply hermes</code> 与 <code>hermes claw migrate</code> 互为反向导入器；要求从协议设计层面解释这一现象。</p>
+            <p><strong>【资产分层论】</strong> 个人助理的内核状态天然分层——人格（SOUL.md）/ 记忆（§ 条目，Hermes 侧约定）/ 技能（SKILL.md）是“用户资产”，sessions / plugins / logs 是“运行时私有”；两侧文档都按这条线划 import 与 archive-only（openclaw migrating-hermes.md 与 claw.py 导入清单一致）。文件目录即用户可审计、可备份、可 hand-edit 的接口，API 反而要求两代进程同时活着。</p>
+            <p><strong>【同族认领论】</strong> 迁移器做的恰恰是<b>翻译与搬运</b>：openclaw→hermes 方向把源条目译成 Markdown 后按 Hermes 自己的 <code>§</code> 约定落目标 store，hermes→openclaw 方向原样拷贝文件族——openclaw 侧从不解析 <code>§</code>。真正能自证谱系的是 SOUL.md / MEMORY.md / SKILL.md 文件族 + 双向迁移脚本这对组合：格式先于产品稳定，是 agentskills.io 这种开放标准策略的延续。</p>
+            <p><strong>【第三代与追问】</strong> 第三代要么兼容这族文件格式才能吃到存量用户，要么自带第三个迁移器；Hermes 连 <code>.clawdbot / .moltbot</code> 旧目录名都认（claw.py:56），说明“认历史”本身就是竞争策略。反追问：哪些东西刻意不迁移？——Hermes-only 的 cron claim、Honcho 凭据、plugins；不迁移清单即产品差异化清单。</p>
+          </div></details></div>
+        </div>
+        <dl class="gloss" data-reveal><div><dt>SOUL.md</dt><dd>首启种子的人格/身份文件，进 system prompt stable 层，两代共享（hermes_cli/default_soul.py; system_prompt.py:377）。</dd></div><div><dt>nudge</dt><dd>每 N 回合（默认 10）触发的自省提醒计数，不注入用户消息（turn_context.py:732）。</dd></div><div><dt>background review</dt><dd>回合尾 fork 出的只读会话 + 写记忆/技能的 review agent（background_review.py:1595）。</dd></div><div><dt>Footprint Ladder</dt><dd>新能力六级落点阶梯：扩码 → CLI+skill → check_fn → plugin → MCP → core tool（最后手段）（AGENTS.md:71）。</dd></div><div><dt>narrow waist</dt><dd>核心窄腰：每个模型工具都随每次 API 调用付费，故核心仅 ~60 工具（快照计数）（AGENTS.md:24; toolsets.py:31）。</dd></div><div><dt>check_fn</dt><dd>工具的服务门控谓词，30s TTL 缓存 + 60s last-good 宽限（registry.py:208/:256/:364）。</dd></div><div><dt>prompt cache sacred</dt><dd>不得中途改动 past context / toolset / prompt 的宪法级纪律，唯一破例是压缩（AGENTS.md:24-29; prompt_caching.py）。</dd></div><div><dt>session key</dt><dd><code>agent:main:&lt;platform&gt;:&lt;chat_type&gt;:&lt;chat_id&gt;[:&lt;thread&gt;]</code> 跨面会话坐标（gateway/session.py:1090）。</dd></div><div><dt>micro-compaction</dt><dd>逐回合折叠最老交换进 running summary 的可选模式，代价 = 破缓存前缀（docs/micro-compaction.md）。</dd></div><div><dt>rearm_oneshot</dt><dd>过期 one-shot 定时作业的显式复活，仅 kind==once、拒活体 claim（cron/jobs.py:2422）。</dd></div></dl>
+        <section class="source-notes" aria-labelledby="hermes-sources" data-reveal><span class="label-mono">PRIMARY SOURCES</span><h3 id="hermes-sources">继续查证</h3><p>课程事实来自本地 Hermes Agent 快照（commit a0ca7c1）的 README、AGENTS.md 与 Python 源码；[文档声明] / [合理推断] 条目已在正文标注不确定语气。</p><div><a href="https://github.com/NousResearch/hermes-agent">Hermes Agent 上游仓库</a><a href="https://hermes-agent.nousresearch.com/docs/">官方文档站</a><a href="https://hermes-agent.nousresearch.com/docs/getting-started/termux">Termux 安装指南</a><a href="https://agentskills.io">agentskills.io 技能标准</a><a href="https://github.com/openclaw/openclaw">OpenClaw 对位仓库</a><a href="https://github.com/plastic-labs/honcho">Honcho 用户建模</a><a href="https://github.com/zed-industries/agent-client-protocol">Agent Client Protocol</a><a href="https://nousresearch.com">Nous Research</a></div></section>
+      </div></section>
+    </main>
+    <footer class="site"><div class="shell"><span>顶级 Agent 内核图谱 · Hermes Agent</span><div><a href="/codex">Codex</a> · <a href="/grok">Grok Build</a> · <a href="/deepseek">DeepSeek Harness</a> · <a href="/pi">Pi Agent</a> · <a href="/opencode">OpenCode</a> · <a href="/openclaw">OpenClaw</a> · <a href="/hermes" aria-current="page">Hermes Agent</a> · <a href="#top">返回顶部 ↑</a></div></div></footer>
+    <script type="module" src="/src/hermes.ts"></script>
+  </body>
+</html>

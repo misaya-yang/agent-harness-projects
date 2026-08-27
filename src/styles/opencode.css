@@ -1,0 +1,53 @@
+.opencode-page {
+  --o-amber-bright: oklch(0.83 0.13 155);
+  --o-amber-core: oklch(0.66 0.16 155);
+  --o-amber-deep: oklch(0.48 0.16 155);
+  --accent: var(--o-amber-deep);
+  --accent-vivid: var(--o-amber-core);
+  --accent-glow: var(--o-amber-bright);
+  --accent-wash: color-mix(in oklch, var(--o-amber-core) 10%, transparent);
+  --accent-line: color-mix(in oklch, var(--o-amber-core) 42%, transparent);
+  --focus-ring: var(--o-amber-deep);
+}
+
+.opencode-page .brand-short { display: none; }
+
+@media (min-width: 1280px) {
+  .opencode-page .hero {
+    --step-hero: clamp(2.75rem, 1.25rem + 3.4vw, 3.85rem);
+  }
+
+  .opencode-page .hero-grid {
+    grid-template-columns: minmax(0, 12fr) minmax(340px, 8fr);
+  }
+}
+
+@media (min-width: 821px) and (max-width: 1279px) {
+  .opencode-page .hero-grid { align-items: center; }
+}
+
+:root[data-theme="dark"] .opencode-page { --o-amber-deep: oklch(0.77 0.13 155); }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .opencode-page { --o-amber-deep: oklch(0.77 0.13 155); }
+}
+
+.opencode-page .loop-layout { grid-template-columns: minmax(190px, .85fr) minmax(180px, .65fr) minmax(240px, 1fr); }
+.opencode-page #oc-system .surface-detail,
+.opencode-page #oc-models .surface-detail { grid-template-columns: minmax(0, 1fr); }
+.opencode-page .m-steps { grid-template-columns: 1fr; }
+.opencode-page .state-counters { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.opencode-page .surface-detail { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.opencode-page .sim-layout .sim-group .seg-row { flex-wrap: wrap; }
+.opencode-page .state-actions .cbtn { font-size: 0.72rem; }
+
+@media (max-width: 820px) {
+  .opencode-page .loop-layout { grid-template-columns: 1fr; }
+  .opencode-page .state-counters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .opencode-page .surface-detail { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 520px) {
+  .opencode-page .topbar .brand-long { display: none; }
+  .opencode-page .topbar .brand-short { display: inline; }
+}

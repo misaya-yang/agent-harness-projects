@@ -254,16 +254,22 @@
   list-style: none;
   color: var(--text-2);
   font-size: var(--step-small);
+  max-inline-size: 42em; /* 中文收益句的行长上限，宽栏下不拉出 45em 长线 */
 }
 
+/* Block flow, not grid: inline children (code/strong) must wrap with the sentence.
+   A grid li auto-places each text run as a separate item and squeezes them into the marker column. */
 .hero-outcomes li {
-  display: grid;
-  grid-template-columns: 18px 1fr;
-  gap: 8px;
+  position: relative;
+  padding-inline-start: 26px;
 }
 
 .hero-outcomes li::before {
   content: "↳";
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  inline-size: 18px;
   color: var(--accent);
   font-family: var(--ff-mono);
 }
@@ -568,11 +574,10 @@
   counter-reset: stage;
 }
 
+/* Block flow, not grid: the ::before marker is absolutely positioned, so a
+   grid li auto-places the lone text item into the 2.2ch marker column (1 char/line). */
 .m-steps li {
   position: relative;
-  display: grid;
-  grid-template-columns: 2.2ch 1fr;
-  gap: 10px;
   padding: 8px 10px 8px 26px;
   border-block-start: 1px solid var(--line-on-console);
   font-family: var(--ff-mono);
@@ -946,6 +951,7 @@
   font-size: var(--step-small);
   color: var(--text-2);
   line-height: 1.8;
+  overflow-wrap: anywhere;
 }
 
 /* ============================================================
@@ -1253,6 +1259,7 @@
   margin: 0;
   color: var(--text-on-console);
   font-size: var(--step-small);
+  overflow-wrap: anywhere;
 }
 
 .source-notes {

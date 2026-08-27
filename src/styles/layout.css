@@ -232,6 +232,7 @@
   font-family: var(--ff-mono);
   font-size: 0.8rem;
   letter-spacing: 0.06em;
+  white-space: nowrap; /* 390px 下“章节”曾被 flex 挤成两行竖排 */
 }
 
 .menu-btn[aria-expanded="true"] {
@@ -802,6 +803,11 @@ footer.site a {
 .progress-track, .rail-progress-bar { height: 6px; overflow: hidden; border-radius: var(--r-pill); background: var(--line); }
 .progress-fill, .rail-progress-fill { height: 100%; background: var(--accent-vivid); transition: width var(--dur-base) var(--ease-out); }
 .reset-progress-btn { justify-self: start; min-height: 28px; padding: 2px 10px; font-size: .68rem; }
+/* .cbtn 的颜色为深色控制台面板设计；此按钮位于浅色 map-summary 面板，须回到页面语义色。 */
+.cbtn.reset-progress-btn { color: var(--text-2); border-color: var(--line-strong); }
+@media (hover: hover) and (pointer: fine) {
+  .cbtn.reset-progress-btn:hover { color: var(--text); border-color: color-mix(in oklch, var(--text) 34%, transparent); }
+}
 
 .rail a.is-completed::after, .chapter-nav a.is-completed::after { content: "✓"; margin-inline-start: auto; color: var(--accent); font-family: var(--ff-mono); font-weight: 700; }
 .rail-progress { display: grid; gap: 6px; margin-block-start: auto; padding-block-start: var(--s-3); border-block-start: 1px solid var(--line); }

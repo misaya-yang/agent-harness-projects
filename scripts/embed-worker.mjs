@@ -54,7 +54,7 @@ function decodeBase64(value) {
 export default {
   async fetch(request) {
     const url = new URL(request.url);
-    const routeAliases = { "/": "/index.html", "/codex": "/index.html", "/grok": "/grok.html", "/deepseek": "/deepseek.html", "/pi": "/pi.html" };
+    const routeAliases = { "/": "/index.html", "/codex": "/index.html", "/grok": "/grok.html", "/deepseek": "/deepseek.html", "/pi": "/pi.html", "/opencode": "/opencode.html", "/openclaw": "/openclaw.html", "/hermes": "/hermes.html" };
     const path = routeAliases[url.pathname] || url.pathname;
     const headers = {
       "content-type": contentType(path),

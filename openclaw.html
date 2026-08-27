@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="从三层循环、run 重试预算、双 SQLite 账本到唤醒源与审批通道，交互式拆解 OpenClaw 长期个人助理内核。" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="OpenClaw 内核图谱 · 顶级 Agent 教学系列" />
+    <meta property="og:description" content="沿着 Loop Stack、Bounded Run、SQLite 账本、唤醒源与记忆固化，读懂跨天存活的 Agent 内核。" />
+    <meta property="og:url" content="https://codex-kernel-atlas.lvy-u.chatgpt.site/openclaw" />
+    <link rel="canonical" href="https://codex-kernel-atlas.lvy-u.chatgpt.site/openclaw" />
+    <meta name="twitter:card" content="summary" />
+    <title>OpenClaw 内核图谱 · 顶级 Agent 教学系列</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=Noto+Sans+SC:wght@400;500;700&amp;family=Noto+Serif+SC:wght@700;900&amp;display=swap" rel="stylesheet" />
+    <link href="/src/styles/tokens.css" rel="stylesheet" />
+    <script>
+      document.documentElement.classList.add("js");
+      try { const t = localStorage.getItem("codex-atlas-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch {}
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) document.documentElement.classList.add("rm");
+    </script>
+  </head>
+  <body class="openclaw-page" data-agent="openclaw">
+    <a class="skip-link" href="#main">跳到正文</a>
+    <div class="progress-line" aria-hidden="true"></div>
+    <header class="topbar">
+      <a class="brand" href="#top"><span class="brand-long">OpenClaw</span><span class="brand-short">OCL</span> 图谱 <span class="label-mono">FIELD GUIDE</span></a>
+      <div class="topbar-actions"><div data-series-nav data-variant="top"><a class="series-fallback" href="/codex">Agent 系列</a></div><button class="theme-btn" type="button" data-theme-toggle aria-label="切换到深色模式"><span aria-hidden="true" data-theme-icon>◐</span><span data-theme-label>深色模式</span></button><button class="menu-btn" type="button" data-menu-btn aria-expanded="false" aria-controls="chapter-nav">章节</button></div>
+    </header>
+    <nav class="chapter-nav" id="chapter-nav" data-menu-panel hidden aria-label="课程章节">
+      <a href="#top" data-spy-link><span class="no">00</span>课程入口</a>
+      <a href="#loop-stack" data-spy-link><span class="no">01</span>三层循环</a>
+      <a href="#settle" data-spy-link><span class="no">02</span>完成与续跑</a>
+      <a href="#state" data-spy-link><span class="no">03</span>状态与持久化</a>
+      <a href="#memory" data-spy-link><span class="no">04</span>记忆体系</a>
+      <a href="#wake" data-spy-link><span class="no">05</span>自动化与唤醒</a>
+      <a href="#budget" data-spy-link><span class="no">06</span>资源治理</a>
+      <a href="#compaction" data-spy-link><span class="no">07</span>上下文压缩</a>
+      <a href="#tools" data-spy-link><span class="no">08</span>工具执行域</a>
+      <a href="#gateway" data-spy-link><span class="no">09</span>通道与网关</a>
+      <a href="#approval" data-spy-link><span class="no">10</span>权限与安全</a>
+      <a href="#soul" data-spy-link><span class="no">11</span>扩展与人格</a>
+      <a href="#practice" data-spy-link><span class="no">12</span>实践与面试</a>
+    </nav>
+    <aside class="rail" aria-label="课程章节">
+      <a class="brand" href="#top">OpenClaw 图谱</a>
+      <a href="#top" data-spy-link><span class="no">00</span>课程入口</a>
+      <a href="#loop-stack" data-spy-link><span class="no">01</span>三层循环</a>
+      <a href="#settle" data-spy-link><span class="no">02</span>完成与续跑</a>
+      <a href="#state" data-spy-link><span class="no">03</span>状态与持久化</a>
+      <a href="#memory" data-spy-link><span class="no">04</span>记忆体系</a>
+      <a href="#wake" data-spy-link><span class="no">05</span>自动化与唤醒</a>
+      <a href="#budget" data-spy-link><span class="no">06</span>资源治理</a>
+      <a href="#compaction" data-spy-link><span class="no">07</span>上下文压缩</a>
+      <a href="#tools" data-spy-link><span class="no">08</span>工具执行域</a>
+      <a href="#gateway" data-spy-link><span class="no">09</span>通道与网关</a>
+      <a href="#approval" data-spy-link><span class="no">10</span>权限与安全</a>
+      <a href="#soul" data-spy-link><span class="no">11</span>扩展与人格</a>
+      <a href="#practice" data-spy-link><span class="no">12</span>实践与面试</a>
+      <button class="theme-btn rail-theme" type="button" data-theme-toggle aria-label="切换到深色模式"><span aria-hidden="true" data-theme-icon>◐</span><span data-theme-label>深色模式</span></button>
+    </aside>
+    <main id="main">
+      <div data-series-nav data-variant="tabs"><nav class="course-tabs" aria-label="选择 Agent 课程"><a href="/codex">Codex</a><a href="/grok">Grok Build</a><a href="/deepseek">DeepSeek Harness</a><a href="/pi">Pi Agent</a><a href="/opencode">OpenCode</a><a href="/openclaw" aria-current="page">OpenClaw</a><a href="/hermes">Hermes Agent</a></nav></div>
+      <section class="hero shell" id="top" data-spy>
+        <div class="hero-grid">
+          <div data-reveal>
+            <p class="eyebrow label-mono">BOUNDED RUNS · PERSISTENT STATE · SOURCE-LED</p>
+            <h1>看懂 OpenClaw 如何<span class="alt">用一连串有界的短 run，活过很多天。</span></h1>
+            <p class="sub">它的内核循环与 Pi 几乎同构、本身无界；跨天存活靠的是外层工程：run 重试预算、双 SQLite 账本、automations / heartbeat / standing intents 三类唤醒源，以及凌晨 3 点的记忆固化。本课程沿三层循环向外逐层拆解。</p>
+            <ul class="hero-outcomes" aria-label="学完本课程你将能够"><li>分清三层循环各自管什么：续跑、回合、失败预算</li><li>用事件与计数器把症状定层，再落回 SQLite 账本验证</li><li>解释“有界 run + 持久状态 + 事件唤醒 + 记忆注入”为何省钱又活着</li></ul>
+            <div class="hero-cta"><a class="btn-primary" href="#loop-stack">进入三层循环 <span class="arrow" aria-hidden="true">→</span></a><a class="btn-secondary" href="#openclaw-source-route">先看源码路线</a></div>
+          </div>
+          <figure class="hero-loop" data-hero-loop data-reveal data-reveal-delay="120">
+            <svg viewBox="0 0 480 360" role="img" aria-labelledby="oclaw-hero-title oclaw-hero-desc">
+              <title id="oclaw-hero-title">OpenClaw 长期循环图</title>
+              <desc id="oclaw-hero-desc">唤醒、有界执行、工具副作用、落库与记忆唤醒组成的五节点长期循环；agent_settled 是执行到落库的收束边。</desc>
+              <circle class="ring" cx="240" cy="180" r="128" />
+              <g class="hnode"><circle cx="240" cy="48" r="38"/><text x="240" y="44" text-anchor="middle">唤醒</text><text class="hno" x="240" y="61" text-anchor="middle">WAKE</text></g>
+              <g class="hnode"><circle cx="365" cy="140" r="38"/><text x="365" y="136" text-anchor="middle">有界执行</text><text class="hno" x="365" y="153" text-anchor="middle">RUN</text></g>
+              <g class="hnode"><circle cx="318" cy="288" r="38"/><text x="318" y="284" text-anchor="middle">工具</text><text class="hno" x="318" y="301" text-anchor="middle">DO</text></g>
+              <g class="hnode"><circle cx="162" cy="288" r="38"/><text x="162" y="284" text-anchor="middle">落库</text><text class="hno" x="162" y="301" text-anchor="middle">STATE</text></g>
+              <g class="hnode"><circle cx="115" cy="140" r="38"/><text x="115" y="136" text-anchor="middle">记忆</text><text class="hno" x="115" y="153" text-anchor="middle">REMEMBER</text></g>
+              <circle class="packet" cx="240" cy="52" r="5">
+                <animateTransform attributeName="transform" type="rotate" from="0 240 180" to="360 240 180" dur="7s" repeatCount="indefinite" />
+              </circle>
+            </svg>
+            <figcaption>
+              <span>wake → run → do → state → remember · agent_settled 收束边</span>
+              <button class="pause-btn" type="button" data-loop-pause aria-pressed="false">⏸ 暂停</button>
+            </figcaption>
+          </figure>
+        </div>
+        <div class="hero-meta label-mono" aria-label="课程范围"><span>SOURCE SNAPSHOT · e6915d09</span><span>12 章 · 09 个实验</span><span>懂续跑 → 懂预算 → 懂唤醒</span></div>
+
+        <section class="lesson-brief" id="openclaw-series-map" data-reveal>
+          <span class="label-mono">SERIES MAP · 3-AGENT LONGEVITY CONTRAST</span>
+          <h3>Pi / Grok Build / OpenClaw：三种续跑答案</h3>
+          <p>同一门系列里，Pi 把循环做到极简，Grok Build 用熔断器家族守住编码会话，OpenClaw 则把“活着”拆成有界 run 与唤醒源的组合。对照结论基于本地源码快照的教学归纳，不代表各上游项目的官方定位。</p>
+          <div class="environment-matrix">
+            <div class="matrix-head"><strong>对比维度</strong><span>三种 Agent 内核的长期运行策略</span><code>核心特征</code></div>
+            <div>
+              <strong>内核循环</strong>
+              <span><strong>Pi</strong>: 双层 while。<br><strong>Grok Build</strong>: actor select + 内外层 while。<br><strong>OpenClaw</strong>: 双层 while（与 Pi 同构，<code>agent-loop.ts:351/:355</code>）。</span>
+              <code>Loop isomorphism</code>
+            </div>
+            <div>
+              <strong>防失控主力</strong>
+              <span><strong>Pi</strong>: 重试 3 + 一次 compact-and-retry。<br><strong>Grok Build</strong>: stationarity 16/8/4 等熔断器家族。<br><strong>OpenClaw</strong>: run 预算 32..160 + idle 5 + compaction 窗口 3 + 48h 墙钟。</span>
+              <code>Budget, not counters</code>
+            </div>
+            <div>
+              <strong>持久化与记忆</strong>
+              <span><strong>Pi</strong>: session 落盘，无长期记忆。<br><strong>Grok Build</strong>: JSONL 多文件 + rewind，dream consolidation。<br><strong>OpenClaw</strong>: 双 SQLite（state 9 / agent 17）+ search/get + dreaming cron + standing intents。</span>
+              <code>Ledger + dream</code>
+            </div>
+            <div>
+              <strong>唤醒与人在环中</strong>
+              <span><strong>Pi</strong>: 无定时唤醒；steer / followUp / abort。<br><strong>Grok Build</strong>: background tasks 自动唤醒；Interject + Ask 权限。<br><strong>OpenClaw</strong>: automations + heartbeat + webhook 唤醒；ask_user + 网关审批走聊天频道。</span>
+              <code>Asleep until woken</code>
+            </div>
+            <div>
+              <strong>运行表面</strong>
+              <span><strong>Pi</strong>: 库 / 框架。<br><strong>Grok Build</strong>: CLI / IDE / headless。<br><strong>OpenClaw</strong>: Gateway + 十余消息通道 + CLI / TUI / UI / 伴生 app。</span>
+              <code>One gateway</code>
+            </div>
+          </div>
+          <div class="custom-stack">
+            <div>
+              <span class="custom-key">OPENCLAW 适用</span>
+              <strong>跨天存活的个人助理</strong>
+              <p>需要助理住在你的设备与聊天频道里：睡在账本中，被定时任务、心跳与消息再点火，且一切审批可走频道回复。</p>
+            </div>
+            <div>
+              <span class="custom-key">PI 适用</span>
+              <strong>极简可嵌入的 Agent 框架</strong>
+              <p>需要双层 while 的轻内核与宿主全权接管治理策略的场合；OpenClaw 的内核正与它同构。</p>
+            </div>
+            <div>
+              <span class="custom-key">GROK 适用</span>
+              <strong>高响应编码会话</strong>
+              <p>需要终端级交互与熔断器家族防失控的编码 Agent 场景。</p>
+            </div>
+            <div>
+              <span class="custom-key">迁移关系</span>
+              <strong>Hermes → OpenClaw</strong>
+              <p>OpenClaw 提供 <code>extensions/migrate-hermes</code> 预览式可回滚迁移，是继承迁移关系；Hermes 自身另有专课。</p>
+            </div>
+          </div>
+        </section>
+      </section>
+
+      <section class="chapter shell" id="loop-stack" data-spy>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 01 · THE LOOP STACK</span><h2>一次对话不是一条大循环，而是三层各有职责的小循环嵌套。</h2><p class="lede">会话层管“要不要再跑一轮”，内核管“这一轮里模型和工具怎么咬合”，run 外层管“这个 run 失败了还有几次命”。</p></header>
+        <article class="lesson-brief" id="openclaw-source-route" data-reveal>
+          <span class="label-mono">SOURCE ROUTE · OPENCLAW e6915d09</span><h3>建议按 2 → 1 → 3 → 4 的顺序读四个入口。</h3><p>四处源码分别回答“什么时候再跑”“怎么跑”“跑不死”“醒来靠什么”——先懂续跑，再懂循环本身。</p>
+          <ol class="source-route">
+            <li><span><code>src/agents/sessions/agent-session-prompting.ts:28</code><strong>runAgentPrompt</strong> 一次用户消息如何变成“跑完→判断→再跑”的会话循环（:32 <code>while(true)</code> + <code>handlePostAgentRun()</code> 三岔决策）。</span></li>
+            <li><span><code>packages/agent-core/src/agent-loop.ts:298</code><strong>runLoop</strong> 最内核的双层 while：外层 :351 跟进 follow-up 队列，内层 :355 跟进 tool call 与 steering（与 Pi 同构）。</span></li>
+            <li><span><code>src/agents/embedded-agent-runner/run-loop.ts:71</code><strong>runPreparedEmbeddedLoop</strong> 整个 run 的失败预算、模型轮换、空闲断路器挂在哪一层（:315 <code>while(true)</code>、:193 预算、:331 耗尽处理）。</span></li>
+            <li><span><code>src/state/openclaw-agent-db-schema.ts</code> + <code>src/agents/tools/automations-tool-name.ts</code> 助理醒来时“记得什么、约了什么”：agent 级 SQLite schema；<code>automations</code> 工具（旧名 <code>cron</code>）。</span></li>
+          </ol>
+          <p class="lesson-result"><strong>学完本章你能：</strong>拿到一条消息时，先说出它此刻站在哪一层循环里，再决定去看哪一排事件。</p>
+        </article>
+        <p data-reveal>三层循环从上到下是：<code>runPreparedEmbeddedLoop</code>（<code>src/agents/embedded-agent-runner/run-loop.ts:71</code>）把整个 run 包进重试预算；<code>runAgentPrompt</code>（<code>src/agents/sessions/agent-session-prompting.ts:28</code>）用 <code>while(true)</code>（:32）和 <code>agent.continue()</code> 决定“再跑一轮吗”；最内层 <code>runLoop</code>（<code>packages/agent-core/src/agent-loop.ts:298</code>）的外圈 :351 跟进 followUp 队列、内圈 :355 跟进 tool calls 与 steering——与 Pi 的双层 while 同构 [源码确认]。OpenClaw 的 legacy runtime 别名 <code>pi</code> 归一化为 <code>openclaw</code>，VISION 自述 lineage 为 Warelay→Clawdbot→Moltbot→OpenClaw [源码确认+文档声明]。</p>
+        <ol class="kp-list" data-reveal><li data-no="01"><span><strong>事件边界</strong>：<code>agent_start</code> / <code>turn_start</code>（<code>agent-loop.ts:228-229</code>）开启一次 run，自然终止于 <code>agent_end</code>（:523）。</span></li><li data-no="02"><span><strong>失败路径</strong>：<code>pushLoopFailure</code>（:274-292）与 abort 路径 <code>stopIfAborted</code>（:320）会落一个半截回合。</span></li><li data-no="03"><span><strong>预算外圈</strong>：run 层的 <code>while(true)</code> 不管模型和工具，只管“这个 run 还有几次命”（见第 06 章）。</span></li></ol>
+        <div class="machine" id="oclaw-loop" data-reveal><div class="machine-bar"><span class="title"><span class="led" data-led></span><strong>三层循环步进机</strong></span><span class="label-mono" data-phase>idle</span></div><div class="machine-body loop-layout"><ol class="m-steps" data-steps><li data-no="01">唤醒</li><li data-no="02">预算开闸</li><li data-no="03">会话层起跑</li><li data-no="04">模型回合</li><li data-no="05">工具批执行</li><li data-no="06">运行中插话</li><li data-no="07">自然停</li><li data-no="08">续跑裁决</li><li data-no="09">会话收束</li><li data-no="10">落库休眠</li></ol><div><div class="m-controls"><button class="cbtn primary" type="button" data-run>▶ 连续</button><button class="cbtn" type="button" data-step>单步 →</button><button class="cbtn" type="button" data-reset>重置</button></div><p class="stage-note" data-note>逐步观察一条 Telegram 消息怎样穿过三层循环再回到睡眠。</p></div><div class="loop-logwrap stream-log elog" data-log aria-live="polite"></div></div></div>
+        <div class="fact-boundary" data-reveal><span class="label-mono">LINE-DRIFT BOUNDARY</span><strong>行号只认 e6915d09。</strong><span>早前的对比报告基于更早提交（schema state 6 / agent 16），多处行号已漂移（如 <code>runPreparedEmbeddedLoop</code> :64→:71、run-loop while :293→:315）。本课全部行号以本地复核值为准，旧报告行号不再引用。</span></div>
+      </section>
+
+      <section class="chapter band-deep" id="settle" data-spy><div class="shell">
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 02 · SETTLED OR CONTINUE</span><h2>“跑完了吗”由三股力量裁决：模型 stopReason、Harness 队列、宿主移交。</h2><p class="lede">内核自然停（无 tool call 且队列空）只是必要条件；会话层还会因重试、压缩、排队消息强行续跑，或因 turn handoff 把控制权交给外部投递。</p></header>
+        <p data-reveal><code>handlePostAgentRun</code>（<code>agent-session-prompting.ts:53</code>）的决策序即短路序：handoff→settled（:58-61）；aborted / 无消息→settled（:62-64）；<code>isRetryableError &amp;&amp; prepareRetry</code>→continue（:66-68）；<code>checkCompaction</code>→continue（:81）；<code>hasQueuedMessages()</code>→continue，否则 settled（:85）[源码确认]。运行中注入走 <code>steer()</code>（<code>agent.ts:337</code>），跑完注入走 <code>followUp()</code>（:342），<code>abort()</code> 在 :373。非 handoff 结束时 finally 里 emit <code>agent_settled</code>（:47-48）——失败与中止也要收束，唯一例外是 handoff 把后续 run 控制权移交外部投递。</p>
+        <div class="decision" data-reveal><span class="label-mono">RETRY IS NARROWER THAN YOU THINK</span><p><code>isRetryableError</code> 只认 overloaded / rate-limit / server error——<strong>上下文溢出不重试</strong>，交给 compaction（<code>agent-session-execution.ts:18-21</code> 注释）。会话级自动重试走指数退避 <code>baseDelayMs * 2 ** (retryCount - 1)</code>，并与 provider 的 <code>Retry-After</code> 取 max（:53/:59）；成功响应即清零 <code>retryCount</code>（<code>agent-session-base.ts:450-456</code>），开关与 <code>maxRetries</code> 上限在 <code>willRetryAfterAgentEnd</code>（:462-464）。</p></div>
+        <p data-reveal>工具侧还有一条终止语义：<code>shouldTerminateToolBatch</code>（<code>agent-loop.ts:1202</code>）要求<strong>全批</strong>工具 <code>terminate:true</code> 才终止内层循环 [源码确认]——一个工具喊停不算数。</p>
+        <div class="machine" id="oclaw-decision" data-reveal><div class="machine-bar"><span class="title"><span class="led" data-led></span><strong>续跑裁决走查</strong></span><span class="label-mono" data-phase>idle</span></div><div class="machine-body loop-layout"><ol class="m-steps" data-steps><li data-no="R1">endedForTurnHandoff</li><li data-no="R2">aborted / 无消息</li><li data-no="R3">isRetryableError</li><li data-no="R4">重试耗尽</li><li data-no="R5">checkCompaction</li><li data-no="R6">hasQueuedMessages</li></ol><div><div class="m-controls"><button class="cbtn primary" type="button" data-scen="handoff">转交外部投递</button><button class="cbtn" type="button" data-scen="abort">用户 abort</button><button class="cbtn" type="button" data-scen="overloaded">overloaded 错误</button><button class="cbtn" type="button" data-scen="exhausted">重试次数耗尽</button><button class="cbtn" type="button" data-scen="overflow">上下文溢出错误</button><button class="cbtn" type="button" data-scen="queued">钩子排队的消息</button></div><p class="stage-note" data-note>选一种输入，看它在哪条规则上短路。</p></div><div class="loop-logwrap stream-log elog" data-log aria-live="polite"></div></div></div>
+      </div></section>
+
+      <section class="chapter shell" id="state" data-spy>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 03 · TWO SQLITE FILES</span><h2>助理的记忆不在内存里，在两本 SQLite 账本里。</h2><p class="lede">全局 <code>openclaw.sqlite</code> 管跨 agent 事实，每 agent 的 <code>openclaw-agent.sqlite</code> 管会话 / transcript / 记忆索引；崩溃恢复靠“状态已落库 + 事件重放”，没有运行中快照。</p></header>
+        <p data-reveal>schema 版本 <code>state:9 / agent:17</code>（<code>package.json</code> <code>openclaw.schemaVersions</code>）；路径在 <code>src/state/openclaw-state-db.paths.ts:40</code> 与 <code>openclaw-agent-db.paths.ts:31</code>（:19 另有 incognito 变体）[源码确认]。</p>
+        <ol class="kp-list" data-reveal><li data-no="01"><span><strong>agent 库</strong>：<code>conversations</code>（schema :251）、<code>sessions</code>（:270 迁移）、<code>session_routes</code>（:477）、<code>state_leases</code>（:306）、<code>transcript_events</code>、<code>standing_intents</code>、<code>board_tabs</code> 等表；canonical SQL 汇总于 <code>src/state/openclaw-agent-schema.ts</code>。</span></li><li data-no="02"><span><strong>全局库</strong>：<code>user_preferences</code>（<code>src/state/user-preferences.ts:21</code>）、<code>audit_events</code>（建表定义 <code>state/openclaw-state-schema.sql:154</code>）。注意：旧 <code>commitments</code> 表 v7 已 retire（<code>openclaw-state-db-contract.ts:6</code>，<code>openclaw-state-db.ts:209</code> 执行清理），只剩 repair 迁移夹具里的历史建表（<code>openclaw-state-db-schema-repair.ts:48</code>）。</span></li><li data-no="03"><span><strong>中断也入账</strong>：abort 时把失败回合 + interrupted-turn 说明落进消息流（<code>agent-loop.ts:320</code> <code>stopIfAborted</code>）。</span></li><li data-no="04"><span><strong>租约互斥</strong>：<code>state_leases</code> 表保证多进程对同一 DB 的租约互斥。</span></li></ol>
+        <div class="decision" data-reveal><span class="label-mono">RECOVERY SEMANTICS</span><p><code>buildCliRespawnPlan</code>（<code>src/entry.respawn.ts:75</code>）只是用调整后的 Node flags 重生 CLI 进程，<strong>不是</strong> agent run 的运行中快照恢复。恢复语义 = 新进程重读 SQLite 账本 + 唤醒源再点火；崩溃后进程内计数器归零，但 transcript、standing intents、automations 定义、记忆索引原样找回。</p></div>
+        <div class="machine" id="oclaw-state" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>状态投影台：内存计数 vs 账本事实</strong></span><span class="label-mono">teaching projection</span></div><div class="machine-body state-layout"><div><div class="state-counters"><div><span class="label-mono">retryCount</span><strong data-events-retry>0</strong></div><div><span class="label-mono">预算 used</span><strong data-budget>0</strong></div><div><span class="label-mono">溢出压缩</span><strong data-overflow>0</strong></div><div><span class="label-mono">transcript 行</span><strong data-transcript>0</strong></div><div><span class="label-mono">intent fires</span><strong data-fires>0</strong></div></div><div class="state-actions"><button class="cbtn primary" type="button" data-event="message">+ message_in</button><button class="cbtn" type="button" data-event="turn">+ turn_end</button><button class="cbtn" type="button" data-event="settle">agent_settled</button><button class="cbtn" type="button" data-event="recovery">+ 失败 attempt</button><button class="cbtn" type="button" data-event="progress">+ 进度续跑</button><button class="cbtn" type="button" data-event="overflow">+ 溢出压缩</button><button class="cbtn" type="button" data-event="intent">intent 命中</button><button class="cbtn" type="button" data-event="crash">☠ 进程崩溃</button><button class="cbtn" type="button" data-event="restart">↻ 重启读账本</button><button class="cbtn" type="button" data-event="reset">重置</button></div></div><div class="stream-log elog" data-log aria-live="polite"></div></div></div>
+      </section>
+
+      <section class="chapter band-edge" id="memory" data-spy><div class="shell">
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 04 · SEARCH, DREAM, INTEND</span><h2>长期记忆 = 混合检索工具 + 夜间固化 + 常驻意图三件套。</h2><p class="lede">模型用 <code>memory_search</code> / <code>memory_get</code> 主动查（FTS+向量混合）；凌晨 3 点 dreaming cron 整理固化；standing intents 让“没做完的事”能在未来消息里被关键词 / embedding 唤醒。</p></header>
+        <p data-reveal>检索工具是 <code>createMemorySearchTool</code>（<code>extensions/memory-core/src/tools.ts:272</code>）与 <code>createMemoryGetTool</code>（:531）；后端是 <code>memory_index_chunks</code> + <code>custom_memory_fts</code> + <code>memory_embedding_cache</code> 表，混合逻辑在 <code>hybrid.ts</code>，向量以 Float32Array blob 存库（<code>vector-blob.ts</code>），并支持本地 embedding provider [源码确认]。</p>
+        <div class="custom-stack" data-reveal><div><span class="custom-key">DREAM</span><strong>记忆固化</strong><p><code>DEFAULT_MEMORY_DREAMING_FREQUENCY = "0 3 * * *"</code>（<code>src/memory-host-sdk/dreaming.ts:28</code>）；memory-core 有完整 <code>dreaming-phases.ts</code> / <code>dreaming-consolidation.ts</code> 阶段文件。</p></div><div><span class="custom-key">INTEND</span><strong>常驻意图</strong><p>standing intents 默认 cooldown 24h、最多触发 3 次（<code>DEFAULT_INTENT_MAX_FIRES = 3</code>）、90 天过期（<code>standing-intents.ts:12-14</code>）；<code>createStandingIntent</code> :256 / <code>matchStandingIntents</code> :394。</p></div><div><span class="custom-key">WEIGHT</span><strong>重要性乘子</strong><p>检索分数叠加 <code>applyImportanceMultiplier</code>（<code>memory/importance.ts:9</code>）。</p></div><div><span class="custom-key">BUDGET</span><strong>记忆预算压缩</strong><p><code>DEFAULT_MEMORY_FILE_MAX_CHARS = 10_000</code> 与 <code>compactMemoryForBudget</code>（<code>memory-budget.ts:33/:198</code>）限制注入上下文的记忆体积。</p></div></div>
+        <div class="fact-boundary" data-reveal><span class="label-mono">NOT THE RETRIEVAL PATH</span><strong>Dreaming 不参与运行时检索。</strong><span>凌晨固化是独立 cron 阶段，不是每次查询都会“做梦”；把 dreaming 描述成在线检索的一部分是常见的误读。</span></div>
+        <div class="machine" id="oclaw-memory" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>醒来时记得什么：resume 注入台</strong></span><span class="label-mono" data-status>选择载体与唤醒方式</span></div><div class="machine-body sim-layout"><div><div class="sim-group" data-carrier><span class="label-mono">01 · 记忆载体</span><div class="seg-row"><button class="cbtn" type="button" data-v="sqlite" aria-pressed="false">agent 级 SQLite 账本</button><button class="cbtn" type="button" data-v="files" aria-pressed="false">文件记忆</button></div></div><div class="sim-group" data-wake><span class="label-mono">02 · 这次怎么醒</span><div class="seg-row"><button class="cbtn" type="button" data-v="chat" aria-pressed="false">通道消息</button><button class="cbtn" type="button" data-v="heartbeat" aria-pressed="false">heartbeat</button><button class="cbtn" type="button" data-v="dream" aria-pressed="false">dreaming 之后</button></div></div><p class="stage-note">两组各选一个：新 run 冷启动，注入的成分与来源文件当场列给你看。</p></div><div><div class="state-counters"><div><span class="label-mono">注入成分</span><strong data-parts>0</strong></div><div><span class="label-mono">账本表</span><strong data-tables>0</strong></div><div><span class="label-mono">字符预算</span><strong data-chars>—</strong></div><div><span class="label-mono">旧预算消耗</span><strong data-budget>0</strong></div></div><div class="atlas-detail" data-detail aria-live="polite"><span class="label-mono">RESUME PROJECTION</span><h3>等待选择</h3><p>进程内计数器在崩溃后归零；助理找回来的一切，都来自这两类载体。</p></div></div></div></div>
+      </div></section>
+
+      <section class="chapter shell" id="wake" data-spy>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 05 · WHAT WAKES THE AGENT</span><h2>让助理主动的四把闹钟：automations、heartbeat、standing intents、通道消息。</h2><p class="lede">模型自己就能注册定时任务（<code>automations</code> 工具，前身叫 <code>cron</code>）；调度器有独立并发与墙钟策略；heartbeat 是“活着就定期看一眼”的独立机制。</p></header>
+        <p data-reveal><code>AUTOMATIONS_TOOL_NAME = "automations"</code>（<code>src/agents/tools/automations-tool-name.ts:6</code>），<code>"cron"</code> 是永久兼容别名（:14-15）[源码确认]。调度器：armTimer（<code>src/cron/service/timer-scheduler.ts:50</code>）、到点批处理 <code>dueJobs</code>（:183）、并发上限 <code>resolveRunConcurrency</code>（:271）；墙钟普通 job 10 分钟、agentTurn 安全阀 60 分钟（<code>src/cron/service/timeout-policy.ts:10/:16/:28</code>）。Heartbeat：<code>startHeartbeatRunner</code>（<code>src/infra/heartbeat-runner-scheduler.ts:62</code>），单次超时与间隔挂钩且封顶 10 分钟（<code>heartbeat-runner-config.ts:29</code>）；模型侧可用 <code>heartbeat_respond</code> 工具回应心跳（<code>src/agents/tools/heartbeat-response-tool.ts</code> + 名称常量 <code>src/auto-reply/heartbeat-tool-response.ts:10</code>）。</p>
+        <div class="decision" data-reveal><span class="label-mono">PRECISION VS CADENCE</span><p>官方文档分工：Automations = 精确时机（cron 表达式 / 一次性），Heartbeat = 近似节奏（默认约每 30 分钟）；automations 作业持久化且输出可投递到聊天通道或 webhook [文档声明]（<code>docs/automation/index.md:52/:64</code>、<code>docs/automation/cron-vs-heartbeat.md</code>）。cron 任务的网关协议 schema 在 <code>packages/gateway-protocol/src/schema/cron.ts</code>（<code>CronJobSchema</code>）。</p></div>
+        <p data-reveal>工具实现按职责拆分在 <code>src/agents/tools/</code>：<code>cron-tool.ts / cron-tool-creator-cap.ts / cron-tool-write.ts / cron-tool-self-list.ts / cron-tool-canonicalize.ts / cron-tool-caller-scope.ts</code>——注册、改写、自列表、规范化、调用者作用域各一个文件 [源码确认]。</p>
+        <div class="machine" id="oclaw-wake" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>谁叫醒了助理：事件源走查</strong></span><span class="label-mono" data-status>选择一个事件源</span></div><div class="machine-body atlas-layout"><div class="atlas-choices"><button class="layer-row" type="button" data-key="chat" aria-pressed="false">通道消息 chat</button><button class="layer-row" type="button" data-key="heartbeat" aria-pressed="false">heartbeat 心跳</button><button class="layer-row" type="button" data-key="cron" aria-pressed="false">automations（旧名 cron）</button><button class="layer-row" type="button" data-key="intent" aria-pressed="false">standing intent 命中</button><button class="layer-row" type="button" data-key="tick" aria-pressed="false">tick</button></div><div class="atlas-detail" data-detail aria-live="polite"><span class="label-mono">WAKE SOURCE</span><h3>选一个事件源</h3><p>看它是 Gateway「发出」还是客户端「订阅」的，看它进哪条 lane、吃不吃 run 重试预算。</p></div></div></div>
+      </section>
+
+      <section class="chapter band-deep" id="budget" data-spy><div class="shell">
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 06 · BUDGET NOT COUNTERS</span><h2>防失控不靠“最多跑 N 轮”，靠一整排分层断路器。</h2><p class="lede">内核无 maxTurns；真正的限量在外层：run 重试预算、48h 墙钟、空闲 5 连击、compaction 后同参同果窗口 3、以及<strong>默认关闭</strong>的工具循环检测。</p></header>
+        <p data-reveal>预算公式 <code>clamp(24 + 8×profile数, 32, 160)</code>（<code>run/helpers.ts:120-132</code>），耗尽走 <code>handleRetryLimitExhaustion</code>（<code>run-loop.ts:331</code>）；<code>recordRunRetry</code> 对 <code>progress_continuation</code> <strong>不计费</strong>（实现上先扣后退：计费照常 +1，随后把 <code>attemptsCounted</code> 减回一，<code>retry-budget.ts:35-38</code>）——有进展的续跑不吃预算。同模型 rate-limit 原地重试 ≤3 次、线性退避步长 10s（10/20/30s，<code>run/helpers.ts:48-51</code>），超出才进 profile 轮换。纯推理重试 2 / 空回复重试 1（<code>run/incomplete-turn-recovery.ts:32-33</code>，run-loop.ts:190-191 消费）[源码确认]。</p>
+        <ol class="kp-list" data-reveal><li data-no="01"><span><strong>墙钟</strong>：默认 48h、<code>0</code> = 不限 sentinel（<code>src/agents/timeout.ts:13</code>/:21-24）。</span></li><li data-no="02"><span><strong>空闲断路器</strong>：<code>MAX_CONSECUTIVE_IDLE_TIMEOUTS_BEFORE_OUTPUT = 5</code>（<code>run/idle-timeout-breaker.ts:16</code>）。</span></li><li data-no="03"><span><strong>压缩后守卫</strong>：<code>DEFAULT_WINDOW_SIZE = 3</code>、违规抛 <code>PostCompactionLoopPersistedError</code>（<code>post-compaction-loop-guard.ts:14/:166</code>）。</span></li><li data-no="04"><span><strong>耗尽 ≠ 直接报错</strong>：有 <code>fallback_model</code> 决策时抛 <code>FailoverError</code> 切模型继续，否则产出用户可见失败载荷 "Request failed after repeated internal retries"（<code>run/retry-limit.ts:29-43</code>）。</span></li></ol>
+        <div class="fact-boundary" data-reveal><span class="label-mono">DEFAULT-OFF FEATURE</span><strong>工具循环检测默认关闭。</strong><span><code>tool-loop-detection.ts:53-54</code> <code>enabled:false</code>，warn 10 / critical 20 / circuit 30（:49-52）是配置默认值而非在跑的行为；opt-in 前没有“重复工具调用”断路器。不得表述为“OpenClaw 有内置循环检测在跑”。</span></div>
+        <div class="fact-boundary" data-reveal><span class="label-mono">WALL-CLOCK, NOT GUARANTEE</span><strong>48h 是墙钟超时，不是任务时长保证。</strong><span>默认 48h 但配置 0 = 不限，且不限时 idle watchdog（断路器 5）仍在管活性；“能跑 48 小时”是简化说法。</span></div>
+        <div class="machine" id="oclaw-budget" data-reveal><div class="machine-bar"><span class="title"><span class="led" data-led></span><strong>重试预算模拟器</strong></span><span class="label-mono" data-status>候选 profile = 2</span></div><div class="machine-body state-layout"><div><div class="state-counters"><div><span class="label-mono">预算 MAX</span><strong data-max>40</strong></div><div><span class="label-mono">已耗 used</span><strong data-used>0</strong></div><div><span class="label-mono">余量</span><strong data-remain>40</strong></div><div><span class="label-mono">限流连击</span><strong data-rl>0</strong></div><div><span class="label-mono">IDLE 连击</span><strong data-idle>0</strong></div></div><div class="oclaw-bar" aria-hidden="true"><div class="oclaw-bar-fill" data-bar-fill></div><div class="oclaw-bar-tail" data-bar-tail></div></div><div class="state-actions" data-profile><span class="label-mono">profileCandidates</span><div class="seg-row"><button class="cbtn" type="button" data-v="1" aria-pressed="false">1</button><button class="cbtn" type="button" data-v="2" aria-pressed="true">2</button><button class="cbtn" type="button" data-v="5" aria-pressed="false">5</button><button class="cbtn" type="button" data-v="20" aria-pressed="false">20</button></div></div><div class="state-actions"><button class="cbtn primary" type="button" data-evt="ok">成功回合</button><button class="cbtn" type="button" data-evt="rate">网络抖动</button><button class="cbtn" type="button" data-evt="auth">auth 失败</button><button class="cbtn" type="button" data-evt="switch">profile 轮换</button><button class="cbtn" type="button" data-evt="compact">溢出压缩</button><button class="cbtn" type="button" data-evt="progress">进度续跑</button><button class="cbtn" type="button" data-evt="idle">idle 无输出</button><button class="cbtn" type="button" data-evt="wall">48h 墙钟</button><button class="cbtn" type="button" data-evt="reset">重置</button></div></div><div class="stream-log elog" data-log aria-live="polite"></div></div></div>
+        <article class="lesson-brief" id="oclaw-budget-skeleton" data-reveal>
+          <span class="label-mono">SOURCE-ALIGNED TEACHING SKELETON · RUN-RETRY-BUDGET</span>
+          <h3>run 重试预算教学骨架（<code>RunRetryBudget / recordRunRetry / resolveMaxRunRetryIterations</code>）</h3>
+          <p>下面是与 <code>src/agents/embedded-agent-runner/run/helpers.ts</code>、<code>run/retry-budget.ts</code>、<code>run-loop.ts</code> 结构对齐的教学简化，命名与真实源码对齐，<strong>非上游源码复制</strong>。真实实现在 idle 断路器与 48h 墙钟上并行生效。</p>
+          <div class="stream-log elog" style="max-height: 480px; overflow-y: auto; padding: 16px; border-radius: var(--r-control); background: var(--surface-console); border: 1px solid var(--line-on-console);">
+<span class="k-sys">// teaching-skeleton: run-retry-budget.ts —— 与 run/helpers.ts、run/retry-budget.ts、run-loop.ts 结构对齐</span>
+<span class="k-user">type</span> <span class="k-model">RunRetryKind</span> = <span class="k-model">"progress_continuation"</span> | <span class="k-model">"recovery"</span>; <span class="k-sys">// 同 retry-budget.ts:1</span>
+
+<span class="k-user">const</span> BASE_RUN_RETRY_ITERATIONS = 24;        <span class="k-sys">// helpers.ts:120</span>
+<span class="k-user">const</span> RUN_RETRY_ITERATIONS_PER_PROFILE = 8;  <span class="k-sys">// helpers.ts:121</span>
+<span class="k-user">const</span> MIN_RUN_RETRY_ITERATIONS = 32;         <span class="k-sys">// helpers.ts:122</span>
+<span class="k-user">const</span> MAX_RUN_RETRY_ITERATIONS = 160;        <span class="k-sys">// helpers.ts:123</span>
+
+<span class="k-user">export function</span> <span class="k-tool">resolveMaxRunRetryIterations</span>(profileCandidateCount: <span class="k-user">number</span>): <span class="k-user">number</span> {
+  <span class="k-user">const</span> scaled = BASE_RUN_RETRY_ITERATIONS +
+    Math.<span class="k-tool">max</span>(1, profileCandidateCount) * RUN_RETRY_ITERATIONS_PER_PROFILE;
+  <span class="k-user">return</span> Math.<span class="k-tool">min</span>(MAX_RUN_RETRY_ITERATIONS, Math.<span class="k-tool">max</span>(MIN_RUN_RETRY_ITERATIONS, scaled));
+}
+
+<span class="k-user">export interface</span> <span class="k-model">RunRetryBudget</span> { max: <span class="k-user">number</span>; used: <span class="k-user">number</span> }
+<span class="k-user">export function</span> <span class="k-tool">createRunRetryBudget</span>(max: <span class="k-user">number</span>): <span class="k-model">RunRetryBudget</span> { <span class="k-user">return</span> { max, used: 0 }; }
+
+<span class="k-sys">// 关键语义：有进展的续跑不吃预算——先扣后退（真实实现：attempt 起点 +1，recordRunRetry 只退回，retry-budget.ts:35-38）</span>
+<span class="k-user">export function</span> <span class="k-tool">recordRunRetry</span>(budget: <span class="k-model">RunRetryBudget</span>, kind: <span class="k-model">RunRetryKind</span>): <span class="k-user">void</span> {
+  budget.used += 1; <span class="k-sys">// 先计费</span>
+  <span class="k-user">if</span> (kind === <span class="k-model">"progress_continuation"</span>) budget.used = Math.<span class="k-tool">max</span>(0, budget.used - 1); <span class="k-sys">// 有进展则退回</span>
+}
+<span class="k-user">export function</span> <span class="k-tool">isRunRetryBudgetExhausted</span>(budget: <span class="k-model">RunRetryBudget</span>): <span class="k-user">boolean</span> {
+  <span class="k-user">return</span> budget.used &gt;= budget.max;
+}
+
+<span class="k-sys">// 外层 run 循环骨架（对应 runPreparedEmbeddedLoop 的 while(true)，run-loop.ts:315）</span>
+<span class="k-user">export async function</span> <span class="k-tool">runPreparedEmbeddedLoopTeaching</span>(
+  attempt: (budget: <span class="k-model">RunRetryBudget</span>) =&gt; <span class="k-user">Promise</span>&lt;{ outcome: <span class="k-model">"done"</span> | <span class="k-model">"retry"</span>; kind: <span class="k-model">RunRetryKind</span> }&gt;,
+  profiles: <span class="k-user">number</span>,
+  onExhausted: (budget: <span class="k-model">RunRetryBudget</span>) =&gt; <span class="k-user">Promise</span>&lt;{ outcome: <span class="k-model">"done"</span> }&gt;,
+): <span class="k-user">Promise</span>&lt;{ outcome: <span class="k-model">"done"</span> }&gt; {
+  <span class="k-user">const</span> budget = <span class="k-tool">createRunRetryBudget</span>(<span class="k-tool">resolveMaxRunRetryIterations</span>(profiles));
+  <span class="k-user">while</span> (<span class="k-user">true</span>) {
+    <span class="k-user">if</span> (<span class="k-tool">isRunRetryBudgetExhausted</span>(budget)) <span class="k-user">return</span> <span class="k-tool">onExhausted</span>(budget); <span class="k-sys">// 真实源码此处 failover/报错（run-loop.ts:317-331）</span>
+    <span class="k-user">const</span> result = <span class="k-user">await</span> <span class="k-tool">attempt</span>(budget);                              <span class="k-sys">// beginRunAttempt ≈ run-loop.ts:351</span>
+    <span class="k-user">if</span> (result.outcome === <span class="k-model">"done"</span>) <span class="k-user">return</span> result;
+    <span class="k-tool">recordRunRetry</span>(budget, result.kind);                               <span class="k-sys">// idle 断路器 / 48h 墙钟在真实实现里并行生效</span>
+  }
+}
+          </div>
+          <p class="lesson-result"><strong>架构精要：</strong>预算只给“失败与 recovery”定价，有进展就免费——这是 OpenClaw“分层治理”的最小样本：限量不靠一条 maxTurns，而靠每个机制各管一段红线。</p>
+        </article>
+      </div></section>
+
+      <section class="chapter shell" id="compaction" data-spy>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 07 · TWO PATHS, ONE PLUG</span><h2>溢出是事故，超阈值是保养——compaction 有两条路径，且引擎可整体换掉。</h2><p class="lede"><code>checkCompaction</code> 区分“模型报错了被动压”与“到水位了主动压”；被动压缩带自动重试且有次数上限；更外层，context-engine 是一个七能力面的可插拔接口。</p></header>
+        <p data-reveal>两路径定义见注释与实现（<code>src/agents/sessions/agent-session-compaction.ts:283-284</code>）：溢出路径 :335-353 自动重试，上限 <code>MAX_OVERFLOW_COMPACTION_ATTEMPTS = 3</code>（<code>src/agents/agent-compaction-constants.ts:14</code>）；阈值路径 :377 压缩后<strong>不</strong>自动重试（:284 注释）[源码确认]。</p>
+        <div class="primitive-grid" data-reveal><article><span class="primitive-no">01 / OVERFLOW</span><h3>被动：溢出压缩</h3><p>模型报 overflow → 压缩后 continue；第 4 次封顶报错（:335-341）。它不经过会话重试，因为溢出不算 retryable error。</p></article><article><span class="primitive-no">02 / THRESHOLD</span><h3>主动：水位保养</h3><p>到阈值触发，压完不回灌续跑；省下的窗口留给下一轮自然推进。</p></article><article><span class="primitive-no">03 / ENGINE</span><h3>可插拔引擎</h3><p><code>ContextEngineHostCapability</code> 七项：<code>bootstrap / assemble-before-prompt / after-turn / maintain / compact / runtime-llm-complete / thread-bootstrap-projection</code>（<code>src/context-engine/types.ts:64-71</code>）。</p></article></div>
+        <div class="decision" data-reveal><span class="label-mono">SWAP THE WHOLE ENGINE</span><p><code>promptAuthority: "assembled" | "preassembly_may_overflow"</code>（types.ts:27）决定预检用装配后还是装配前估计；引擎经 <code>registry.ts / delegate.ts / host-compat.ts</code> 注册与能力协商，<code>quarantine-health.ts</code> 隔离异常引擎。操作面三种：<code>agent-run / manual-compact / subagent-spawn</code>（types.ts:50）。压缩自身还有护栏钩子：<code>src/agents/agent-hooks/</code> 下 <code>compaction-safeguard.ts</code>、<code>compaction-instructions.ts</code> 与上下文修剪 [源码确认]。</p></div>
+      </section>
+
+      <section class="chapter band-edge" id="tools" data-spy><div class="shell">
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 08 · TOOLS AS CAPABILITY SURFACE</span><h2>工具域是策略裁剪后的能力视图，执行前后各有一道钩子闸。</h2><p class="lede">会话、子代理、节点设备、媒体生成、网页、cron……几十个内置工具文件按域划分；before/afterToolCall 与 afterToolOutcome 让审批与观测插在工具两侧；并行 / 串行按工具级 executionMode 混合。</p></header>
+        <p data-reveal><code>executeToolCalls</code>（<code>agent-loop.ts:633</code>）分流 sequential :764 / parallel :945，deferred 工具在 <code>resolveDeferredTool</code>（:1239）支持运行中延迟解析；三钩子契约在 <code>packages/agent-core/src/types.ts:49/:100/:151</code> [源码确认]。</p>
+        <div class="custom-stack" data-reveal><div><span class="custom-key">SESSIONS</span><strong>会话与子代理</strong><p><code>sessions-send/spawn/list/history/search</code>、<code>subagents-tool.ts</code>；<code>agent-step.ts:60 runAgentStep</code> 支持嵌套 run。</p></div><div><span class="custom-key">DEVICES</span><strong>节点与终端</strong><p><code>nodes-tool.ts</code>、<code>computer-tool.ts</code>、<code>terminal-tool.ts</code>——设备能力经网关代理。</p></div><div><span class="custom-key">WEB/MEDIA</span><strong>网页与生成</strong><p><code>web-search / web-fetch</code>、<code>image / music / video-generate</code>。</p></div><div><span class="custom-key">WORKFLOW</span><strong>目标与工坊</strong><p><code>goal-tools.ts</code>、<code>skill-workshop-tool.ts</code>、<code>transcripts-tool.ts</code>、<code>dashboard-tool.ts</code> 等。</p></div></div>
+        <p data-reveal>并发轨道：<code>createEmbeddedRunLaneController</code>（<code>run/lane-controller.ts</code>，<code>run-orchestrator.ts:70</code> 引入）把全局 lane 与每会话 lane 双轨入队（<code>enqueueGlobal</code> 调用 :199 / <code>enqueueSession</code> 调用 :231）；transcript 支持归档重写水位（<code>transcript_rewrite_watermarks</code> 表，<code>openclaw-agent-session-transcript-archive-schema.ts:8</code>）[源码确认]。</p>
+        <div class="decision" data-reveal><span class="label-mono">边界</span><p>工具域默认<strong>没有循环断路器</strong>：<code>tool-loop-detection.ts:54</code> <code>enabled:false</code>，opt-in 之后 warn 10（:56，值在 <code>tool-loop-thresholds.ts:1</code>）/ critical 20（:51）/ 熔断 30（:52）才有意义，历史窗口 30 条（:49）。第 12 章症状定位器 loopy 一条说的就是这个：模型重复调同一工具不被掐断是默认行为，不是 bug；默认在跑的红线只有 idle 断路器 5 与压缩后窗口守卫 3，两者都不防重复调用。</p></div>
+      </div></section>
+
+      <section class="chapter shell" id="gateway" data-spy>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 09 · ONE GATEWAY, MANY SURFACES</span><h2>一个长驻 Gateway 拥有所有通道连接，其它一切都是它的 WS 客户端。</h2><p class="lede">WhatsApp / Telegram / Slack / Discord / Signal / iMessage 通道各自只有一个宿主；CLI、Web Control UI、macOS 应用、automations 都以 WS 角色接入同一个 Gateway，设备节点（node）再声明自己的 caps。</p></header>
+        <p data-reveal>架构文档：单 Gateway、WS on <code>127.0.0.1:18789</code>、node 以 <code>role: node</code> 同端口接入、emit 面 <code>agent/chat/presence/health/heartbeat/cron</code>、客户端订阅面含 <code>tick/shutdown</code>（<code>docs/concepts/architecture.md:31/:37</code>——tick 是订阅节奏，不是 emit 事件名）[文档声明+源码确认]。通道实现为扩展：<code>extensions/telegram</code>（grammY）、<code>whatsapp</code>（Baileys）、<code>discord</code>、<code>slack</code>、<code>signal</code>、<code>imessage</code>、<code>msteams</code>、<code>googlechat</code>、<code>matrix</code>、<code>irc</code>、<code>nostr</code>、<code>sms</code>、<code>zoom-meetings</code> 等；协议与帧校验在 <code>packages/gateway-protocol</code>（<code>frame-guards.ts</code>）。内嵌场景（TUI/单进程）用 <code>in-process-gateway.ts</code> / <code>embedded-gateway-stub.ts</code> 复用同一网关契约——工具不感知自己面对的是进程内还是远程 Gateway [源码确认，合理推断（双实现同接口）]。</p>
+        <p data-reveal>node 暴露设备能力命令（<code>camera.*</code>、<code>screen.record</code>、<code>location.get</code>，macOS app 加 <code>canvas.*</code>），配对为设备级、审批存于 device pairing store [文档声明]；相关表 <code>session_members</code>、<code>device_pairing_join_codes</code>、<code>operator_approvals</code> 在 <code>src/state/</code> schema 常量中可见 [源码确认]。</p>
+        <div class="machine" id="oclaw-surface" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>表面接线板</strong></span><span class="label-mono" data-status>选择表面</span></div><div class="machine-body surface-layout"><div class="surface-choices"><button class="cbtn" type="button" data-key="telegram" aria-pressed="false">Telegram 通道</button><button class="cbtn" type="button" data-key="discord" aria-pressed="false">Discord 通道</button><button class="cbtn" type="button" data-key="ui" aria-pressed="false">Control UI (web)</button><button class="cbtn" type="button" data-key="cli" aria-pressed="false">CLI / TUI</button><button class="cbtn" type="button" data-key="macos" aria-pressed="false">macOS 伴生 app</button></div><dl class="surface-detail" data-detail><div><dt>协议角色</dt><dd>选择一种运行表面</dd></div><div><dt>共同宿主</dt><dd>一切经同一个 Gateway（127.0.0.1:18789）</dd></div></dl></div></div>
+        <div class="fact-boundary" data-reveal><span class="label-mono">EXTERNAL SERVICES BOUNDARY</span><strong>通道后端与模型推理不在本仓库。</strong><span>Telegram/Discord 等通道走 <code>src/channels/*</code> + <code>extensions/&lt;channel&gt;</code> 的传输适配；实际服务端与模型 provider 推理属外部服务，本仓库只保证执行与治理机制。</span></div>
+      </section>
+
+      <section class="chapter band-deep" id="approval" data-spy><div class="shell">
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 10 · APPROVAL AS A CHANNEL EVENT</span><h2>审批不是弹窗，是可以走任意聊天频道回复的网关对象。</h2><p class="lede">exec 审批由 ExecApprovalManager 集中管理，策略三态（off / on-miss / always）+ 兜底（deny / allowlist / full）；<code>ask_user</code> 让模型自己挂起等人回答；DM 陌生发送者默认走配对审批。</p></header>
+        <p data-reveal><code>ExecApprovalManager</code>（<code>src/gateway/exec-approval-manager.ts:231</code>）+ 周边 30+ 审批文件（allowlist、policy、forwarder、sqlite store…）[源码确认]。策略枚举 <code>ask: off|on-miss|always</code>、<code>askFallback: deny|allowlist|full</code>（<code>src/infra/exec-approvals-config.ts:257-259</code>），默认 <code>ask:"off", askFallback:"deny"</code>（:123-125）；审批可转发到通道并支持 reaction 批准（<code>src/infra/exec-approval-forwarder.ts</code>、<code>src/plugin-sdk/approval-reaction-runtime.ts</code>，发布为 <code>plugin-sdk/approval-reaction-runtime</code> 导出子路径）。</p>
+        <div class="decision" data-reveal><span class="label-mono">REJECTION LANDS IN THE LOOP</span><p>拒绝的落点是内核契约：<code>BeforeToolCallResult { block:true, reason }</code> 阻止执行、<strong>由 loop 代投一条 error tool result</strong>，模型只看到被拒结果（<code>packages/agent-core/src/types.ts:49-57</code> 注释原文）[源码确认]。<code>ask_user</code> 让模型主动等人：<code>reserveAskUserPromptDelivery</code>（<code>ask-user-tool.ts:180</code>）/ <code>waitForAskUserPromptReady</code>（:213）/ <code>createAskUserTool</code>（:460）。README 安全段：inbound 消息按不可信输入对待、DM 配对 <code>openclaw pairing approve</code> [文档声明]。</p></div>
+        <div class="machine" id="oclaw-approval" data-reveal><div class="machine-bar"><span class="title"><span class="led" data-led></span><strong>危险 shell 的闸门链</strong></span><span class="label-mono" data-status>闸门 0/6 · idle</span></div><div class="machine-body loop-layout"><ol class="m-steps" data-steps><li data-no="G1">消息进 Gateway</li><li data-no="G2">agent 提案工具调用</li><li data-no="G3">审批路由（ExecApprovalManager）</li><li data-no="G4">审批转发进 Telegram</li><li data-no="G5">用户点 ✓/✗ reaction</li><li data-no="G6">决议回注：执行或拒绝</li></ol><div><div class="m-controls"><button class="cbtn primary" type="button" data-gate aria-pressed="false">下一闸门 →</button><button class="cbtn" type="button" data-verdict="allow" aria-pressed="false">✓ 批复执行</button><button class="cbtn" type="button" data-verdict="deny" aria-pressed="false">✗ 批复拒绝</button><button class="cbtn" type="button" data-reset aria-pressed="false">重置</button></div><p class="stage-note" data-note>一条要跑 <code>rm -rf</code> 的提案，逐闸门点过去，看它在哪一步被谁裁决。</p></div><div class="loop-logwrap stream-log elog" data-log aria-live="polite"></div></div></div>
+      </div></section>
+
+      <section class="chapter shell" id="soul" data-spy>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 11 · PLUGINS, SKILLS, SOUL</span><h2>能力在 extension 里，手艺在 skill 里，性格在 SOUL.md 里。</h2><p class="lede">150 个扩展目录覆盖模型 provider、通道、记忆后端；52 个技能是 markdown 手册；SOUL.md 注入人格层让助理“有声音”；连内核 runtime 本身都可被插件 harness 替换。</p></header>
+        <p data-reveal><code>extensions/</code> 约 150 项：<code>memory-core / memory-lancedb / memory-wiki / active-memory</code>、模型 provider（anthropic / openai / ollama / lmstudio…）、通道、<code>browser</code>、<code>canvas</code>、<code>voice-call</code>、<code>diagnostics-otel / prometheus</code>、<code>migrate-hermes / migrate-claude</code>、<code>policy</code>、<code>vault</code> [源码确认]。资源清单在 <code>package.json</code> 的 <code>openclaw.{extensions,skills,prompts,themes}</code>；runtime 选择：内置 id <code>openclaw</code>，插件 harness 可注册 <code>codex</code>，<code>auto</code> 按 provider 路由选择 [文档声明]。</p>
+        <div class="custom-stack" data-reveal><div><span class="custom-key">VOICE</span><strong>SOUL.md</strong><p>注入普通会话的高优先指令层，“voice 住在这里”（<code>docs/concepts/soul.md</code>）[文档声明]。</p></div><div><span class="custom-key">SELF-CARE</span><strong>custodian-skills</strong><p>仅 4 个“自维护”技能：<code>add-model-provider / cloud-image-bake / configure-channel / diagnose-gateway</code>——助理照看自己安装 / 通道 / 诊断的手册 [源码确认]。</p></div><div><span class="custom-key">SCORE</span><strong>成熟度记分卡</strong><p><code>taxonomy.yaml</code>（"Maturity scorecard"，含 <code>smoke-ci</code> / <code>personal-agent</code> 证据 profile）与 <code>qa/maturity-scores.yaml</code>（50 个 active surfaces）。</p></div><div><span class="custom-key">RULE</span><strong>插件 SDK 边界</strong><p>插件走 plugin SDK barrel（<code>packages/plugin-sdk</code>），文档明令插件不得 import <code>src/**</code> 内部 [文档声明]。</p></div></div>
+        <p data-reveal>与 Hermes 的关系一句话：OpenClaw 提供 <code>extensions/migrate-hermes</code> 与 <code>docs/install/migrating-hermes.md</code> 的预览式可回滚迁移（导入模型配置、prompts、记忆、技能）——是继承迁移关系，Hermes 自身另有专课。</p>
+        <div class="decision" data-reveal><span class="label-mono">边界</span><p>人格文件没有专用编辑通道：<code>SOUL.md</code> 就是 workspace 里的普通文件，编辑权等于 workspace 文件系统控制权。操作者直接改文件；agent 也可以用文件工具改写自己的 <code>SOUL.md</code>——官方指南甚至推荐这么做（<code>docs/concepts/soul.md:38</code> "let it rewrite SOUL.md"）。推论：任何能点火 run 的聊天通道都能“说服”agent 改人格，写入走的是普通工具调用、过同一条审批链，没有额外闸门。生效面：per-agent workspace 隔离（<code>docs/concepts/multi-agent.md:111</code>），文件每次 session 载入（<code>docs/concepts/agent-workspace.md:71-72</code>）——改完下一轮生效，不追溯已在跑的 run。</p></div>
+      </section>
+
+      <section class="chapter band-edge" id="practice" data-spy><div class="shell">
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 12 · PRACTICE &amp; INTERVIEW</span><h2>把前十一章倒过来用：从症状走回源码。</h2><p class="lede">五步诊断法 + 三套面试题（架构 / 故障 / 安全），全部答案可落回课程定位。</p></header>
+        <div class="spread"><article class="prose" data-reveal><h3>五步诊断法</h3><p>第一步<strong>定层</strong>：症状发生在哪层？唤醒（cron / heartbeat / 通道）→ run 预算（run-loop）→ 会话续跑（runAgentPrompt）→ 内核（runLoop / 工具）→ 状态（SQLite）。第二步<strong>看事件</strong>：<code>agent_start / turn_start / turn_end / agent_end / agent_settled / auto_retry_end</code> 哪个缺失或重复——事件即分层探针（<code>agent-loop.ts:228/:523</code>、<code>agent-session-prompting.ts:47</code>）。第三步<strong>查预算</strong>：run 重试 <code>used/max</code>、会话 <code>retryCount</code>、溢出压缩 <code>overflowRecoveryAttempts(≤3)</code>、idle 连击(≤5) 四个计数器各查各的，勿混为一谈。第四步<strong>读账本</strong>：agent SQLite 的 <code>transcript_events</code> 与 <code>sessions</code> 是唯一事实源，崩溃恢复问题先问“最后一条落库事件是什么”。第五步<strong>验证唤醒</strong>：跨天不动 = 唤醒源问题——automations 定义是否持久化、timer 是否 arm、heartbeat 是否在 active hours、standing intent 是否已 3 连发 / 过期。</p><div class="decision"><span class="label-mono">SOURCE BOUNDARY · e6915d09</span><p>本文所有默认值（预算、maxRetries、审批策略）仅确认到源码层；线上部署的 config 可能覆盖源码默认值，具体部署 config 不在本仓库内。静态源码能证明实现关系，不能替代真实部署验证。</p></div></article></div>
+        <div class="machine" id="oclaw-atlas" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>症状定位器</strong></span><span class="label-mono" data-status>选择症状</span></div><div class="machine-body atlas-layout"><div class="atlas-choices"><button class="layer-row" type="button" data-key="silent" aria-pressed="false">助理“不回消息”了</button><button class="layer-row" type="button" data-key="expensive" aria-pressed="false">同一任务反复重跑、越来越贵</button><button class="layer-row" type="button" data-key="dreaming" aria-pressed="false">凌晨记忆文件突然变大 / 被改写</button><button class="layer-row" type="button" data-key="loopy" aria-pressed="false">模型重复调同一工具不被掐断</button></div><div class="atlas-detail" data-detail><span class="label-mono">FIRST EVIDENCE</span><h3>选择一种症状</h3><p>查看它落在哪一层，以及最先查什么。</p></div></div></div>
+
+        <div class="interview" data-reveal>
+          <span class="label-mono">PROBLEM SET 01 · 架构题</span>
+          <h4>“OpenClaw 如何让助理‘活着’而不烧 token？”</h4>
+          <div class="qa">
+            <details>
+              <summary>展开答题骨架</summary>
+              <div class="ans">
+                <p><strong>【结论】</strong> 不靠长驻循环，靠有界 run + 持久状态 + 事件唤醒 + 记忆注入。</p>
+                <p><strong>【机制】</strong> 三层循环（预算 / 会话 / 内核）；run 结束即在 finally 里 emit <code>agent_settled</code> 落库休眠；automations / heartbeat / 通道消息再把下一次 run 点火。</p>
+                <p><strong>【源码定位】</strong> <code>run-loop.ts:71</code>、<code>agent-session-prompting.ts:28/:47</code>、<code>timer-scheduler.ts:50</code>、<code>heartbeat-runner-scheduler.ts:62</code>。</p>
+                <p><strong>【反例追问】</strong> agent_settled 为什么在 finally 里？——失败 / 中止也要收束，唯一例外是 handoff 把后续 run 控制权移交外部投递。</p>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <div class="interview" data-reveal>
+          <span class="label-mono">PROBLEM SET 02 · 故障题</span>
+          <h4>“一个 cron 任务每天凌晨都失败重跑，怎么查？”</h4>
+          <div class="qa">
+            <details>
+              <summary>展开答题骨架</summary>
+              <div class="ans">
+                <p><strong>【结论】</strong> 先在“定层”里分清是 run 失败预算耗尽、agentTurn 60min 安全阀、还是 dreaming / 任务本身报错。</p>
+                <p><strong>【机制】</strong> 预算只计 recovery；“到点重跑”多为"上次没跑完 + 定义持久化 + 明早再 arm"，不是同一次 run 在续命。</p>
+                <p><strong>【源码定位】</strong> <code>helpers.ts:120-132</code>、<code>retry-budget.ts:35</code>、<code>timeout-policy.ts:16</code>、<code>retry-limit.ts:43</code> 的失败载荷、<code>transcript_events</code>。</p>
+                <p><strong>【反例追问】</strong> 为什么“有进展的续跑”不扣预算反而可能烧更多钱？——预算防失控不防长任务，48h 墙钟与 idle 5 才是另两条红线。</p>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <div class="interview" data-reveal>
+          <span class="label-mono">PROBLEM SET 03 · 安全题</span>
+          <h4>“助理要在 Telegram 里执行一条危险 shell，链路上有哪几道闸？”</h4>
+          <div class="qa">
+            <details>
+              <summary>展开答题骨架</summary>
+              <div class="ans">
+                <p><strong>【结论】</strong> 审批模式 → ExecApprovalManager 集中裁决 → 审批转发到通道等批复；未批的调用以失败结果回填，模型只见结果不见豁免。</p>
+                <p><strong>【机制】</strong> <code>ask: off|on-miss|always</code> 三态 + <code>askFallback: deny|allowlist|full</code>；DM 不可信输入与 pairing；<code>beforeToolCall</code> 可阻断。</p>
+                <p><strong>【源码定位】</strong> <code>exec-approvals-config.ts:123-125/:257-259</code>、<code>exec-approval-manager.ts:231</code>、<code>types.ts:49</code>（beforeToolCall）、README 安全段。</p>
+                <p><strong>【反例追问】</strong> Gateway 的 WS 为什么默认只绑 127.0.0.1？——信任边界：控制面在本机，远程必须走 SSH / Tailscale 隧道，防止任何能连端口的人驱动你的设备。</p>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <dl class="gloss" data-reveal><div><dt>run</dt><dd>一次有界的助理执行 episode：从 <code>agent_start</code> 到 <code>agent_end</code>，可含多个 turn；跨天任务由多次 run 接力。</dd></div><div><dt>turn</dt><dd>一次 assistant 回复 + 其工具调用批，由 <code>turn_start / turn_end</code> 界定。</dd></div><div><dt>steer / followUp</dt><dd>运行中即时注入 / 本轮自然结束后注入的用户消息队列（<code>agent.ts:337/:342</code>）。</dd></div><div><dt>settled / handoff</dt><dd>会话层收束的两种终局：正常落库休眠 / 把后续 run 控制权移交外部投递方。</dd></div><div><dt>run 重试预算</dt><dd>外层失败 attempt 配额 <code>clamp(24+8N,32,160)</code>；progress_continuation 不计费。</dd></div><div><dt>automations（前身 cron）</dt><dd>模型可自助注册的持久定时任务；旧名 <code>cron</code> 作永久兼容别名。</dd></div><div><dt>Memory Dreaming</dt><dd>默认凌晨 3 点的记忆固化 cron（consolidation phases），非运行时检索路径。</dd></div><div><dt>standing intent</dt><dd>常驻意图：登记后由未来消息关键词 / embedding 命中唤醒，24h cooldown、3 次封顶、90 天过期。</dd></div><div><dt>lane controller</dt><dd>嵌入式 run 的并发轨道：全局 lane + 每会话 lane，双轨排队。</dd></div><div><dt>SOUL.md</dt><dd>注入普通会话人格指令层的操作者文件，“voice 住在这里”。</dd></div></dl>
+        <section class="source-notes" aria-labelledby="openclaw-sources" data-reveal><span class="label-mono">PRIMARY SOURCES</span><h3 id="openclaw-sources">继续查证</h3><p>课程事实来自本地 OpenClaw 快照 <code>e6915d09</code>（MIT，OpenClaw Foundation）的 README / VISION / docs 与 TypeScript 源码；官方文档站另有 Gateway / Channels / Tools / Plugins 参考。</p><div><a href="https://github.com/openclaw/openclaw">开源仓库</a><a href="https://github.com/openclaw/openclaw/blob/main/packages/agent-core/src/agent-loop.ts">内核循环 agent-loop.ts</a><a href="https://github.com/openclaw/openclaw/blob/main/src/agents/sessions/agent-session-prompting.ts">会话层 runAgentPrompt</a><a href="https://github.com/openclaw/openclaw/blob/main/src/agents/embedded-agent-runner/run-loop.ts">run 预算层 run-loop.ts</a><a href="https://github.com/openclaw/openclaw/blob/main/extensions/memory-core/src">记忆 memory-core</a><a href="https://github.com/openclaw/openclaw/blob/main/src/state/openclaw-agent-db-schema.ts">状态 schema</a><a href="https://github.com/openclaw/openclaw/blob/main/docs/concepts/architecture.md">架构文档</a><a href="https://github.com/openclaw/openclaw/blob/main/docs/install/migrating-hermes.md">Hermes 迁移</a><a href="https://github.com/openclaw/openclaw/blob/main/docs/automation/index.md">自动化文档</a><a href="https://github.com/openclaw/openclaw/blob/main/src/infra/exec-approvals-config.ts">审批配置</a><a href="https://docs.openclaw.ai">官方文档站</a></div></section>
+      </div></section>
+    </main>
+    <footer class="site"><div class="shell"><span>顶级 Agent 内核图谱 · OpenClaw</span><div><a href="/codex">Codex</a> · <a href="/grok">Grok Build</a> · <a href="/deepseek">DeepSeek Harness</a> · <a href="/pi">Pi Agent</a> · <a href="/opencode">OpenCode</a> · <a href="/openclaw">OpenClaw</a> · <a href="/hermes">Hermes Agent</a> · <a href="#top">返回顶部 ↑</a></div></div></footer>
+    <script type="module" src="/src/openclaw.ts"></script>
+  </body>
+</html>

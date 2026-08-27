@@ -70,6 +70,73 @@ function initSessionTree(): void {
   qsa<HTMLButtonElement>(root, "[data-tree]").forEach((button) => button.addEventListener("click", () => { const action = button.dataset.tree; if (action === "reset") { entries = 0; branches = 1; context = 0; if (log) log.innerHTML = ""; render(); return; } if (action === "message") { entries += 1; context += 1; render("message appended to current leaf"); } if (action === "tool") { entries += 1; context += 1; render("toolResult appended; source call remains paired"); } if (action === "branch") { entries += 1; branches += 1; context = Math.max(1, Math.ceil(context / 2)); render("leaf moved earlier; old branch remains"); } if (action === "compact") { entries += 1; context = context > 0 ? Math.min(3, context) : 0; render("compaction entry appended; old entries remain"); } }));
 }
 
+function initCompaction(): void {
+  const root = document.querySelector("#pi-compaction"); if (!root) return;
+  type CpEntry = { id: string; kind: "user" | "assistant" | "tool"; tokens: number };
+  const WINDOW = 65536; const KEEP = 20000; const SUMMARY = 1200; const LABEL = { user: "u", assistant: "a", tool: "tr" };
+  let reserve = 16384; let seq = 0; let entries: CpEntry[] = []; let keptFrom = -1;
+  const log = qs<HTMLElement>(root, "[data-log]"); const strip = qs<HTMLElement>(root, "[data-strip]"); const status = qs<HTMLElement>(root, "[data-status]"); const led = qs<HTMLElement>(root, "[data-led]");
+  const k = (n: number) => `${(n / 1000).toFixed(1)}k`;
+  const total = () => entries.reduce((sum, entry) => sum + entry.tokens, 0);
+  const line = (note: string, cls = "k-sys") => log?.insertAdjacentHTML("beforeend", `<span class="ev"><span class="${cls}">${note}</span></span>`);
+  const render = () => {
+    const ctx = total(); const projected = keptFrom >= 0 ? SUMMARY + entries.slice(keptFrom).reduce((sum, entry) => sum + entry.tokens, 0) : ctx;
+    const set = (selector: string, value: string) => { const el = qs<HTMLElement>(root, selector); if (el) el.textContent = value; };
+    set("[data-entries]", String(entries.length)); set("[data-tokens]", k(ctx)); set("[data-projected]", k(projected));
+    if (status) status.textContent = keptFrom >= 0 ? `firstKept ${entries[keptFrom]?.id ?? "-"}` : `阈值 ${k(WINDOW - reserve)}`;
+    led?.classList.toggle("is-done", keptFrom >= 0);
+    if (strip) strip.innerHTML = (keptFrom >= 0 ? `<span class="pi-chip is-summary">Σ summary ${k(SUMMARY)}</span>` : "") + (entries.length ? entries.map((entry, index) => `<span class="pi-chip is-${entry.kind}${keptFrom >= 0 && index < keptFrom ? " is-cut" : ""}">${LABEL[entry.kind]} ${k(entry.tokens)}</span>`).join("") : `<span class="pi-chip">追加 Turn 后出现 entry 条</span>`);
+  };
+  qsa<HTMLButtonElement>(root, "[data-reserve] button").forEach((button) => button.addEventListener("click", () => {
+    reserve = Number(button.dataset.r); // 换 reserve 只移动下次触发线，不撤销既有 compaction 投影
+    qsa<HTMLButtonElement>(root, "[data-reserve] button").forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === button)));
+    line(`reserveTokens=${k(reserve)}：触发线 window−reserve=${k(WINDOW - reserve)}`); render();
+  }));
+  qsa<HTMLButtonElement>(root, "[data-cp]").forEach((button) => button.addEventListener("click", () => {
+    const action = button.dataset.cp;
+    if (action === "reset") { reserve = 16384; seq = 0; entries = []; keptFrom = -1; if (log) log.innerHTML = ""; qsa<HTMLButtonElement>(root, "[data-reserve] button").forEach((candidate) => candidate.setAttribute("aria-pressed", "false")); render(); return; }
+    if (action === "heavy" || action === "light") { const tool = action === "heavy" ? 9000 : 2400; entries.push({ id: `e${++seq}`, kind: "user", tokens: 420 }, { id: `e${++seq}`, kind: "assistant", tokens: 1800 }, { id: `e${++seq}`, kind: "tool", tokens: tool }); line(`turn 追加：u 0.4k + a 1.8k + toolResult ${k(tool)}，context=${k(total())}${keptFrom >= 0 ? "（落在 firstKept 之后，投影随之增长）" : ""}`); render(); return; }
+    if (action === "compact") {
+      if (!entries.length) { line("空 transcript，无可压缩段", "k-warn"); return; }
+      const ctx = total(); const threshold = WINDOW - reserve;
+      line(`shouldCompact(${k(ctx)}, ${k(WINDOW)}, reserve ${k(reserve)}) → ${ctx > threshold ? "true" : "false"}`, ctx > threshold ? "k-tool" : "k-warn");
+      if (ctx <= threshold) line("未达阈值：auto-compaction 不触发；这次走手动 AgentSession.compact()");
+      let acc = 0; let cut = 0;
+      for (let index = entries.length - 1; index >= 0; index -= 1) { acc += entries[index].tokens; if (acc >= KEEP) { cut = index; while (cut < entries.length && entries[cut].kind === "tool") cut += 1; break; } }
+      if (cut >= entries.length) { line("窗口内只剩 toolResult，切点推至末尾：本次不追加 compaction", "k-warn"); render(); return; }
+      if (cut === 0) { line("全量都在 keep 预算内：无早期段可摘要，投影不变", "k-warn"); render(); return; }
+      keptFrom = cut;
+      line(`findCutPoint：从后向前累计 ≥ ${k(KEEP)} → cut@${entries[cut].id}（toolResult 不作切点，向后让位）`);
+      line("摘要输入：单个 tool result 截到 2000 字符；独立会话 + toolChoice none + cacheRetention none");
+      line(`appendCompaction：firstKeptEntryId=${entries[cut].id}，tokensBefore=${k(ctx)}；entries 数不变，旧 entry 仍在 JSONL`);
+      render(); return;
+    }
+  }));
+  render();
+}
+
+function initTuiDiff(): void {
+  const root = document.querySelector("#pi-tui-diff"); if (!root) return;
+  const base = ["$ pi \"审阅 src/config.ts\"", "user · 检查错误处理并给最小修复建议", "⏳ read src/config.ts", "assistant · 错误处理集中在 load() 的"];
+  let rows = base.slice(); let streamStep = 0; let toolDone = false;
+  const screen = qs<HTMLElement>(root, "[data-screen]"); const log = qs<HTMLElement>(root, "[data-log]"); const status = qs<HTMLElement>(root, "[data-status]");
+  const draw = (changed: number[]) => { if (screen) screen.innerHTML = rows.map((row, index) => `<span class="pi-row${changed.includes(index) ? " is-changed" : ""}"><span class="t">${index + 1}</span>${row.replace(/</g, "&lt;")}</span>`).join(""); };
+  const apply = (name: string, changed: number[], mode: string) => {
+    draw(changed); if (status) status.textContent = `${changed.length} 行重写`;
+    const note = changed.length ? `${mode}：${name} → 重写行 ${changed.map((index) => index + 1).join(",")}，整段包在 ESC[?2026h/l` : "本帧与 previousLines 相同：差分不输出任何字节";
+    log?.insertAdjacentHTML("beforeend", `<span class="ev"><span class="${changed.length ? "k-tool" : "k-warn"}">${note}</span></span>`);
+  };
+  qsa<HTMLButtonElement>(root, "[data-frame] button").forEach((button) => button.addEventListener("click", () => {
+    qsa<HTMLButtonElement>(root, "[data-frame] button").forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === button)));
+    const frame = button.dataset.f;
+    if (frame === "reset") { rows = base.slice(); streamStep = 0; toolDone = false; if (log) log.innerHTML = ""; draw([]); if (status) status.textContent = "等待帧"; return; }
+    if (frame === "stream") { streamStep += 1; if (streamStep === 1) { rows[3] = "assistant · 错误处理集中在 load() 的 catch 分支"; apply("文本 delta", [3], "差分"); return; } if (streamStep === 2) { rows.push("· 建议：补 timeout 与 retry 预算"); apply("换行追加", [rows.length - 1], "差分"); return; } apply("空闲帧", [], "差分"); return; }
+    if (frame === "tool") { if (!toolDone) { rows[2] = "✔ read src/config.ts · 327 行 · 1.2s"; toolDone = true; apply("工具行更新", [2], "差分"); return; } apply("工具行重复帧", [], "差分"); return; }
+    if (frame === "resize") { apply("宽度变化", rows.map((_, index) => index), "full redraw"); return; }
+  }));
+  draw([]);
+}
+
 function initSurface(id: string, data: SurfaceData): void {
   const root = document.querySelector(id); if (!root) return;
   const detail = qs<HTMLElement>(root, "[data-detail]"); const status = qs<HTMLElement>(root, "[data-status]");
@@ -88,6 +155,8 @@ function boot(): void {
   initQueues();
   initTools();
   initSessionTree();
+  initCompaction();
+  initTuiDiff();
   initChoiceDetail("#pi-layers", { provider: { title: "packages/ai · API adapter", body: "检查目标 model.api 的 payload conversion、auth、SSE mapping 与 in-band error event。", status: "PI AI" }, loop: { title: "packages/agent · runLoop", body: "查看 committed assistant、tool batch、steering/follow-up drain 与 stopReason。", status: "AGENT CORE" }, session: { title: "coding-agent · SessionManager", body: "检查 leaf、parentId、buildContextEntries 与 branch/compaction projection。", status: "SESSION TREE" }, render: { title: "packages/tui · differential renderer", body: "比较 previousLines/previousScreen、viewport width 与 full redraw 条件。", status: "TUI" } });
   initSurface("#pi-providers", { anthropic: [["统一层", "Model + Context + AssistantMessageEventStream"], ["Adapter", "system block、thinking signature、tool_result"], ["Auth", "Provider auth resolution"], ["Wire", "Anthropic Messages SSE"]], openai: [["统一层", "同一 Agent / Pi AI contracts"], ["Adapter", "system/developer role、image URL、tool ids"], ["Compat", "endpoint-specific stop/toolUse mapping"], ["Wire", "OpenAI-compatible streaming"]], google: [["统一层", "同一 provider-neutral events"], ["Adapter", "Google content parts 与 reasoning options"], ["模型", "catalog 由 Provider 提供"], ["Wire", "Google API-specific payload"]], faux: [["用途", "确定性测试"], ["响应", "scripted tool call / text / error"], ["网络", "不访问真实 Provider"], ["证据", "验证标准事件与最终 Message"]] });
   initChoiceDetail("#pi-extensions", { tool: { title: "ExtensionAPI.registerTool", body: "注册 TypeBox schema、execute、progress 与 TUI renderers；异常才成为 isError。" }, skill: { title: "ResourceLoader + Skill", body: "System Prompt 先暴露 name/description，模型按需用 read 加载完整 SKILL.md。" }, hook: { title: "tool_call event", body: "执行前可改参数或 block；这是一项 Extension policy，不是 Pi 内建 Sandbox。" }, state: { title: "Session custom entry", body: "custom 持久扩展状态但不进 LLM；custom_message 才会进入 context。" } });

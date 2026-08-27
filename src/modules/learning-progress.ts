@@ -15,7 +15,7 @@ type ProgressState = {
 };
 
 const STORAGE_KEY = "agent-learning-progress-v1";
-const COURSE_IDS = ["codex", "grok", "deepseek", "pi"];
+const COURSE_IDS = ["codex", "grok", "deepseek", "pi", "opencode", "openclaw", "hermes"];
 const TOTAL_CHAPTERS = 12;
 let storageAvailable = true;
 let memoryState = emptyState();

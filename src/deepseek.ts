@@ -112,6 +112,166 @@ function initSafety(): void {
   (["op", "mode", "approval"] as const).forEach((group) => qsa<HTMLButtonElement>(root, `[data-${group}] button`).forEach((button) => button.addEventListener("click", () => select(group, button.dataset.v ?? "", button))));
 }
 
+function initPromptAssembly(): void {
+  const root = document.querySelector("#dsh-prompt");
+  if (!root) return;
+  type Sec = { name: string; order: number; text: string };
+  const identity: Sec = { name: "harness:identity", order: -100, text: "You are an AI agent powered by DeepSeek Harness." };
+  const personaText = (rewritten: boolean): Sec => ({ name: "deployment:persona", order: 0, text: rewritten ? "改写后的 persona" : "默认部署 persona" });
+  const optional: Record<string, Sec> = {
+    repo: { name: "repo-rules", order: 10, text: "仓库规则" },
+    shell: { name: "shell-rules", order: 10, text: "Shell 规则" },
+    audit: { name: "audit-note", order: 100, text: "审计说明" },
+    early: { name: "urgent-hint", order: -200, text: "高优先级提示（插队到 identity 之前）" },
+  };
+  const mounted = new Set<string>();
+  let personaRewritten = false;
+  let snapshot = false;
+  let previous = "";
+  const log = qs<HTMLElement>(root, "[data-log]");
+  const status = qs<HTMLElement>(root, "[data-status]");
+  const render = () => {
+    const sections: Sec[] = [identity, personaText(personaRewritten)];
+    mounted.forEach((key) => { const sec = optional[key]; if (sec) sections.push(sec); });
+    sections.sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
+    const signature = sections.map((section) => `${section.name}:${section.text}`).join("|");
+    const before = previous ? previous.split("|") : [];
+    const now = signature.split("|");
+    let boundary = before.length ? 0 : sections.length;
+    while (boundary < before.length && boundary < now.length && before[boundary] === now[boundary]) boundary += 1;
+    const baseline = mounted.size === 0 && !personaRewritten && !snapshot;
+    const pureAppend = boundary >= before.length && now.length >= before.length;
+    const pureTrim = boundary === now.length && now.length < before.length;
+    const lines = sections.map((section, i) => {
+      const sig = `${section.name}:${section.text}`;
+      const tag = i < boundary
+        ? `<span class="t">缓存命中</span>`
+        : before.includes(sig)
+          ? `<span class="k-warn">前缀失效 ←</span>`
+          : before.some((line) => line.startsWith(`${section.name}:`))
+            ? `<span class="k-warn">内容变更 · 触发断裂</span>`
+            : pureAppend
+              ? `<span class="t">新增 · 不动已缓存前缀</span>`
+              : `<span class="k-warn">插队新增 · 触发断裂</span>`;
+      return `<span class="ev"><span class="t">sys${String(i + 1).padStart(2, "0")}</span> <span class="k-sys">order ${section.order} · ${section.name}</span> ${tag}</span>`;
+    });
+    lines.push(`<span class="ev"><span class="k-tool">tool schemas · 按 Agent scope 排序追加</span> <span class="t">request/header 记录顺序，可重建</span></span>`);
+    if (snapshot) lines.push(`<span class="ev"><span class="k-user">user snapshot · runtime context（cwd / branch）</span> <span class="t">pre-step 注入，不碰 system 前缀</span></span>`);
+    else lines.push(`<span class="ev"><span class="t">runtime context：未注入。注入时以 user-role 加入，不进 system</span></span>`);
+    if (log) log.innerHTML = lines.join("");
+    const set = (selector: string, value: string) => { const el = qs<HTMLElement>(root, selector); if (el) el.textContent = value; };
+    set("[data-sections]", String(sections.length));
+    set("[data-prefix]", `${boundary}/${sections.length} 行`);
+    set("[data-snap]", snapshot ? "1（user role）" : "0");
+    if (status) status.textContent = !previous && baseline
+      ? "基线：两段 system"
+      : pureAppend
+        ? now.length > before.length ? "前缀稳定 · 新增不破坏缓存" : "与上次一致 · 缓存不动"
+        : pureTrim
+          ? `前缀稳定 · tail 收缩至 ${boundary} 行`
+          : `前缀断裂 @第 ${boundary + 1} 行 · 已缓存 ${boundary} 行仍命中，此后 ${sections.length - boundary} 行重算`;
+    previous = signature;
+  };
+  qsa<HTMLButtonElement>(root, "[data-toggle]").forEach((button) => button.addEventListener("click", () => {
+    const key = button.dataset.toggle ?? "";
+    if (key === "ctx") snapshot = !snapshot;
+    else if (key === "persona") personaRewritten = !personaRewritten;
+    else if (mounted.has(key)) mounted.delete(key);
+    else mounted.add(key);
+    button.setAttribute("aria-pressed", String(key === "ctx" ? snapshot : key === "persona" ? personaRewritten : mounted.has(key)));
+    render();
+  }));
+  qs<HTMLButtonElement>(root, "[data-reset]")?.addEventListener("click", () => {
+    mounted.clear(); personaRewritten = false; snapshot = false; previous = "";
+    qsa<HTMLButtonElement>(root, "[data-toggle]").forEach((button) => button.setAttribute("aria-pressed", "false"));
+    render(); // 刷新计数器，并把 previous 落回基线签名——下一次 toggle 才能对真实状态做 diff
+  });
+  render();
+}
+
+function initContextProjection(): void {
+  const root = document.querySelector("#dsh-context");
+  if (!root) return;
+  type Evt = { label: string; tok: number; visible: boolean; pair?: "call" | "result" };
+  const events: Evt[] = [
+    { label: "user/message · 检查 config/app.json 超时", tok: 40, visible: true },
+    { label: "assistant/chunk ×12 · 流式证据", tok: 0, visible: false },
+    { label: "assistant/message · 结论 + tool-call read_file", tok: 180, visible: true, pair: "call" },
+    { label: "tool/result · read_file 文件内容", tok: 300, visible: true, pair: "result" },
+    { label: "assistant/message · 需要修改 + tool-call write_file", tok: 200, visible: true, pair: "call" },
+    { label: "tool/result · write ok", tok: 60, visible: true, pair: "result" },
+    { label: "user/message · 再跑一遍测试", tok: 30, visible: true },
+    { label: "assistant/message · 测试输出（长文本）", tok: 500, visible: true },
+  ];
+  const summaryTokens = 120;
+  let replayed = 0;
+  let budget = 0;
+  let tailStart = -1;
+  const status = qs<HTMLElement>(root, "[data-status]");
+  const render = () => {
+    const visible = events.slice(0, replayed).filter((event) => event.visible);
+    const compacted = tailStart >= 0;
+    const nodes = compacted ? 1 + (visible.length - tailStart) : visible.length;
+    const usage = compacted
+      ? summaryTokens + visible.slice(tailStart).reduce((sum, event) => sum + event.tok, 0)
+      : visible.reduce((sum, event) => sum + event.tok, 0);
+    let verdict = "ask";
+    let label = "等待选择";
+    const foldableMore = visible.length - (compacted ? tailStart : 0) > 2; // recent tail 之外还有可折叠的稳定段
+    if (!budget) label = "先选预算";
+    else if (replayed === 0) label = "等待重放";
+    else if (usage <= budget) { verdict = "ok"; label = `可发起请求 ${usage}/${budget}`; }
+    else if (!compacted) label = `超预算 ${usage}/${budget} · compaction 候选`;
+    else if (foldableMore) label = `仍超预算 ${usage}/${budget} · 可再压缩`;
+    else { verdict = "deny"; label = `仍超预算 ${usage}/${budget} · tail 不可再切`; }
+    const badge = qs<HTMLElement>(root, "[data-verdict]");
+    if (badge) badge.dataset.verdict = verdict;
+    const out = qs<HTMLElement>(root, "[data-verdict-label]");
+    if (out) out.textContent = label;
+    if (status) status.textContent = label;
+    const trace = [
+      `LOG：${replayed}/${events.length} 条事件已重放${replayed >= events.length ? "（turn/end 后 idle）" : ""}`,
+      `SURFACE：${nodes} 个节点 · deriveMessages 投影${compacted ? "（含 summary 节点）" : ""}`,
+      `model-visible：${usage} tok / 预算 ${budget || "?"}`,
+    ];
+    if (replayed >= 2) trace.push("assistant/chunk 计入日志，不入历史：投影时 0 成本。");
+    if (compacted) {
+      trace.push(`选区 = 最早 ${tailStart} 个稳定节点 → summary(${summaryTokens} tok)；replacement 引用原事件 seq，原事件保留。`);
+      const kept = visible[tailStart];
+      if (kept) trace.push(`tail 自 “${kept.label.slice(0, 24)}” 保留；tool-call / result 配对未切断。`);
+      if (foldableMore) trace.push("回合压力还在：recent tail 之外的稳定段可再折叠——再次 compaction 会推进选区边界。");
+    } else if (budget && replayed > 0 && usage > budget) {
+      trace.push("选区规则：最早连续稳定段 + 保留 recent tail；被切断的 call / result 对整对后移。");
+      if (!foldableMore) trace.push("选区为空：日志尚短，没有可替换的稳定前缀——这正是锁外的正常拒绝。");
+    }
+    const list = qs<HTMLElement>(root, "[data-trace]");
+    if (list) list.innerHTML = trace.map((line) => `<li>${line}</li>`).join("");
+  };
+  qsa<HTMLButtonElement>(root, "[data-budget] button").forEach((button) => button.addEventListener("click", () => {
+    budget = Number(button.dataset.v) || 0;
+    qsa<HTMLButtonElement>(root, "[data-budget] button").forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === button)));
+    render();
+  }));
+  qs<HTMLButtonElement>(root, "[data-replay]")?.addEventListener("click", () => { if (replayed < events.length) replayed += 1; render(); });
+  qs<HTMLButtonElement>(root, "[data-compact]")?.addEventListener("click", () => {
+    const visible = events.slice(0, replayed).filter((event) => event.visible);
+    const from = tailStart >= 0 ? tailStart : 0; // 已有 summary 时，在旧边界之上继续推进
+    let next = Math.max(from, visible.length - 2);
+    if (visible[next]?.pair === "result") next += 1;
+    if (next > from && next < visible.length) tailStart = next;
+    render();
+  });
+  qs<HTMLButtonElement>(root, "[data-reset]")?.addEventListener("click", () => {
+    replayed = 0; budget = 0; tailStart = -1;
+    qsa<HTMLButtonElement>(root, "[data-budget] button").forEach((candidate) => candidate.setAttribute("aria-pressed", "false"));
+    render();
+    if (status) status.textContent = "选择 context 预算";
+    const list = qs<HTMLElement>(root, "[data-trace]");
+    if (list) list.innerHTML = "<li>重放 = 往 append-only log 追加事件；投影 = <code>deriveMessages()</code>。</li>";
+  });
+  render();
+}
+
 function initSurface(id: string, data: SurfaceData): void {
   const root = document.querySelector(id);
   if (!root) return;
@@ -135,6 +295,8 @@ function boot(): void {
   initHeroPause();
   initLoop();
   initSessionProjection();
+  initPromptAssembly();
+  initContextProjection();
   initSafety();
   initChoiceDetail("#dsh-composition", {
     model: { title: "ctx.llm · LlmAdapter", body: "注册或替换 Provider adapter；Loop 只通过 LLM service 发起流式调用。", status: "LLM PROVIDER" },

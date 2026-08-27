@@ -1,0 +1,102 @@
+.openclaw-page {
+  --o-amber-bright: oklch(0.82 0.13 25);
+  --o-amber-core: oklch(0.63 0.19 25);
+  --o-amber-deep: oklch(0.47 0.18 25);
+  --accent: var(--o-amber-deep);
+  --accent-vivid: var(--o-amber-core);
+  --accent-glow: var(--o-amber-bright);
+  --accent-wash: color-mix(in oklch, var(--o-amber-core) 10%, transparent);
+  --accent-line: color-mix(in oklch, var(--o-amber-core) 42%, transparent);
+  --focus-ring: var(--o-amber-deep);
+}
+
+.openclaw-page .brand-short { display: none; }
+
+:root[data-theme="dark"] .openclaw-page { --o-amber-deep: oklch(0.76 0.14 25); }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .openclaw-page { --o-amber-deep: oklch(0.76 0.14 25); }
+}
+
+@media (min-width: 1280px) {
+  .openclaw-page .hero {
+    --step-hero: clamp(2.7rem, 1.2rem + 3.3vw, 3.8rem);
+  }
+
+  .openclaw-page .hero-grid {
+    grid-template-columns: minmax(0, 12fr) minmax(340px, 8fr);
+  }
+}
+
+@media (min-width: 821px) and (max-width: 1279px) {
+  .openclaw-page .hero-grid { align-items: center; }
+}
+
+.openclaw-page .loop-layout { grid-template-columns: minmax(180px, .8fr) minmax(180px, .65fr) minmax(230px, 1fr); }
+.openclaw-page .m-steps { grid-template-columns: 1fr; }
+.openclaw-page .state-counters { grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); }
+.openclaw-page .surface-detail { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.openclaw-page .surface-detail dd { min-width: 0; overflow-wrap: anywhere; }
+
+/* 重试预算条：与 .ctx-bar 同框语言，但语义是 used/max 余量 */
+.oclaw-bar {
+  display: flex;
+  gap: 2px;
+  block-size: 34px;
+  margin-block-start: var(--s-3);
+  padding: 4px;
+  border: 1px solid var(--line-on-console);
+  border-radius: 10px;
+  background: color-mix(in oklch, black 24%, var(--surface-console));
+  overflow: hidden;
+}
+
+.oclaw-bar-fill {
+  flex-basis: 0;
+  min-inline-size: 0;
+  border-radius: 4px;
+  background: var(--o-amber-core);
+  transition: flex-grow var(--dur-slow) var(--ease-emph);
+}
+
+.oclaw-bar-fill.is-hot { background: var(--status-deny); }
+
+.oclaw-bar-tail {
+  flex-basis: 0;
+  min-inline-size: 0;
+  border-radius: 4px;
+  background: color-mix(in oklch, white 10%, var(--surface-console));
+  transition: flex-grow var(--dur-slow) var(--ease-emph);
+}
+
+.openclaw-page #oclaw-budget .state-actions { margin-block-start: var(--s-3); }
+.openclaw-page #oclaw-budget .state-actions > .label-mono { flex-basis: 100%; color: var(--text-on-console-mute); }
+
+/* 唤醒源走查 / 记忆注入台：detail 面板内的行式走查（去掉 .stage-note 外层虚框，只留行距） */
+.openclaw-page #oclaw-wake .atlas-detail .stage-note,
+.openclaw-page #oclaw-memory .atlas-detail .stage-note {
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  margin-block-start: var(--s-2);
+}
+
+.openclaw-page #oclaw-wake .stage-note strong,
+.openclaw-page #oclaw-memory .stage-note strong {
+  font-family: var(--ff-mono);
+  font-size: var(--step-label);
+  letter-spacing: 0.08em;
+  font-weight: 500;
+  color: var(--accent-glow);
+}
+
+@media (max-width: 820px) {
+  .openclaw-page .loop-layout { grid-template-columns: 1fr; }
+  .openclaw-page .surface-detail { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 520px) {
+  .openclaw-page .topbar .brand-long { display: none; }
+  .openclaw-page .topbar .brand-short { display: inline; }
+  .openclaw-page .surface-detail > div { grid-template-columns: 1fr; }
+}

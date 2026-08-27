@@ -26,7 +26,7 @@
     <div class="progress-line" aria-hidden="true"></div>
     <header class="topbar">
       <a class="brand" href="#top">Grok Build 内核图谱 <span class="label-mono">FIELD GUIDE</span></a>
-      <div class="topbar-actions"><div data-series-nav data-variant="top"><a class="series-fallback" href="/codex">Agent 系列</a></div><button class="theme-btn" type="button" data-theme-toggle aria-label="切换到深色模式"><span aria-hidden="true" data-theme-icon>◐</span><span data-theme-label>深色</span></button><button class="menu-btn" type="button" data-menu-btn aria-expanded="false" aria-controls="chapter-nav">章节</button></div>
+      <div class="topbar-actions"><div data-series-nav data-variant="top"><a class="series-fallback" href="/codex">Agent 系列</a></div><button class="theme-btn" type="button" data-theme-toggle aria-label="切换到深色模式"><span aria-hidden="true" data-theme-icon>◐</span><span data-theme-label>深色模式</span></button><button class="menu-btn" type="button" data-menu-btn aria-expanded="false" aria-controls="chapter-nav">章节</button></div>
     </header>
     <nav class="chapter-nav" id="chapter-nav" data-menu-panel hidden aria-label="课程章节">
       <a href="#top" data-spy-link><span class="no">00</span>课程入口</a>
@@ -61,7 +61,7 @@
       <button class="theme-btn rail-theme" type="button" data-theme-toggle aria-label="切换到深色模式"><span aria-hidden="true" data-theme-icon>◐</span><span data-theme-label>深色模式</span></button>
     </aside>
     <main id="main">
-      <div data-series-nav data-variant="tabs"><nav class="course-tabs" aria-label="选择 Agent 课程"><a href="/codex">Codex</a><a href="/grok" aria-current="page">Grok Build</a><a href="/deepseek">DeepSeek Harness</a><a href="/pi">Pi Agent</a></nav></div>
+      <div data-series-nav data-variant="tabs"><nav class="course-tabs" aria-label="选择 Agent 课程"><a href="/codex">Codex</a><a href="/grok" aria-current="page">Grok Build</a><a href="/deepseek">DeepSeek Harness</a><a href="/pi">Pi Agent</a><a href="/opencode">OpenCode</a><a href="/openclaw">OpenClaw</a><a href="/hermes">Hermes Agent</a></nav></div>
       <section class="hero shell" id="top" data-spy>
         <div class="hero-grid">
           <div data-reveal>
@@ -94,18 +94,21 @@
         <div class="hero-meta label-mono" aria-label="课程范围"><span>SOURCE SNAPSHOT · 07b2f71</span><span>12 章 · 10 个实验</span><span>找拥有层 → 看事件 → 做最小验证</span></div>
 
         <section class="lesson-brief" id="kernel-atlas" data-reveal>
-          <span class="label-mono">KERNEL ATLAS · 4-AGENT PANORAMIC SYNTHESIS</span>
-          <h3>四大主流开源 Agent 全景架构对比与技术选型指南</h3>
-          <p>横向打通 Codex (`codex-rs`)、Grok Build (`xai-org/grok-build`)、DeepSeek Harness (`deepseek-harness`) 与 Pi Agent (`pi-mono`) 六大核心维度。选型结论是基于本地源码快照的教学归纳，不代表各上游项目的官方定位。</p>
+          <span class="label-mono">KERNEL ATLAS · 7-COURSE PANORAMIC SYNTHESIS</span>
+          <h3>七门课程全景：开源 Agent 架构对比与技术选型指南</h3>
+          <p>横向打通 Codex (`codex-rs`)、Grok Build (`xai-org/grok-build`)、DeepSeek Harness (`deepseek-harness`)、Pi Agent (`pi-mono`)，以及新增的 OpenCode (`anomalyco/opencode`)、OpenClaw (`openclaw/openclaw`) 与 Hermes Agent (`NousResearch/hermes-agent`) 六大核心维度。选型结论是基于本地源码快照的教学归纳，不代表各上游项目的官方定位。</p>
 
           <div class="environment-matrix">
-            <div class="matrix-head"><strong>对比维度</strong><span>四大主流 Agent 架构实现与技术取舍</span><code>核心特征</code></div>
+            <div class="matrix-head"><strong>对比维度</strong><span>七门课程：各 Agent 架构实现与技术取舍</span><code>核心特征</code></div>
             <div>
               <strong>1. 会话与状态模型</strong>
               <span><strong>Codex</strong>: Thread / Turn / Item 三层层级容器，状态由内存 Actor + 外部存储双重建模。<br>
               <strong>Grok Build</strong>: Tokio LocalSet 独立线程 Actor（`SessionActor` + `ChatStateActor`），追加持久化到 `updates.jsonl`。<br>
               <strong>DeepSeek</strong>: 纯追加型不可变 Session Log，由 `SurfaceManager` 实时投影出当前模型可见历史。<br>
-              <strong>Pi Agent</strong>: 追加型 JSONL Session 树（`id` / `parentId`），通过移动叶节点指针实现非破坏性分支与回退。</span>
+              <strong>Pi Agent</strong>: 追加型 JSONL Session 树（`id` / `parentId`），通过移动叶节点指针实现非破坏性分支与回退。<br>
+              <strong>OpenCode</strong>: 事件流投影进单文件 `opencode.db`，消息历史由最近一条摘要条目之后重建（`filterCompacted`），压缩对主循环完全透明。<br>
+              <strong>OpenClaw</strong>: 双 SQLite 文件（全局 `state/openclaw.sqlite` + 每 agent `openclaw-agent.sqlite`），会话、transcript、standing intents 与记忆索引全落库；恢复靠状态已落库 + 事件重放。<br>
+              <strong>Hermes</strong>: `~/.hermes/state.db` 以 `parent_session_id` 串起会话血统，外加压缩标记、压缩锁与 gateway 路由表；cron 任务单独持久化到 `jobs.json`。</span>
               <code>State vs Tree</code>
             </div>
             <div>
@@ -113,15 +116,21 @@
               <span><strong>Codex</strong>: App Server 双向 JSON-RPC 协议，规范化 Request 与 started / delta / completed 通知。<br>
               <strong>Grok Build</strong>: 采用 Agent Client Protocol (ACP) 标准协议，扩展 XAI 专有事件（`rewind`, `compaction`）。<br>
               <strong>DeepSeek</strong>: 面向自动化与工具管线的 JSON-RPC stdio / NDJSON 协议，流式提交 committed assistant 消息。<br>
-              <strong>Pi Agent</strong>: LF-only JSONL Coding-Agent RPC 与 4 字节大端前缀 + 定长 CBOR 独立 Server Protocol 双协议面。</span>
-              <code>JSON-RPC / ACP / CBOR</code>
+              <strong>Pi Agent</strong>: LF-only JSONL Coding-Agent RPC 与 4 字节大端前缀 + 定长 CBOR 独立 Server Protocol 双协议面。<br>
+              <strong>OpenCode</strong>: 单一本地 HTTP 服务器承载内核：`POST /session/:id/message` 是唯一喂脑入口，`GET /event`（SSE）是唯一广播出口；TUI、IDE、GitHub、CI 全是同构客户端。<br>
+              <strong>OpenClaw</strong>: Gateway 统一接入模型、工具、消息通道与 macOS/iOS/Android/Wear 伴生应用；Telegram/Discord 等通道经 `src/channels/*` 抽象路由。<br>
+              <strong>Hermes</strong>: 单个 Python 内核同时驱动 CLI、23+ 平台消息网关、TUI、Zed ACP、MCP server 与 Electron 桌面六面；`acp_adapter` 负责协议翻译。</span>
+              <code>JSON-RPC / ACP / SSE / CBOR</code>
             </div>
             <div>
               <strong>3. 沙箱与权限控制</strong>
               <span><strong>Codex</strong>: `SandboxPolicy` (`ro`/`ww`/`dfa`) × `ApprovalPolicy` (`untrusted`/`on-request`/`never`) 正交二维决策矩阵。<br>
               <strong>Grok Build</strong>: `PermissionManager` (4种模式) × `SandboxProfile` (`workspace`/`read-only`/`strict`/`devbox`)，分层合并。<br>
               <strong>DeepSeek</strong>: 3 种文件效果模式 (`ro`/`ww`/`dfa`) × 独立审批通道，不可用时强制 fail-closed。<br>
-              <strong>Pi Agent</strong>: 默认采用宿主进程全量权限；`Project Trust` 控制配置加载，真正安全隔离依托外部 Docker/VM。</span>
+              <strong>Pi Agent</strong>: 默认采用宿主进程全量权限；`Project Trust` 控制配置加载，真正安全隔离依托外部 Docker/VM。<br>
+              <strong>OpenCode</strong>: 无 OS 级沙箱；按工具 × pattern 匹配 allow / ask / deny 规则，待审批以 `deferred` 终止原因表达——审批是循环的输入而非旁路。<br>
+              <strong>OpenClaw</strong>: `beforeToolCall` / `afterToolCall` 钩子 + 网关审批（exec-approval-manager）；审批不通过时工具调用被替换为失败结果，模型只见结果不见例外。<br>
+              <strong>Hermes</strong>: `tools/approval.py` 分级：hardline 直接拒绝、危险操作询问、cron/gateway 非交互场景各自降级；记忆写入另有 `write_approval` 闸门。</span>
               <code>Sandbox × Approval</code>
             </div>
             <div>
@@ -129,7 +138,10 @@
               <span><strong>Codex</strong>: 达到预算阈值触发 CompactionSummary 折叠，保留关键目标与 Diff 事实。<br>
               <strong>Grok Build</strong>: 85% 上下文压力触发全量替换压缩，专用 Sampler 生成摘要并记录 `CompactionCheckpoint`。<br>
               <strong>DeepSeek</strong>: `compaction/start` 耐久锁机制，在稳定日志区间生成摘要并通过 Surface Replacement 原子替换。<br>
-              <strong>Pi Agent</strong>: `firstKeptEntryId` 动态截断点选择，后向搜索绝不切断 toolResult，单回合支持超长前缀摘要。</span>
+              <strong>Pi Agent</strong>: `firstKeptEntryId` 动态截断点选择，后向搜索绝不切断 toolResult，单回合支持超长前缀摘要。<br>
+              <strong>OpenCode</strong>: `isOverflow` 触发后把 compaction 摘要作为普通输入自喂进下一轮循环（compact then continue），`finish` 语义防御 provider 谎报。<br>
+              <strong>OpenClaw</strong>: 溢出路径与阈值路径双路触发 `runAutoCompaction`；context-engine 以能力面（bootstrap / assemble-before-prompt / compact）可插拔。<br>
+              <strong>Hermes</strong>: “Prompt 缓存神圣”宪法——缓存标记边界只有压缩可合法击穿；micro-compaction 与 `trajectory_compressor` 分别服务在线回合与离线轨迹。</span>
               <code>Compaction & Summary</code>
             </div>
             <div>
@@ -137,7 +149,10 @@
               <span><strong>Codex</strong>: Local / Git Worktree / Cloud 容器 / 远程宿主多环境适配。<br>
               <strong>Grok Build</strong>: `WorkspaceSession` 统一封装 FS、PTY、ProcessManager、VCS 与检查点，解耦上层调用。<br>
               <strong>DeepSeek</strong>: 严格三元解耦（Service Definition / Provider / Consumer），支持 Local、Sandbox 与 E2B 云沙箱热插拔。<br>
-              <strong>Pi Agent</strong>: 原生 Node.js 宿主接口，支持 Gondolin 微虚拟机路由与 OpenShell 容器化封装。</span>
+              <strong>Pi Agent</strong>: 原生 Node.js 宿主接口，支持 Gondolin 微虚拟机路由与 OpenShell 容器化封装。<br>
+              <strong>OpenCode</strong>: 工具清单按模型 / agent / 权限三层过滤后交给 LLM；执行发生在 server 宿主侧，子代理以子 session 形式派生。<br>
+              <strong>OpenClaw</strong>: 内核与宿主通过 `packages/agent-core` 能力接口解耦；run 落在 gateway 所在设备，伴生应用只是表面而非第二执行世界。<br>
+              <strong>Hermes</strong>: 七个执行后端（local、Docker、Termux、Daytona、Modal 等）共享同一窄腰工具层，文件同步有独立通道，后端切换不动 loop。</span>
               <code>Workspace Seam</code>
             </div>
             <div>
@@ -145,12 +160,20 @@
               <span><strong>Codex</strong>: 定制六边形（AGENTS.md、Memories、Skills、MCP、Hooks、Subagents）。<br>
               <strong>Grok Build</strong>: 规则文件、Skills、MCP 服务、Plugins 分发包、生命周期 Hooks 与跨会话 Memory。<br>
               <strong>DeepSeek</strong>: Cordis 插件树、Profile 继承、Agent Presets 作用域与 Dynamic Cordis 内存自修改运行时。<br>
-              <strong>Pi Agent</strong>: Jiti 动态加载 TypeScript 模块（`ExtensionAPI`）、ResourceLoader 与统一 Provider 适配器。</span>
+              <strong>Pi Agent</strong>: Jiti 动态加载 TypeScript 模块（`ExtensionAPI`）、ResourceLoader 与统一 Provider 适配器。<br>
+              <strong>OpenCode</strong>: 插件 hooks、自定义 commands、Skills、agents（子代理定义）与 MCP 统一汇入 tool registry 与权限管线。<br>
+              <strong>OpenClaw</strong>: 约 150 个 `extensions/` 目录、SKILL.md 技能、SOUL.md 人格与 automations 工具，都以网关插件身份组合进单一 Gateway 进程。<br>
+              <strong>Hermes</strong>: 学习闭环让 Agent 自创自改 SKILL.md、写回 MEMORY.md；与 OpenClaw 共享 SOUL.md / MEMORY.md / SKILL.md 文件族谱系并有双向迁移器（§ 条目是 Hermes 侧约定，OpenClaw 搬运不解析）。</span>
               <code>Extension Hexagon</code>
             </div>
           </div>
 
           <div class="custom-stack">
+            <div>
+              <span class="custom-key">DEEPSEEK 适用</span>
+              <strong>极致插件化与执行环境热插拔</strong>
+              <p>追求“Everything is a Plugin”架构，需通过 Cordis IoC 容器无缝切换本地执行、E2B 云沙箱与自修改运行时的场景。</p>
+            </div>
             <div>
               <span class="custom-key">CODEX 适用</span>
               <strong>企业级多端与富客户端集成</strong>
@@ -162,14 +185,24 @@
               <p>追求极致终端响应速度、全屏 TUI 交互、ACP 标准支持以及原子级 Git Workspace Checkpoint / Rewind 恢复能力。</p>
             </div>
             <div>
-              <span class="custom-key">DEEPSEEK 适用</span>
-              <strong>极致插件化与执行环境热插拔</strong>
-              <p>追求“Everything is a Plugin”架构，需通过 Cordis IoC 容器无缝切换本地执行、E2B 云沙箱与自修改运行时的场景。</p>
-            </div>
-            <div>
               <span class="custom-key">PI AGENT 适用</span>
               <strong>轻量嵌入式与非线性分支探索</strong>
               <p>需要极简轻量 TypeScript 内核、非破坏性 JSONL 树形分支探索（`/tree`）与 CSI 2026 同步差分渲染的应用。</p>
+            </div>
+            <div>
+              <span class="custom-key">OPENCODE 适用</span>
+              <strong>服务器即内核的多客户端平台嵌入</strong>
+              <p>需要一个本地 HTTP 服务器承载 Agent 内核，让 TUI、IDE、CI、GitHub 成为同构客户端；事件投影进单文件 SQLite，会话历史与计费统计最容易被平台接管。</p>
+            </div>
+            <div>
+              <span class="custom-key">OPENCLAW 适用</span>
+              <strong>跨天存活的通用个人助理</strong>
+              <p>“活着”不靠无限循环：有界 run 预算 + 双 SQLite 持久状态 + automations / standing intents 唤醒 + 凌晨记忆固化，多通道贯通你的设备。</p>
+            </div>
+            <div>
+              <span class="custom-key">HERMES 适用</span>
+              <strong>单机 Python 的自演化内核</strong>
+              <p>学习闭环接入 agent loop 一等公民（回合 nudge → 后台自省 → 技能/记忆写回），同一内核从 Termux 手机到 GPU 集群六面部署，并与 OpenClaw 共享两代格式谱系。</p>
             </div>
           </div>
         </section>
@@ -424,7 +457,7 @@
         <section class="source-notes" aria-labelledby="grok-sources" data-reveal><span class="label-mono">PRIMARY SOURCES</span><h3 id="grok-sources">继续查证</h3><p>课程事实来自 Grok Build 开源仓库中的 README、用户指南与 Rust 源码。</p><div><a href="https://docs.x.ai/build/overview">Grok Build 官方文档</a><a href="https://github.com/xai-org/grok-build">开源仓库</a><a href="https://agentclientprotocol.com/">Agent Client Protocol</a></div></section>
       </div></section>
     </main>
-    <footer class="site"><div class="shell"><span>顶级 Agent 内核图谱 · Grok Build</span><div><a href="/codex">Codex 课程</a> · <a href="#top">返回顶部 ↑</a></div></div></footer>
+    <footer class="site"><div class="shell"><span>顶级 Agent 内核图谱 · Grok Build</span><div><a href="/codex">Codex</a> · <a href="/deepseek">DeepSeek Harness</a> · <a href="/pi">Pi Agent</a> · <a href="/opencode">OpenCode</a> · <a href="/openclaw">OpenClaw</a> · <a href="/hermes">Hermes Agent</a> · <a href="#top">返回顶部 ↑</a></div></div></footer>
     <script type="module" src="/src/grok.ts"></script>
   </body>
 </html>

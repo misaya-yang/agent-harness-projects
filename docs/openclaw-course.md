@@ -1,7 +1,7 @@
 # OpenClaw 课程事实素材（源码研究产出）
 
 > 本文是教学站“顶级开源 Agent 内核图谱”OpenClaw 课程的事实底座。
-> 源码基线：`/Users/misaya.yanghejazfs.com.au/misaya_project/Agent_projects/openclaw`，短提交 `e6915d09`（2026-08-24，`fix(cli): reject missing transcript summary paths (#128589)`）。
+> 源码基线：本地 `openclaw` 快照，短提交 `e6915d09`（2026-08-24，`fix(cli): reject missing transcript summary paths (#128589)`）。
 > 只读研究：所有行号由本次在 `e6915d09` checkout 上逐条复核（早前的对比报告基于旧提交，行号有漂移，本文一律以复核值为准）。
 
 ## 读法与证据标签
@@ -388,13 +388,13 @@ export async function runPreparedEmbeddedLoopTeaching(
 ## 10 PRIMARY SOURCES
 
 - 上游仓库：<https://github.com/openclaw/openclaw>（MIT，OpenClaw Foundation）
-- 内核循环：<https://github.com/openclaw/openclaw/blob/main/packages/agent-core/src/agent-loop.ts>、<https://github.com/openclaw/openclaw/blob/main/packages/agent-core/src/agent.ts>
-- 会话层：<https://github.com/openclaw/openclaw/blob/main/src/agents/sessions/agent-session-prompting.ts>、<https://github.com/openclaw/openclaw/blob/main/src/agents/sessions/agent-session-compaction.ts>
-- run 预算层：<https://github.com/openclaw/openclaw/blob/main/src/agents/embedded-agent-runner/run-loop.ts>、<https://github.com/openclaw/openclaw/blob/main/src/agents/embedded-agent-runner/run/helpers.ts>、<https://github.com/openclaw/openclaw/blob/main/src/agents/embedded-agent-runner/run/retry-budget.ts>
-- 记忆：<https://github.com/openclaw/openclaw/tree/main/extensions/memory-core/src>、<https://github.com/openclaw/openclaw/blob/main/src/memory-host-sdk/dreaming.ts>
-- 状态 schema：<https://github.com/openclaw/openclaw/blob/main/src/state/openclaw-agent-db-schema.ts>
-- 架构文档：<https://github.com/openclaw/openclaw/blob/main/docs/concepts/architecture.md>、<https://github.com/openclaw/openclaw/blob/main/docs/agent-runtime-architecture.md>、<https://github.com/openclaw/openclaw/blob/main/VISION.md>
-- 人格与迁移：<https://github.com/openclaw/openclaw/blob/main/docs/concepts/soul.md>、<https://github.com/openclaw/openclaw/blob/main/docs/install/migrating-hermes.md>
-- 自动化与心跳：<https://github.com/openclaw/openclaw/blob/main/docs/automation/index.md>、<https://github.com/openclaw/openclaw/blob/main/src/cron/service/timer-scheduler.ts>
-- 审批与安全：<https://github.com/openclaw/openclaw/blob/main/src/gateway/exec-approval-manager.ts>、<https://github.com/openclaw/openclaw/blob/main/src/infra/exec-approvals-config.ts>、<https://github.com/openclaw/openclaw/blob/main/SECURITY.md>
+- 内核循环：<https://github.com/openclaw/openclaw/blob/e6915d099adb114c87e75d560bc15be55a8a3b14/packages/agent-core/src/agent-loop.ts>、<https://github.com/openclaw/openclaw/blob/e6915d099adb114c87e75d560bc15be55a8a3b14/packages/agent-core/src/agent.ts>
+- 会话层：<https://github.com/openclaw/openclaw/blob/e6915d099adb114c87e75d560bc15be55a8a3b14/src/agents/sessions/agent-session-prompting.ts>、<https://github.com/openclaw/openclaw/blob/e6915d099adb114c87e75d560bc15be55a8a3b14/src/agents/sessions/agent-session-compaction.ts>
+- run 预算层：<https://github.com/openclaw/openclaw/blob/e6915d099adb114c87e75d560bc15be55a8a3b14/src/agents/embedded-agent-runner/run-loop.ts>、<https://github.com/openclaw/openclaw/blob/e6915d099adb114c87e75d560bc15be55a8a3b14/src/agents/embedded-agent-runner/run/helpers.ts>、<https://github.com/openclaw/openclaw/blob/e6915d099adb114c87e75d560bc15be55a8a3b14/src/agents/embedded-agent-runner/run/retry-budget.ts>
+- 记忆：<https://github.com/openclaw/openclaw/tree/e6915d099adb114c87e75d560bc15be55a8a3b14/extensions/memory-core/src>、<https://github.com/openclaw/openclaw/blob/e6915d099adb114c87e75d560bc15be55a8a3b14/src/memory-host-sdk/dreaming.ts>
+- 状态 schema：<https://github.com/openclaw/openclaw/blob/e6915d099adb114c87e75d560bc15be55a8a3b14/src/state/openclaw-agent-db-schema.ts>
+- 架构文档：<https://github.com/openclaw/openclaw/blob/e6915d099adb114c87e75d560bc15be55a8a3b14/docs/concepts/architecture.md>、<https://github.com/openclaw/openclaw/blob/e6915d099adb114c87e75d560bc15be55a8a3b14/docs/agent-runtime-architecture.md>、<https://github.com/openclaw/openclaw/blob/e6915d099adb114c87e75d560bc15be55a8a3b14/VISION.md>
+- 人格与迁移：<https://github.com/openclaw/openclaw/blob/e6915d099adb114c87e75d560bc15be55a8a3b14/docs/concepts/soul.md>、<https://github.com/openclaw/openclaw/blob/e6915d099adb114c87e75d560bc15be55a8a3b14/docs/install/migrating-hermes.md>
+- 自动化与心跳：<https://github.com/openclaw/openclaw/blob/e6915d099adb114c87e75d560bc15be55a8a3b14/docs/automation/index.md>、<https://github.com/openclaw/openclaw/blob/e6915d099adb114c87e75d560bc15be55a8a3b14/src/cron/service/timer-scheduler.ts>
+- 审批与安全：<https://github.com/openclaw/openclaw/blob/e6915d099adb114c87e75d560bc15be55a8a3b14/src/gateway/exec-approval-manager.ts>、<https://github.com/openclaw/openclaw/blob/e6915d099adb114c87e75d560bc15be55a8a3b14/src/infra/exec-approvals-config.ts>、<https://github.com/openclaw/openclaw/blob/e6915d099adb114c87e75d560bc15be55a8a3b14/SECURITY.md>
 - 官方文档站：<https://docs.openclaw.ai>（Gateway / Channels / Tools / Plugins 参考）

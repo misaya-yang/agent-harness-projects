@@ -14,7 +14,7 @@
 | 许可 | MIT（LICENSE，Copyright (c) 2025 opencode）[源码确认] |
 | 定位一句话 | 终端优先的开源 AI coding agent：一个本地 HTTP 服务器承载 agent 内核，TUI/CLI/IDE/GitHub/桌面全部是它的客户端 |
 
-**Hero thesis（本课主论点）**：OpenCode 把“服务器即内核”当作第一公民——`opencode` 启动时 TUI 与 agent server 同进程但跨边界对话（in-worker HTTP + RPC 事件流），`POST /session/:id/message` 是唯一喂脑入口，`GET /event`（SSE）是唯一广播出口；而内核主循环 `runLoop` 的终止判定只有一条规则：**最后一条 assistant 消息已正常收尾且没有待处理的工具调用**。所有花哨能力（压缩、子代理、权限审批、回退）都被表达为这个循环的输入或事件，而不是循环之外的旁路。
+**Hero thesis（本课主论点）**：OpenCode 把“服务器即内核”当作第一公民——`opencode` 启动时 TUI 与 agent server 同进程但跨边界对话（in-worker HTTP + RPC 事件流），`POST /session/:id/message` 是主喂脑入口（`prompt_async`、`command`、`shell` 也会进入 `SessionPrompt`），`GET /event` 与 `/global/event` 是两类 SSE 广播出口；而内核主循环 `runLoop` 的终止判定只有一条规则：**最后一条 assistant 消息已正常收尾且没有待处理的工具调用**。所有花哨能力（压缩、子代理、权限审批、回退）都被表达为这个循环的输入或事件，而不是循环之外的旁路。
 
 ---
 
@@ -428,12 +428,12 @@ function* runLoop(sessionID: SessionID) {
 
 ## 10 PRIMARY SOURCES
 
-- https://github.com/anomalyco/opencode/blob/754bb7e/packages/opencode/src/session/prompt.ts — runLoop 主循环（:1081-1341）
-- https://github.com/anomalyco/opencode/blob/754bb7e/packages/opencode/src/session/processor.ts — LLMEvent 消费/工具调用/doom loop（:29,331-460,356-383）
-- https://github.com/anomalyco/opencode/blob/754bb7e/packages/opencode/src/tool/registry.ts — 内建工具清单与模型过滤（:231-303）
-- https://github.com/anomalyco/opencode/blob/754bb7e/packages/opencode/src/permission/index.ts — evaluate/ask/reply 审批内核（:28-165）
-- https://github.com/anomalyco/opencode/blob/754bb7e/packages/opencode/src/session/compaction.ts — 压缩/tail/prune/autocontinue
-- https://github.com/anomalyco/opencode/blob/754bb7e/packages/opencode/src/server/routes/instance/httpapi/groups/event.ts — SSE `/event` 端点
-- https://github.com/anomalyco/opencode/blob/754bb7e/packages/opencode/src/cli/tui/worker.ts — TUI↔server 同进程 RPC 桥
-- https://github.com/anomalyco/opencode/blob/754bb7e/packages/core/src/session/projector.ts — 事件→SQLite 投影
+- https://github.com/anomalyco/opencode/blob/754bb7e3903df6276e6ddc96e3d6daced7160902/packages/opencode/src/session/prompt.ts — runLoop 主循环（:1081-1341）
+- https://github.com/anomalyco/opencode/blob/754bb7e3903df6276e6ddc96e3d6daced7160902/packages/opencode/src/session/processor.ts — LLMEvent 消费/工具调用/doom loop（:29,331-460,356-383）
+- https://github.com/anomalyco/opencode/blob/754bb7e3903df6276e6ddc96e3d6daced7160902/packages/opencode/src/tool/registry.ts — 内建工具清单与模型过滤（:231-303）
+- https://github.com/anomalyco/opencode/blob/754bb7e3903df6276e6ddc96e3d6daced7160902/packages/opencode/src/permission/index.ts — evaluate/ask/reply 审批内核（:28-165）
+- https://github.com/anomalyco/opencode/blob/754bb7e3903df6276e6ddc96e3d6daced7160902/packages/opencode/src/session/compaction.ts — 压缩/tail/prune/autocontinue
+- https://github.com/anomalyco/opencode/blob/754bb7e3903df6276e6ddc96e3d6daced7160902/packages/opencode/src/server/routes/instance/httpapi/groups/event.ts — SSE `/event` 端点
+- https://github.com/anomalyco/opencode/blob/754bb7e3903df6276e6ddc96e3d6daced7160902/packages/opencode/src/cli/tui/worker.ts — TUI↔server 同进程 RPC 桥
+- https://github.com/anomalyco/opencode/blob/754bb7e3903df6276e6ddc96e3d6daced7160902/packages/core/src/session/projector.ts — 事件→SQLite 投影
 - https://opencode.ai — 官方文档站

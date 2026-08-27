@@ -1,7 +1,7 @@
 # Hermes Agent 内核课程 · 事实素材
 
 > 教学站课程素材稿。所有定位基于本地仓库
-> `/Users/misaya.yanghejazfs.com.au/misaya_project/Agent_projects/hermes-agent`（commit `a0ca7c1`）。
+> 本地 `hermes-agent` 源码快照（commit `a0ca7c1`）。
 > 证据等级标注：[源码确认] 代码可直接读到；[文档声明] 仅 README/AGENTS.md/docs 陈述；[合理推断] 由结构推断。
 
 ## 0 身份卡

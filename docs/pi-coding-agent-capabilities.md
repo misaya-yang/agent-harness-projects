@@ -1,6 +1,6 @@
 # Pi coding-agent 能力地图（源码快照）
 
-> 快照：`/Users/misaya.yanghejazfs.com.au/misaya_project/Agent_projects/pi`，`a470b121bf683b4c2b9fc0b3a7c807de7e0cfe9c`（2026-08-25）。本文只基于本地源码、包 README 和相关 docs；没有联网、安装依赖、运行真实模型或修改源仓。
+> 快照：本地 `pi` 源码，`a470b121bf683b4c2b9fc0b3a7c807de7e0cfe9c`（2026-08-25）。本文只基于本地源码、包 README 和相关 docs；没有联网、安装依赖、运行真实模型或修改源仓。
 
 ## 阅读方式与证据等级
 

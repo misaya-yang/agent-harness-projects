@@ -51,4 +51,13 @@ describe("published course contract", () => {
     });
     assert.doesNotMatch(pages.map(read).join("\n"), /class="reader-mode"|class="reader-view"/);
   });
+
+  it("keeps source notes portable and snapshot-pinned", () => {
+    const sourceNotes = fs.readdirSync(path.join(root, "docs"))
+      .filter((file) => file.endsWith(".md"))
+      .map((file) => read(path.join("docs", file)))
+      .join("\n");
+    assert.doesNotMatch(sourceNotes, /\/Users\//);
+    assert.doesNotMatch(`${sourceNotes}\n${pages.map(read).join("\n")}`, /github\.com\/openclaw\/openclaw\/(?:blob|tree)\/main\//);
+  });
 });

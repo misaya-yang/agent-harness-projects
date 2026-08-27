@@ -1,6 +1,6 @@
 # Pi Agent Runtime：从一次 prompt 到 provider stream 的可验证教程
 
-> 源码基线：`/Users/misaya.yanghejazfs.com.au/misaya_project/Agent_projects/pi`，短提交 `a470b121b`。
+> 源码基线：本地 `pi` 快照，短提交 `a470b121b`。
 > 本文只依据该 checkout 的源码、README 和 `packages/agent/docs/harness.md` 编写；没有联网、安装依赖、运行真实模型或修改源仓。
 
 ## 读法与证据边界

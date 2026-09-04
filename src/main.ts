@@ -77,39 +77,39 @@ interface ToolStage {
 const CX_TOOL_STAGES: ToolStage[] = [
   {
     title: "发现",
-    note: "ToolRegistry 以曝光级别登记工具，模型工具列表只是本轮可见集。撞名不崩注册表：首个撞名被记下来供追溯（registry.rs:271）。",
-    trace: "registry：内建 + MCP + 动态 → 按 exposure 过滤可见集",
-    log: ["k-sys", "ToolRegistry::add_with_exposure → 可见工具 12 个"],
+    note: "注册表保存全部能力，但模型只看到当前 step 的可见集。直接、延迟、仅模型、仅 code mode 与隐藏等暴露档决定工具何时、以何种方式出现。",
+    trace: "发现：内建 + MCP + 动态工具 → 按 exposure 生成本 step 可见集",
+    log: ["k-sys", "step snapshot → 已生成当前可见工具集"],
   },
   {
     title: "校验",
-    note: "build_tool_call 把 FunctionCall 解析成内部 ToolCall；参数 JSON 不合法走 FunctionCallError 回注给模型，而不是炸掉回合。",
-    trace: "router：FunctionCall → ToolCall（schema / 参数错误在此截住）",
-    log: ["k-warn", "build_tool_call: serde parse ok"],
+    note: "结构化调用先按 schema 解析。参数不合法时，错误作为可行动文本回给模型，让它修正；只有程序性 Fatal 才终止整个 Turn。",
+    trace: "校验：FunctionCall → schema 检查 → 合法调用或可纠正错误",
+    log: ["k-warn", "schema check → 参数合法"],
   },
   {
     title: "授权",
-    note: "审批阶段集中在 approvals.rs：命令先规范化再查决策缓存；Granular 类别未放行的直接判拒，不再打扰用户。",
-    trace: "approvals：canonicalize → 命中缓存？→ 请示 / 直拒 / 放行",
-    log: ["k-user", "approval cache: miss → escalate"],
+    note: "命令规则先分类，再结合审批策略和权限画像决定放行、请示或拒绝。Granular 中被关闭的询问类别会自动拒绝，不再打扰用户。",
+    trace: "授权：规则分类 → 审批策略 → 权限画像 → 放行 / 请示 / 拒绝",
+    log: ["k-user", "approval decision → 需要明确授权"],
   },
   {
     title: "执行",
-    note: "命令进入 OS 级沙箱执行（macOS Seatbelt 等），进程环境打上 CODEX_SANDBOX 标记；越界写以 EPERM 级失败收场。",
-    trace: "sandbox：应用 profile → spawn → 采集 stdout/stderr/exit",
-    log: ["k-tool", "exec: seatbelt profile applied · exit 0"],
+    note: "命令进入实际执行宿主的系统沙箱；本地、云端与远程环境的强制者不同，但都要采集标准输出、标准错误与退出状态。",
+    trace: "执行：宿主应用权限边界 → 启动 → 采集输出与退出状态",
+    log: ["k-tool", "execution boundary applied → exit 0"],
   },
   {
     title: "归一化",
-    note: "写入历史那一刻就按 TruncationPolicy（Bytes / Tokens）截断（history.rs:164），保留退出码与输出骨架。事后无迹可寻的是没入档的部分。",
-    trace: "normalize：TruncationPolicy::Tokens(limit) 截长输出",
-    log: ["k-sys", "record_items: 214 行 → 截断入档"],
+    note: "长输出在写入历史时就按预算截断，保留高信号的头尾并明确声明缺失规模。模型后续看到的是归一化后的版本。",
+    trace: "归一化：控制体积 → 保留头尾 → 标记截断规模",
+    log: ["k-sys", "214 行输出 → 已按预算截断并入档"],
   },
   {
     title: "回注",
-    note: "function_call_output 按 call_id 配对追加，for_prompt 组装下一轮请求。配对断裂是 API 400 的经典成因，也是“模型忘了自己做过什么”的常见真相。",
-    trace: "inject：function_call_output(call_id) → 下一次响应请求",
-    log: ["k-sys", "history.push(output) → 模型续推"],
+    note: "工具结果按 call id 与调用配对进入历史，下一次请求再从权威历史派生。取消的调用也必须合成回执，否则恢复时会出现孤儿调用。",
+    trace: "回注：工具输出与 call id 配对 → 历史 → 下一 step",
+    log: ["k-sys", "tool output paired → 模型继续判断"],
   },
 ];
 
@@ -194,14 +194,14 @@ type CxCmd = "test" | "net" | "outside";
 const CX_ENV_CMDS: Record<CxCmd, { cmd: string; allowlisted: boolean }> = {
   test: { cmd: "cargo test", allowlisted: true },
   net: { cmd: "curl -s https://api.example.com", allowlisted: false },
-  outside: { cmd: "echo key >> ~/.zshrc", allowlisted: false },
+  outside: { cmd: "write <outside-workspace>", allowlisted: false },
 };
 
 const CX_ENV_SHORT: Record<CxEnv, string> = {
-  local: "本机执行，OS 沙箱（Seatbelt / Landlock 等）即时生效",
-  worktree: "独立 git worktree，可写根指向 worktree 目录",
-  cloud: "托管容器执行，sandbox_mode 只是意图，隔离与网络由环境模板决定",
-  remote: "exec-server 在远端宿主执行，沙箱在宿主侧生效",
+  local: "当前机器执行，系统沙箱在本地强制",
+  worktree: "独立 Git 工作树执行，改动与主检出隔离",
+  cloud: "托管环境执行，隔离与网络由环境模板共同决定",
+  remote: "远程宿主执行，沙箱在宿主侧生效",
 };
 
 const CX_ENV_VERDICTS = {
@@ -209,7 +209,7 @@ const CX_ENV_VERDICTS = {
   ask: {
     tag: "升级请示",
     cls: "ask",
-    desc: "沙箱拦截或策略要求确认：内核发出反向审批请求。通道形态随环境而变——云端异步、超时按拒绝算；批准只扩大边界，不整体解除 OS 沙箱。",
+    desc: "当前边界不足且策略允许询问：系统发出审批请求。批准只处理这次明确的权限需求，不应被理解为永久关闭沙箱。",
   },
   deny: {
     tag: "直接拒绝",
@@ -227,10 +227,10 @@ function cxEnvDecide(
   const trace: string[] = [`环境=${env}：${CX_ENV_SHORT[env]}`];
   let blocked: string | null = null;
   if (sbx === "read-only") {
-    blocked = "read-only 拒绝一切写入与网络（network_access 默认 false）";
+    blocked = cmd === "net" ? "当前网络权限不覆盖该访问" : "read-only 不允许这次写入";
   } else if (sbx === "workspace-write") {
-    if (cmd === "net") blocked = "workspace-write 默认 network_access=false，出站被拦";
-    else if (cmd === "outside") blocked = "写入越出可写根（cwd + TMPDIR）";
+    if (cmd === "net") blocked = "当前网络权限不覆盖该访问";
+    else if (cmd === "outside") blocked = "写入目标越出工作区可写根";
   }
 
   if (blocked) {
@@ -244,17 +244,16 @@ function cxEnvDecide(
         ? "approval=untrusted：白名单外命令执行前请示"
         : "approval=on-request：模型发起升级请示",
     );
-    if (env === "cloud") trace.push("请示走托管通道，超时按拒绝处理");
-    else if (env === "remote") trace.push("请示回传到客户端，宿主侧不因批准而放宽");
-    else trace.push("批准只扩大可写根 / 网络，不整体解除 OS 沙箱");
+    if (env === "remote") trace.push("审批决定回传后，仍由远程宿主执行最终边界");
+    else trace.push("批准只覆盖明确权限，不整体解除系统沙箱");
     return { key: "ask", trace };
   }
 
   trace.push(`sandbox=${sbx} 允许该操作`);
   if (env === "worktree" && cmd === "test")
-    trace.push("写入落在 worktree，主检出不受影响；成果需 merge 回来");
-  if (env === "cloud") trace.push("容器文件系统随任务销毁，留下的只有 diff 与事件");
-  if (env === "remote") trace.push("可写根在宿主侧解析，客户端路径未必存在");
+    trace.push("测试产生的改动留在独立工作树，主检出不受影响");
+  if (env === "cloud") trace.push("文件寿命由托管环境的持久化契约决定");
+  if (env === "remote") trace.push("可写边界由远程宿主解析，客户端视图不能代替宿主事实");
   if (apr === "untrusted" && !CX_ENV_CMDS[cmd].allowlisted) {
     trace.push("approval=untrusted：exec policy 未放行 → 仍要请示");
     return { key: "ask", trace };
@@ -357,15 +356,15 @@ const CX_SCENARIOS: CxScenario[] = [
     question: "打包默认、用户配置、项目配置与 -c 参数都写了 model。本轮听谁的？",
     candidates: [
       { id: "pack", label: "打包默认 PackagedDefaults" },
-      { id: "user", label: "~/.codex/config.toml" },
-      { id: "proj", label: "项目 .codex/config.toml" },
+      { id: "user", label: "用户配置层" },
+      { id: "proj", label: "项目配置层" },
       { id: "flag", label: "-c model=…（会话参数）" },
     ],
     winner: "flag",
     ladder: [
       "-c model=… → SessionFlags · 优先级 30　← 胜",
-      "项目 .codex/config.toml → Project · 25",
-      "~/.codex/config.toml → User · 20",
+      "项目配置层 → Project · 25",
+      "用户配置层 → User · 20",
       "打包默认 → PackagedDefaults · −10",
     ],
     why: "SessionFlags 是当次会话意图，压过项目与用户层；只有 legacy managed（40 / 50）在它之上。",
@@ -375,13 +374,13 @@ const CX_SCENARIOS: CxScenario[] = [
     question: "MDM 偏好层下发 read-only，用户与项目都写了 workspace-write。谁生效？",
     candidates: [
       { id: "mdm", label: "MDM 偏好层下发（Mdm）" },
-      { id: "user", label: "~/.codex/config.toml（User）" },
-      { id: "proj", label: "项目 .codex/config.toml（Project）" },
+      { id: "user", label: "用户配置层（User）" },
+      { id: "proj", label: "项目配置层（Project）" },
     ],
     winner: "proj",
     ladder: [
-      "项目 .codex/config.toml → Project · 25　← 胜",
-      "~/.codex/config.toml → User · 20",
+      "项目配置层 → Project · 25　← 胜",
+      "用户配置层 → User · 20",
       "MDM 下发偏好 → Mdm · 0",
     ],
     why: "普通 Mdm 层（0）压不过用户与项目层——它只是偏好下发通道；合规锁在 managed config（40 / 50）。",
@@ -403,22 +402,22 @@ const CX_SCENARIOS: CxScenario[] = [
     why: "企业合规层在阶梯顶端，50 > 40 > 30。共享机器上命令行赢不过推送的合规配置——把个人机的 -c 直觉搬过去，就是最常见的误判。",
   },
   {
-    conflict: "AGENTS.md　模型看到的是哪份？",
-    question: "cwd=packages/api：仓库根与 packages/ 各有 AGENTS.md，packages/api/ 下同时有 AGENTS.md 和 AGENTS.override.md。哪些指令进入上下文？",
+    conflict: "AGENTS.md　模型看到的是哪几层？",
+    question: "项目根、中间目录和当前目录都有项目指令；当前目录还提供 override。哪些指令进入上下文？",
     candidates: [
       { id: "root-only", label: "只有仓库根的生效" },
-      { id: "nearest", label: "只有 packages/api/AGENTS.md 生效" },
-      { id: "concat", label: "根 → cwd 逐层拼接，override 替换其目录主文件" },
+      { id: "nearest", label: "只有当前目录主文件生效" },
+      { id: "concat", label: "根 → 当前目录逐层拼接，override 替换同层主文件" },
       { id: "budget", label: "全部拼接，超预算随机丢" },
     ],
     winner: "concat",
     ladder: [
-      "仓库根 AGENTS.md（最先加载）",
-      "packages/AGENTS.md（按目录顺序拼接）",
-      "packages/api/AGENTS.override.md（替换该目录 AGENTS.md，最后加载）",
+      "项目根指令（最先加载）",
+      "中间目录指令（按目录顺序拼接）",
+      "当前目录 override（替换同目录主文件，最后加载）",
       "总量预算 project_doc_max_bytes，超限截尾而非随机丢弃",
     ],
-    why: "AGENTS.md 不是覆盖是拼接：从项目根到 cwd 逐层收集、不越过项目根；AGENTS.override.md 只替换所在目录的主文件，供本机临时改写。",
+    why: "项目指令不是跨层覆盖，而是从项目根到当前目录逐层拼接；override 只替换所在目录的主文件，总量超预算时从尾部截断。",
   },
 ];
 

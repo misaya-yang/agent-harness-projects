@@ -16,11 +16,11 @@ type Chapter = {
 };
 
 function coverageFor(view: HTMLElement): string[] {
-  const coverage = ["原理"];
-  if (view.querySelector(".lesson-brief, .source-route, .source-notes")) coverage.push("源码");
+  const coverage = ["概念"];
+  if (view.querySelector(".lesson-brief")) coverage.push("案例");
   if (view.querySelector(".machine")) coverage.push("实验");
-  if (view.querySelector(".decision, .fact-boundary, .environment-matrix")) coverage.push("边界");
-  if (view.querySelector(".interview")) coverage.push("面试");
+  if (view.querySelector(".decision, .fact-boundary, .environment-matrix")) coverage.push("权衡");
+  if (view.querySelector(".interview")) coverage.push("自测");
   return coverage;
 }
 
@@ -39,15 +39,15 @@ function buildCourseMap(chapters: Chapter[]): HTMLElement {
   map.setAttribute("aria-labelledby", "reader-map-title");
   map.innerHTML = `
     <header class="reader-map-head">
-      <span class="label-mono">COURSE MAP · 12 CHAPTERS</span>
-      <h2 id="reader-map-title">不是一条滑到底的长页，而是三段可以完成的学习路径。</h2>
-      <p>每章都标明实际覆盖的原理、源码、交互实验、工程边界与面试输出；选一章进入，完成后打卡继续下一章。</p>
+      <span class="label-mono">LEARNING MAP · 12 CHAPTERS</span>
+      <h2 id="reader-map-title">三段路径，把复杂内核学成一套可调试的方法。</h2>
+      <p>先建立心智模型，再通过交互实验观察状态变化，最后把判断带到真实工程问题里。每次只学一章。</p>
     </header>`;
 
   const phases = [
-    ["01—04", "建立系统模型", "先认清结构、状态与一次运行的控制权。"],
-    ["05—08", "追踪运行证据", "沿工具、上下文与持久化事实定位问题。"],
-    ["09—12", "进入生产边界", "理解扩展、运行表面、安全与实践。"],
+    ["01—04", "先跑通", "看清一次任务怎样进入、推进、调用工具并停下。"],
+    ["05—08", "再控制", "学会管理副作用、上下文、状态与失败恢复。"],
+    ["09—12", "最后上生产", "把扩展、多代理、安全与诊断收成工程判断。"],
   ];
   const grid = document.createElement("div");
   grid.className = "reader-map-grid";
@@ -110,7 +110,7 @@ export function initChapterReader(): void {
   const toolbar = document.createElement("div");
   toolbar.className = "reader-toolbar shell";
   toolbar.innerHTML = `
-    <a class="reader-map-link" href="#reader-map"><span class="label-mono">课程地图</span><strong>12 章全景</strong></a>
+    <a class="reader-map-link" href="#reader-map"><span class="label-mono">学习地图</span><strong>12 章路径</strong></a>
     <div class="reader-current" aria-live="polite">
       <span class="label-mono" data-reader-position>00 / 12</span>
       <strong data-reader-title>课程地图</strong>

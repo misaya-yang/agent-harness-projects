@@ -19,12 +19,12 @@ type Sandbox = "ro" | "ww" | "dfa";
 type Approval = "untrusted" | "on-request" | "never";
 
 const OPS: Op[] = [
-  { id: "read", label: "读取源码", cmd: 'cat src/main.rs', reads: true, writeIn: false, writeOut: false, net: false, riskNote: "纯读操作" },
-  { id: "test", label: "跑测试", cmd: "cargo test", reads: true, writeIn: true, writeOut: false, net: false, riskNote: "写入 target/（工作区内）" },
-  { id: "patch", label: "改工作区文件", cmd: "apply_patch tests/login.rs", reads: true, writeIn: true, writeOut: false, net: false, riskNote: "写入工作区内文件" },
-  { id: "net", label: "访问网络", cmd: "curl -s https://api.example.com", reads: true, writeIn: false, writeOut: false, net: true, riskNote: "出站网络请求" },
-  { id: "outside", label: "写工作区之外", cmd: "echo note > ~/Desktop/x.txt", reads: true, writeIn: false, writeOut: true, net: false, riskNote: "越出工作区边界" },
-  { id: "purge", label: "删除依赖目录", cmd: "rm -rf target/", reads: true, writeIn: true, writeOut: false, net: false, riskNote: "破坏性写（工作区内）" },
+  { id: "read", label: "读取项目文件", cmd: "read project-file", reads: true, writeIn: false, writeOut: false, net: false, riskNote: "纯读操作" },
+  { id: "test", label: "跑测试", cmd: "run test-suite", reads: true, writeIn: true, writeOut: false, net: false, riskNote: "写入工作区内构建缓存" },
+  { id: "patch", label: "改工作区文件", cmd: "patch workspace-file", reads: true, writeIn: true, writeOut: false, net: false, riskNote: "写入工作区内文件" },
+  { id: "net", label: "访问网络", cmd: "fetch external-api", reads: true, writeIn: false, writeOut: false, net: true, riskNote: "出站网络请求" },
+  { id: "outside", label: "写工作区之外", cmd: "write outside-workspace", reads: true, writeIn: false, writeOut: true, net: false, riskNote: "越出工作区边界" },
+  { id: "purge", label: "删除构建产物", cmd: "delete build-output", reads: true, writeIn: true, writeOut: false, net: false, riskNote: "破坏性写（工作区内）" },
 ];
 
 const VERDICTS = {

@@ -7,15 +7,15 @@
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Codex 内核图谱 · 交互式 Agent 工程课" />
     <meta property="og:description" content="沿着 Thread、Turn、Item，读懂 Codex 内核、工具、权限、上下文、扩展体系与客户端协议。" />
-    <meta property="og:url" content="https://codex-kernel-atlas.lvy-u.chatgpt.site" />
-    <meta property="og:image" content="https://codex-kernel-atlas.lvy-u.chatgpt.site/og.png" />
+    <meta property="og:url" content="https://harness.lvy-u.chatgpt.site" />
+    <meta property="og:image" content="https://harness.lvy-u.chatgpt.site/og.png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <link rel="canonical" href="https://codex-kernel-atlas.lvy-u.chatgpt.site" />
+    <link rel="canonical" href="https://harness.lvy-u.chatgpt.site" />
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Codex 内核图谱 · 交互式 Agent 工程课" />
     <meta name="twitter:description" content="沿着 Thread、Turn、Item，读懂 Codex 内核、工具、权限、上下文、扩展体系与客户端协议。" />
-    <meta name="twitter:image" content="https://codex-kernel-atlas.lvy-u.chatgpt.site/og.png" />
+    <meta name="twitter:image" content="https://harness.lvy-u.chatgpt.site/og.png" />
     <title>Codex 内核图谱 · 交互式 Agent 工程课</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -78,13 +78,13 @@
       <section class="hero shell" id="top" data-spy>
         <div class="hero-grid">
           <div data-reveal>
-            <p class="eyebrow label-mono">从一次真实修复任务，读懂 Agent 运行时</p>
-            <h1>看懂 Codex 如何把一句请求，变成<span class="alt">可验证的代码改动。</span></h1>
-            <p class="sub">跟踪一个“修复失败测试”的任务：请求如何进入 Thread / Turn，模型何时生成 Item，工具怎样经过审批与沙箱，结果又如何回到下一轮判断。不是记术语，而是学会沿源码和事件定位故障。</p>
-            <ul class="hero-outcomes" aria-label="学完本课程你将能够"><li>画出一次回合从输入到完成的完整链路</li><li>判断失败属于协议、策略还是执行环境</li><li>用事件记录与源码位置证明结论</li></ul>
+            <p class="eyebrow label-mono">从真实故障出发，掌握 Agent 运行时</p>
+            <h1>看懂 Codex 如何把一句请求，变成<span class="alt">可验证、可恢复的行动。</span></h1>
+            <p class="sub">我们从“测试已经通过，为什么任务还没结束？”这个问题出发，沿一次回合认识模型、工具、权限、上下文与多代理。每章都给你一个短 trace 和一个判断题，让架构知识真正变成排障能力。</p>
+            <ul class="hero-outcomes" aria-label="学完本课程你将能够"><li>画出提交、step、工具回执与回合收束的完整链路</li><li>根据事件停点判断故障属于协议、工具、安全还是环境</li><li>解释 steer、interrupt、compaction 与 resume 分别改变什么</li><li>为工具失败、重试和取消设计可回放的确定性收口</li><li>判断何时该用 Skill、MCP、Hook、Memory 或 Subagent</li></ul>
             <div class="hero-cta">
-              <a class="btn-primary" href="#loop">从真实任务开始 <span class="arrow" aria-hidden="true">→</span></a>
-              <a class="btn-secondary" href="#source-route">先看源码路线</a>
+              <a class="btn-primary" href="#loop">从第一个故障开始 <span class="arrow" aria-hidden="true">→</span></a>
+              <a class="btn-secondary" href="#kernel-atlas">先看学习路线</a>
             </div>
           </div>
           <figure class="hero-loop" data-hero-loop data-reveal data-reveal-delay="120">
@@ -102,120 +102,19 @@
             <figcaption><span>turn_loop / live map</span><button class="pause-btn" type="button" data-loop-pause aria-pressed="false">⏸ 暂停</button></figcaption>
           </figure>
         </div>
-        <div class="hero-meta label-mono" aria-label="课程范围"><span>SOURCE SNAPSHOT · 2df6705</span><span>12 章 · 11 个实验</span><span>读链路 → 动手操作 → 回到源码</span></div>
+        <div class="hero-meta label-mono" aria-label="课程范围"><span>VERIFIED SNAPSHOT · 498d40b29f60</span><span>12 章 · 11 个实验</span><span>问题 → TRACE → 判断 → 复盘</span></div>
 
         <section class="lesson-brief" id="kernel-atlas" data-reveal>
-          <span class="label-mono">KERNEL ATLAS · 7-COURSE PANORAMIC SYNTHESIS</span>
-          <h3>七门课程全景：开源 Agent 架构对比与技术选型指南</h3>
-          <p>横向打通 Codex (`codex-rs`)、Grok Build (`xai-org/grok-build`)、DeepSeek Harness (`deepseek-harness`)、Pi Agent (`pi-mono`)，以及新增的 OpenCode (`anomalyco/opencode`)、OpenClaw (`openclaw/openclaw`) 与 Hermes Agent (`NousResearch/hermes-agent`) 六大核心维度。选型结论是基于本地源码快照的教学归纳，不代表各上游项目的官方定位。</p>
-
-          <div class="environment-matrix">
-            <div class="matrix-head"><strong>对比维度</strong><span>七门课程：各 Agent 架构实现与技术取舍</span><code>核心特征</code></div>
-            <div>
-              <strong>1. 会话与状态模型</strong>
-              <span><strong>Codex</strong>: Thread / Turn / Item 三层层级容器，状态由内存 Actor + 外部存储双重建模。<br>
-              <strong>Grok Build</strong>: Tokio LocalSet 独立线程 Actor（`SessionActor` + `ChatStateActor`），追加持久化到 `updates.jsonl`。<br>
-              <strong>DeepSeek</strong>: 纯追加型不可变 Session Log，由 `SurfaceManager` 实时投影出当前模型可见历史。<br>
-              <strong>Pi Agent</strong>: 追加型 JSONL Session 树（`id` / `parentId`），通过移动叶节点指针实现非破坏性分支与回退。<br>
-              <strong>OpenCode</strong>: 事件流投影进单文件 `opencode.db`，消息历史由最近一条摘要条目之后重建（`filterCompacted`），压缩对主循环完全透明。<br>
-              <strong>OpenClaw</strong>: 双 SQLite 文件（全局 `state/openclaw.sqlite` + 每 agent `openclaw-agent.sqlite`），会话、transcript、standing intents 与记忆索引全落库；恢复靠状态已落库 + 事件重放。<br>
-              <strong>Hermes</strong>: `~/.hermes/state.db` 以 `parent_session_id` 串起会话血统，外加压缩标记、压缩锁与 gateway 路由表；cron 任务单独持久化到 `jobs.json`。</span>
-              <code>State vs Tree</code>
-            </div>
-            <div>
-              <strong>2. 通信协议与交互</strong>
-              <span><strong>Codex</strong>: App Server 双向 JSON-RPC 协议，规范化 Request 与 started / delta / completed 通知。<br>
-              <strong>Grok Build</strong>: 采用 Agent Client Protocol (ACP) 标准协议，扩展 XAI 专有事件（`rewind`, `compaction`）。<br>
-              <strong>DeepSeek</strong>: 面向自动化与工具管线的 JSON-RPC stdio / NDJSON 协议，流式提交 committed assistant 消息。<br>
-              <strong>Pi Agent</strong>: LF-only JSONL Coding-Agent RPC 与 4 字节大端前缀 + 定长 CBOR 独立 Server Protocol 双协议面。<br>
-              <strong>OpenCode</strong>: 单一本地 HTTP 服务器承载内核：`POST /session/:id/message` 是唯一喂脑入口，`GET /event`（SSE）是唯一广播出口；TUI、IDE、GitHub、CI 全是同构客户端。<br>
-              <strong>OpenClaw</strong>: Gateway 统一接入模型、工具、消息通道与 macOS/iOS/Android/Wear 伴生应用；Telegram/Discord 等通道经 `src/channels/*` 抽象路由。<br>
-              <strong>Hermes</strong>: 单个 Python 内核同时驱动 CLI、23+ 平台消息网关、TUI、Zed ACP、MCP server 与 Electron 桌面六面；`acp_adapter` 负责协议翻译。</span>
-              <code>JSON-RPC / ACP / SSE / CBOR</code>
-            </div>
-            <div>
-              <strong>3. 沙箱与权限控制</strong>
-              <span><strong>Codex</strong>: `SandboxPolicy` (`ro`/`ww`/`dfa`) × `ApprovalPolicy` (`untrusted`/`on-request`/`never`) 正交二维决策矩阵。<br>
-              <strong>Grok Build</strong>: `PermissionManager` (4种模式) × `SandboxProfile` (`workspace`/`read-only`/`strict`/`devbox`)，分层合并。<br>
-              <strong>DeepSeek</strong>: 3 种文件效果模式 (`ro`/`ww`/`dfa`) × 独立审批通道，不可用时强制 fail-closed。<br>
-              <strong>Pi Agent</strong>: 默认采用宿主进程全量权限；`Project Trust` 控制配置加载，真正安全隔离依托外部 Docker/VM。<br>
-              <strong>OpenCode</strong>: 无 OS 级沙箱；按工具 × pattern 匹配 allow / ask / deny 规则，待审批以 `deferred` 终止原因表达——审批是循环的输入而非旁路。<br>
-              <strong>OpenClaw</strong>: `beforeToolCall` / `afterToolCall` 钩子 + 网关审批（exec-approval-manager）；审批不通过时工具调用被替换为失败结果，模型只见结果不见例外。<br>
-              <strong>Hermes</strong>: `tools/approval.py` 分级：hardline 直接拒绝、危险操作询问、cron/gateway 非交互场景各自降级；记忆写入另有 `write_approval` 闸门。</span>
-              <code>Sandbox × Approval</code>
-            </div>
-            <div>
-              <strong>4. 上下文工程与压缩</strong>
-              <span><strong>Codex</strong>: 达到预算阈值触发 CompactionSummary 折叠，保留关键目标与 Diff 事实。<br>
-              <strong>Grok Build</strong>: 85% 上下文压力触发全量替换压缩，专用 Sampler 生成摘要并记录 `CompactionCheckpoint`。<br>
-              <strong>DeepSeek</strong>: `compaction/start` 耐久锁机制，在稳定日志区间生成摘要并通过 Surface Replacement 原子替换。<br>
-              <strong>Pi Agent</strong>: `firstKeptEntryId` 动态截断点选择，后向搜索绝不切断 toolResult，单回合支持超长前缀摘要。<br>
-              <strong>OpenCode</strong>: `isOverflow` 触发后把 compaction 摘要作为普通输入自喂进下一轮循环（compact then continue），`finish` 语义防御 provider 谎报。<br>
-              <strong>OpenClaw</strong>: 溢出路径与阈值路径双路触发 `runAutoCompaction`；context-engine 以能力面（bootstrap / assemble-before-prompt / compact）可插拔。<br>
-              <strong>Hermes</strong>: “Prompt 缓存神圣”宪法——缓存标记边界只有压缩可合法击穿；micro-compaction 与 `trajectory_compressor` 分别服务在线回合与离线轨迹。</span>
-              <code>Compaction & Summary</code>
-            </div>
-            <div>
-              <strong>5. 执行世界抽象</strong>
-              <span><strong>Codex</strong>: Local / Git Worktree / Cloud 容器 / 远程宿主多环境适配。<br>
-              <strong>Grok Build</strong>: `WorkspaceSession` 统一封装 FS、PTY、ProcessManager、VCS 与检查点，解耦上层调用。<br>
-              <strong>DeepSeek</strong>: 严格三元解耦（Service Definition / Provider / Consumer），支持 Local、Sandbox 与 E2B 云沙箱热插拔。<br>
-              <strong>Pi Agent</strong>: 原生 Node.js 宿主接口，支持 Gondolin 微虚拟机路由与 OpenShell 容器化封装。<br>
-              <strong>OpenCode</strong>: 工具清单按模型 / agent / 权限三层过滤后交给 LLM；执行发生在 server 宿主侧，子代理以子 session 形式派生。<br>
-              <strong>OpenClaw</strong>: 内核与宿主通过 `packages/agent-core` 能力接口解耦；run 落在 gateway 所在设备，伴生应用只是表面而非第二执行世界。<br>
-              <strong>Hermes</strong>: 七个执行后端（local、Docker、Termux、Daytona、Modal 等）共享同一窄腰工具层，文件同步有独立通道，后端切换不动 loop。</span>
-              <code>Workspace Seam</code>
-            </div>
-            <div>
-              <strong>6. 扩展体系与生态</strong>
-              <span><strong>Codex</strong>: 定制六边形（AGENTS.md、Memories、Skills、MCP、Hooks、Subagents）。<br>
-              <strong>Grok Build</strong>: 规则文件、Skills、MCP 服务、Plugins 分发包、生命周期 Hooks 与跨会话 Memory。<br>
-              <strong>DeepSeek</strong>: Cordis 插件树、Profile 继承、Agent Presets 作用域与 Dynamic Cordis 内存自修改运行时。<br>
-              <strong>Pi Agent</strong>: Jiti 动态加载 TypeScript 模块（`ExtensionAPI`）、ResourceLoader 与统一 Provider 适配器。<br>
-              <strong>OpenCode</strong>: 插件 hooks、自定义 commands、Skills、agents（子代理定义）与 MCP 统一汇入 tool registry 与权限管线。<br>
-              <strong>OpenClaw</strong>: 约 150 个 `extensions/` 目录、SKILL.md 技能、SOUL.md 人格与 automations 工具，都以网关插件身份组合进单一 Gateway 进程。<br>
-              <strong>Hermes</strong>: 学习闭环让 Agent 自创自改 SKILL.md、写回 MEMORY.md；与 OpenClaw 共享 SOUL.md / MEMORY.md / SKILL.md 文件族谱系并有双向迁移器（§ 条目是 Hermes 侧约定，OpenClaw 搬运不解析）。</span>
-              <code>Extension Hexagon</code>
-            </div>
-          </div>
-
+          <span class="label-mono">LEARNING MAP · 4 PASSES</span>
+          <h3>不要一次吞下所有名词：先学循环，再学边界，最后学恢复。</h3>
+          <p>课程按一个工程师真正会遇到的顺序展开。你先看任务怎么跑，再看为什么被拦、为什么“忘了”、为什么重连后还能继续。每一段都用前一段的结论，不会突然跳进一张术语表。</p>
           <div class="custom-stack">
-            <div>
-              <span class="custom-key">DEEPSEEK 适用</span>
-              <strong>极致插件化与执行环境热插拔</strong>
-              <p>追求“Everything is a Plugin”架构，需通过 Cordis IoC 容器无缝切换本地执行、E2B 云沙箱与自修改运行时的场景。</p>
-            </div>
-            <div>
-              <span class="custom-key">CODEX 适用</span>
-              <strong>企业级多端与富客户端集成</strong>
-              <p>需要严密 App Server 双向协议、细粒度正交权限矩阵与 Thread/Turn/Item 完整生命周期的生产级开发平台。</p>
-            </div>
-            <div>
-              <span class="custom-key">GROK 适用</span>
-              <strong>高性能 Rust 终端与深度版本控制</strong>
-              <p>追求极致终端响应速度、全屏 TUI 交互、ACP 标准支持以及原子级 Git Workspace Checkpoint / Rewind 恢复能力。</p>
-            </div>
-            <div>
-              <span class="custom-key">PI AGENT 适用</span>
-              <strong>轻量嵌入式与非线性分支探索</strong>
-              <p>需要极简轻量 TypeScript 内核、非破坏性 JSONL 树形分支探索（`/tree`）与 CSI 2026 同步差分渲染的应用。</p>
-            </div>
-            <div>
-              <span class="custom-key">OPENCODE 适用</span>
-              <strong>服务器即内核的多客户端平台嵌入</strong>
-              <p>需要一个本地 HTTP 服务器承载 Agent 内核，让 TUI、IDE、CI、GitHub 成为同构客户端；事件投影进单文件 SQLite，会话历史与计费统计最容易被平台接管。</p>
-            </div>
-            <div>
-              <span class="custom-key">OPENCLAW 适用</span>
-              <strong>跨天存活的通用个人助理</strong>
-              <p>“活着”不靠无限循环：有界 run 预算 + 双 SQLite 持久状态 + automations / standing intents 唤醒 + 凌晨记忆固化，多通道贯通你的设备。</p>
-            </div>
-            <div>
-              <span class="custom-key">HERMES 适用</span>
-              <strong>单机 Python 的自演化内核</strong>
-              <p>学习闭环接入 agent loop 一等公民（回合 nudge → 后台自省 → 技能/记忆写回），同一内核从 Termux 手机到 GPU 集群六面部署，并与 OpenClaw 共享两代格式谱系。</p>
-            </div>
+            <div><span class="custom-key">PASS 01 · 01—03</span><strong>任务为什么还没结束？</strong><p>建立 Turn / step / tool output 心智模型，学会从事件停点判断循环卡在哪里。</p></div>
+            <div><span class="custom-key">PASS 02 · 04—06</span><strong>为什么能做、却没有被允许？</strong><p>分清审批、权限画像、命令规则与执行环境，理解前端和内核的职责边界。</p></div>
+            <div><span class="custom-key">PASS 03 · 07—09</span><strong>怎样保留状态而不塞爆窗口？</strong><p>用 Thread / Turn / Item、世界状态差分、compaction 与扩展机制组织长期任务。</p></div>
+            <div><span class="custom-key">PASS 04 · 10—12</span><strong>怎样把系统接入生产并排障？</strong><p>读懂配置覆盖、客户端选择、多代理资源闸门和失败的确定性收口。</p></div>
           </div>
+          <p class="lesson-result"><strong>学习方法：</strong>先回答每章开头的问题，再操作实验，最后用章末判断题验证自己是否真的会用。</p>
         </section>
       </section>
       <section class="chapter shell" id="loop" data-spy>
@@ -224,22 +123,23 @@
           <h2>从“测试失败”开始，跟踪一次完整回合。</h2>
           <p class="lede">假设你让 Codex 修复一个失败测试。本章不先背概念，而是追踪任务从协议入口、模型判断、工具执行到完成事件的全过程。</p>
         </header>
-        <article class="lesson-brief" id="source-route" data-reveal>
-          <span class="label-mono">SOURCE ROUTE · CODEX 2df6705</span>
-          <h3>先读四个入口，再操作下面的回合步进机。</h3>
-          <p>这四处源码分别回答“任务从哪里进、这一轮带了什么、过程中产生了什么、谁把请求交给内核”。</p>
+        <article class="lesson-brief" data-reveal>
+          <span class="label-mono">INCIDENT 01 · TEST PASSED, TURN STILL RUNNING</span>
+          <h3>命令成功，只说明一个 Item 完成；它不代表整个 Turn 已收束。</h3>
+          <p>把一次任务分成三层就不容易误判：提交循环接收操作，Turn 循环决定是否继续，单次采样 step 负责一次模型请求。模型还想调用工具、或队列里还有 steer / mailbox 输入，都会进入下一步。</p>
           <ol class="source-route">
-            <li><span><code>codex-rs/app-server-protocol/src/protocol/v2/thread.rs</code><strong>ThreadStartParams</strong> 建立会话容器与工作上下文。</span></li>
-            <li><span><code>codex-rs/app-server-protocol/src/protocol/v2/turn.rs</code><strong>TurnStartParams</strong> 携带本轮输入、模型与执行策略。</span></li>
-            <li><span><code>codex-rs/app-server-protocol/src/protocol/v2/item.rs</code><strong>ThreadItem</strong> 与 started / completed 通知描述消息、命令和文件变更。</span></li>
-            <li><span><code>codex-rs/app-server/src/request_processors/turn_processor.rs</code><strong>turn_start_inner</strong> 把协议请求交给正在运行的 Codex 会话。</span></li>
+            <li><span><strong>看到命令退出码 0</strong>：只确认这次执行成功。</span></li>
+            <li><span><strong>看到 tool output 回注</strong>：模型现在才拿到执行事实。</span></li>
+            <li><span><strong>看到仍需跟进</strong>：模型或排队输入要求再跑一个 step。</span></li>
+            <li><span><strong>看到 turn completed</strong>：整轮才真正结束。</span></li>
           </ol>
           <p class="lesson-result"><strong>学完本章你能：</strong>解释为什么“命令退出码为 0”不等于“Turn 已完成”，并指出该去查哪一类事件。</p>
         </article>
         <div class="spread">
           <article class="prose" data-reveal>
             <h3>心智模型</h3>
-            <p><strong>一次回合不是一次模型调用。</strong>它从用户输入入队开始，经过上下文组装、流式响应、工具判定、受控执行与结果回注，直到模型不再请求工具才收敛。</p>
+            <p><strong>一次回合不是一次模型调用。</strong>它从用户输入入队开始，经过上下文组装、流式响应、工具判定、受控执行与结果回注，直到模型不再请求工具、也没有排队输入才收敛。</p>
+            <p>Steer 不抢断当前 token 流，而是在下一个 step 边界进入历史；Interrupt 才会取消活动任务，先给约 100ms 的优雅收尾窗口，必要时硬终止，并留下“本轮被打断”的历史事实。</p>
             <div class="decision"><span class="label-mono">ROOT-CAUSE LENS</span><p>把故障归到拥有它的层：模型选错工具、策略拒绝权限、执行环境失败、还是结果没有正确回注。不要把所有失败都叫作“模型不行”。</p></div>
           </article>
           <ol class="kp-list" data-reveal data-reveal-delay="100">
@@ -282,19 +182,21 @@
             <div class="loop-logwrap stream-log elog" data-log aria-live="polite"></div>
           </div>
         </div>
+        <p class="lesson-result" data-reveal><strong>快速判断：</strong>用户在执行中补充条件，应该 steer 还是 interrupt？若旧任务仍有价值就排队 steer；若继续执行可能造成错误副作用，才 interrupt，并检查已启动工具是否留下取消回执。</p>
       </section>
       <section class="chapter band-deep" id="protocol" data-spy>
         <div class="shell">
-          <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 02 · APP SERVER PROTOCOL</span><h2>把 UI 与内核之间的对话，读成一条事件河流。</h2><p class="lede">当前 App Server 以双向 JSON-RPC 为协议骨架：客户端发起 Thread/Turn 请求，服务端用 thread/*、turn/* 与 item/* 通知流式报告事实。</p></header>
-          <div class="spread"><article class="prose" data-reveal><h3>请求与通知</h3><p><strong>向内的是请求，向外的是证据。</strong>连接先完成 initialize/initialized 握手，再 start、resume 或 fork Thread；Turn 可被 steer 或 interrupt，Item 则承载消息、命令、文件变更和工具调用。</p><p>CLI、IDE 与自定义客户端因此可以共享同一运行时，同时拥有不同的呈现、持久化和审批界面。</p><p>为什么必须是双向 JSON-RPC，而不是单向事件流？因为服务端要能反问客户端：审批请求、<code>mcpServer/elicitation/request</code>（app-server-protocol/src/protocol/common.rs:1686）都是服务端发起的反向请求。客户端因此不该自建业务状态镜像——thread_history.rs:380 把 ItemStarted 等事件折叠成线程历史，这条投影路径才是可恢复性的真正来源。</p></article><ol class="kp-list" data-reveal><li data-no="REQ"><span><strong>Request</strong>：thread/start、turn/start、审批决定与中断。</span></li><li data-no="EVT"><span><strong>Notification</strong>：item/started、delta、item/completed 与 turn/completed。</span></li><li data-no="ASK"><span><strong>反向请求</strong>：审批与 elicitation 由服务端发起，双向是协议前提。</span></li><li data-no="WHY"><span><strong>可恢复性</strong>：状态从持久化 Thread 与事件重建，而不是从 UI 猜测。</span></li></ol></div>
+          <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 02 · APP SERVER PROTOCOL</span><h2>断线重连后，UI 凭什么知道刚才发生了什么？</h2><p class="lede">本章把协议当成事实流水：客户端发请求，服务端发通知，也会反向发起审批或 elicitation。学完后你能判断“界面没显示”究竟是内核没做，还是客户端漏投影。</p></header>
+          <div class="spread"><article class="prose" data-reveal><h3>向内是意图，向外是事实</h3><p><strong>短 trace：</strong><code>initialize → thread/start → turn/start → item/started → delta → item/completed → turn/completed</code>。连接先握手；Thread 承载可恢复状态；Turn 表示一次工作；Item 是流式可观察单元。</p><p>它必须是双向协议，因为服务端不只“播事件”，还可能要求客户端做决定，例如命令审批、结构化表单或客户端执行的动态工具。UI 不应猜测业务状态，而应把通知折叠成可重建的投影。</p><p>内部会话用提交队列与回复通道通信，跨进程边界才用请求 id 关联。两套协议职责不同：一个服务并发与任务控制，一个服务客户端互通。</p></article><ol class="kp-list" data-reveal><li data-no="REQ"><span><strong>Request</strong>：表达“请开始、转向、中断或回答”。</span></li><li data-no="EVT"><span><strong>Notification</strong>：报告“已经开始、变化、完成或失败”。</span></li><li data-no="ASK"><span><strong>反向请求</strong>：服务端需要客户端给出审批、表单或工具结果。</span></li><li data-no="WHY"><span><strong>恢复原则</strong>：持久化记录与事件是事实源，界面只是投影。</span></li></ol></div>
           <div class="machine" id="machine-stream" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>协议事件流回放</strong></span><span class="label-mono" data-phase>0/15</span></div><div class="machine-body"><div class="m-controls"><button class="cbtn primary" type="button" data-play aria-pressed="false">▶ 播放</button><button class="cbtn" type="button" data-speed aria-pressed="false">1×</button><button class="cbtn" type="button" data-restart>↻ 重播</button></div><div class="stream-log elog" data-log aria-live="polite"></div></div></div>
-          <div class="interview" data-reveal><span class="label-mono">INTERVIEW LENS</span><h4>“客户端断线重连后，UI 状态从哪里来？”</h4><div class="qa"><details><summary>展开 30 秒模范答案</summary><div class="ans">从 Thread 的持久化与事件重放来，不从 UI 猜。重连先过 initialize/initialized 握手（common.rs:488），再 resume Thread；客户端按 item/started、delta、item/completed 重建投影，中断的回合由 turn/ 通知收尾。ServerNotification 枚举（common.rs:1591）就是“向外的事实”的完整清单。答题要点一句话：事实源在服务端事件流，客户端只是投影。</div></details></div></div>
+          <div class="interview" data-reveal><span class="label-mono">CHECK YOUR MODEL</span><h4>“客户端断线重连后，UI 状态从哪里来？”</h4><div class="qa"><details><summary>展开判断与答案</summary><div class="ans">从 Thread 的持久化记录和事件重放来，不从旧页面内存猜。重连后重新握手、恢复 Thread，再按 Item 与 Turn 的生命周期通知重建投影。判断口诀：客户端可以缓存视图，但不能把缓存当事实源。</div></details></div></div>
           <div class="decision" data-reveal><span class="label-mono">边界</span><p>本页按 v2 通知的当前命名讲解。请求与通知的 wire 格式由随版本生成的 schema 决定，environments、dynamic tools、elicitation 仍带 experimental 标注。把“事件名永不变化”写进生产假设，是协议层最典型的误用。</p></div>
+          <p class="lesson-result" data-reveal><strong>本章小结：</strong>先找最后一个已确认事件，再问“下一步应该由客户端、内核还是用户产生”。这个问题通常比盯着 loading 动画更快定位断点。</p>
         </div>
       </section>
       <section class="chapter shell" id="tools" data-spy>
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 03 · TOOL LIFECYCLE</span><h2>工具不是插件列表，而是一条受控执行管线。</h2><p class="lede">模型只提出结构化调用；系统负责发现、校验、授权、执行、截断输出与回注。每个环节都有自己的失败模式。</p></header>
-        <div class="spread"><article class="prose" data-reveal><h3>六个检查点</h3><p>先确认工具是否对当前回合<strong>可见</strong>，再校验参数；之后权限策略与沙箱共同决定能否执行。执行结果需要保留退出码、标准输出与标准错误，最后包装成模型能继续推理的结果。</p><div class="decision"><span class="label-mono">DEBUG ORDER</span><p>工具未出现 → 查注册与能力；调用参数错 → 查 schema；执行被拒 → 查审批与沙箱；命令成功但回答错 → 查输出截断和结果回注。</p></div><p>管线而不是插件列表，换来三件事：每段可单独观测、每段可单独替换、失败有确定归属。撞名工具不会让注册表崩溃，registry 记下首个撞名供追溯（core/src/tools/registry.rs:271）；参数解析失败由 build_tool_call 转成结构化错误回给模型（core/src/tools/router.rs:148），而不是炸掉整个回合；输出在写入历史那一刻就被截断（core/src/context_manager/history.rs:164），事后无迹可寻的是没入档的那部分。每一步都有明确失败模式，每一步才都可测。</p></article><ol class="kp-list" data-reveal><li data-no="01"><span><strong>发现</strong>：当前身份与作用域可见哪些工具。</span></li><li data-no="02"><span><strong>校验</strong>：参数是否符合结构化契约。</span></li><li data-no="03"><span><strong>授权</strong>：能力与策略是否允许。</span></li><li data-no="04"><span><strong>执行</strong>：在限定环境中启动并采集结果。</span></li><li data-no="05"><span><strong>归一化</strong>：保留诊断，控制体积。</span></li><li data-no="06"><span><strong>回注</strong>：让模型基于事实继续。</span></li></ol></div>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 03 · TOOL LIFECYCLE</span><h2>模型“会用工具”，为什么还是调用不到？</h2><p class="lede">因为工具调用不是一个按钮，而是发现、校验、授权、执行、归一化与回注六个检查点。本章教你按顺序排除，而不是把任何失败都归咎于模型。</p></header>
+        <div class="spread"><article class="prose" data-reveal><h3>六个检查点，一条定位顺序</h3><p><strong>短 trace：</strong><code>可见？ → 参数对？ → 允许？ → 执行了？ → 输出完整？ → 回到历史？</code>。先找第一个“否”，不要跨层猜原因。</p><div class="decision"><span class="label-mono">DEBUG ORDER</span><p>工具未出现 → 查本 step 的可见工具；参数错 → 查 schema；执行被拒 → 查审批、规则与沙箱；命令成功但回答错 → 查输出截断和回注。</p></div><p>当前机制会在每个 step 重建工具路由，因此 MCP、项目规则和动态工具的变化最迟下一步生效。工具还分直接、延迟、仅模型调用、仅 code mode 与隐藏等暴露方式；列表太大时由 <code>tool_search</code> 按需发现。取消也不能让调用凭空消失：每个已派发调用都必须得到真实或合成回执，历史才可重放。</p><p>另一个容易混淆的新变化：同步用户提问会挂起等待；异步用户提问或消息会立即返回“已接受”，答案以后续输入到达。看到“工具成功”时，先确认它承诺的是完成，还是仅仅送达。</p></article><ol class="kp-list" data-reveal><li data-no="01"><span><strong>发现</strong>：这个 step 里模型是否看得见。</span></li><li data-no="02"><span><strong>校验</strong>：参数是否符合结构化契约。</span></li><li data-no="03"><span><strong>授权</strong>：策略、规则与权限是否允许。</span></li><li data-no="04"><span><strong>执行</strong>：在限定环境中启动并采集结果。</span></li><li data-no="05"><span><strong>归一化</strong>：保留头尾诊断并声明截断。</span></li><li data-no="06"><span><strong>回注</strong>：让模型基于事实继续。</span></li></ol></div>
         <div class="machine" id="cx-tools" data-reveal>
           <div class="machine-bar"><span class="title"><span class="led"></span><strong>工具管线步进器</strong></span><span class="label-mono" data-status>0/6 · 待步进</span></div>
           <div class="machine-body sim-layout">
@@ -309,40 +211,44 @@
             </div>
           </div>
         </div>
-        <div class="interview" data-reveal><span class="label-mono">INTERVIEW LENS</span><h4>“如何设计一个可扩展的 Agent 工具系统？”</h4><div class="qa"><details><summary>展开答题骨架</summary><div class="ans">先定义工具 schema 与稳定错误模型，再把发现、权限、审批、执行和观测分层；强调调用幂等性、超时/取消、输出上限和审计事件。最后说明工具能力必须按身份与作用域动态裁剪。</div></details></div></div>
+        <div class="interview" data-reveal><span class="label-mono">CHECK YOUR MODEL</span><h4>“工具返回 accepted，是否代表用户已经回答？”</h4><div class="qa"><details><summary>展开判断与答案</summary><div class="ans">不一定。异步消息工具立即返回 accepted，只表示消息已送出；用户回答会作为后续输入到达。同步提问才会在当前工具调用中等待应答。排障时必须先分清送达语义与完成语义。</div></details></div></div>
+        <p class="lesson-result" data-reveal><strong>本章小结：</strong>工具系统的核心不是“有多少工具”，而是每一步是否有确定输入、可观察输出和失败归属。</p>
       </section>
       <section class="chapter band-edge" id="safety" data-spy>
         <div class="shell">
-          <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 04 · SAFETY BOUNDARIES</span><h2>沙箱回答“能不能”，审批回答“要不要问”。</h2><p class="lede">把两者混在一起，就会出现既难解释又难测试的权限逻辑。先判定操作落在哪个边界，再决定是否允许用户升级授权。</p></header>
-          <div class="machine" id="machine-sandbox" data-reveal><div class="machine-bar"><span class="title"><span class="led"></span><strong>沙箱 × 审批决策台</strong></span><span class="label-mono">common policies</span></div><div class="machine-body sim-layout"><div><div class="sim-group" data-group-op><span class="label-mono">01 · 选择操作</span><div class="seg-row"><button class="cbtn" type="button" data-v="read">读取源码</button><button class="cbtn" type="button" data-v="test">跑测试</button><button class="cbtn" type="button" data-v="patch">改文件</button><button class="cbtn" type="button" data-v="net">访问网络</button><button class="cbtn" type="button" data-v="outside">写工作区外</button><button class="cbtn" type="button" data-v="purge">删除依赖</button></div></div><div class="sim-group" data-group-sbx><span class="label-mono">02 · SandboxPolicy</span><div class="seg-row"><button class="cbtn" type="button" data-v="ro">ReadOnly</button><button class="cbtn" type="button" data-v="ww">WorkspaceWrite</button><button class="cbtn" type="button" data-v="dfa">DangerFullAccess</button></div></div><div class="sim-group" data-group-apr><span class="label-mono">03 · ApprovalPolicy</span><div class="seg-row"><button class="cbtn" type="button" data-v="untrusted">Untrusted</button><button class="cbtn" type="button" data-v="on-request">OnRequest</button><button class="cbtn" type="button" data-v="never">Never</button></div></div></div><div><code class="cmd-line" data-cmd></code><div style="margin-block: var(--s-4)"><span class="verdict-badge" data-verdict></span></div><p class="stage-note" data-verdict-desc></p><ol class="trace-list" data-trace></ol><div class="stream-log elog" data-log aria-live="polite"></div></div></div></div>
-          <div class="spread"><article class="prose" data-reveal><h3>第三种审批：Granular</h3><p>配置面常见三值，源码枚举里其实四值。AskForApproval（protocol/src/protocol.rs:924）还有 Granular：把请示拆成沙箱升级、规则命中、Skill 脚本、权限申请、MCP elicitation 五类开关——类别关掉时直接自动拒绝，不再打扰用户。另一个容易漏读的是 ExternalSandbox（protocol/src/protocol.rs:1027）：进程已在外部沙箱里时，Codex 不再包一层，只按声明处理网络边界。</p><p>失败推演正好对称：以为 never 就是没有边界——沙箱仍是硬边界，越权命令直接失败回注模型；以为沙箱放行就万事大吉——Granular 类别仍可能把请示判成直拒。两个开关各管一件事，这正是本章标题。</p></article></div>
-          <div class="interview" data-reveal><span class="label-mono">INTERVIEW LENS</span><h4>“审批策略设成 never，是不是就没有安全边界了？”</h4><div class="qa"><details><summary>展开 30 秒模范答案</summary><div class="ans">不是。审批决定“要不要问人”，沙箱决定“能不能做”。never 只关闭请示通道，SandboxPolicy 的 OS 级限制仍然生效；越界命令以失败结果直接返回模型，不会静默提权。配置默认值是 read-only（config_types.rs:104），ask 与 sandbox 正交，能画出这张二维矩阵，这题就是送分。</div></details></div></div>
-          <div class="decision" data-reveal><span class="label-mono">BOUNDARY</span><p>这里演示官方常见模式 read-only / workspace-write / danger-full-access 与 untrusted / on-request / never。自定义权限 Profile、自动审查和每次请求的细粒度 grant 属于更高一层配置。</p></div>
+          <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 04 · SAFETY BOUNDARIES</span><h2>用户点了允许，为什么命令仍然被拒绝？</h2><p class="lede">因为安全不是一个开关。审批策略决定“要不要问”，权限画像决定“能碰什么”，命令规则决定“这类动作如何分类”，最后还要由系统沙箱强制执行。</p></header>
+          <div class="machine" id="machine-sandbox" data-reveal><div class="machine-bar"><span class="title"><span class="led"></span><strong>沙箱 × 审批决策台</strong></span><span class="label-mono">common policies</span></div><div class="machine-body sim-layout"><div><div class="sim-group" data-group-op><span class="label-mono">01 · 选择操作</span><div class="seg-row"><button class="cbtn" type="button" data-v="read">读取项目文件</button><button class="cbtn" type="button" data-v="test">跑测试</button><button class="cbtn" type="button" data-v="patch">改文件</button><button class="cbtn" type="button" data-v="net">访问网络</button><button class="cbtn" type="button" data-v="outside">写工作区外</button><button class="cbtn" type="button" data-v="purge">删除构建产物</button></div></div><div class="sim-group" data-group-sbx><span class="label-mono">02 · SandboxPolicy</span><div class="seg-row"><button class="cbtn" type="button" data-v="ro">ReadOnly</button><button class="cbtn" type="button" data-v="ww">WorkspaceWrite</button><button class="cbtn" type="button" data-v="dfa">DangerFullAccess</button></div></div><div class="sim-group" data-group-apr><span class="label-mono">03 · ApprovalPolicy</span><div class="seg-row"><button class="cbtn" type="button" data-v="untrusted">Untrusted</button><button class="cbtn" type="button" data-v="on-request">OnRequest</button><button class="cbtn" type="button" data-v="never">Never</button></div></div></div><div><code class="cmd-line" data-cmd></code><div style="margin-block: var(--s-4)"><span class="verdict-badge" data-verdict></span></div><p class="stage-note" data-verdict-desc></p><ol class="trace-list" data-trace></ol><div class="stream-log elog" data-log aria-live="polite"></div></div></div></div>
+          <div class="spread"><article class="prose" data-reveal><h3>把一次拒绝拆成三问</h3><p><strong>短 trace：</strong><code>命令规则分类 → 是否允许询问 → 权限画像与沙箱执行</code>。规则可给出允许、询问或禁止；Granular 还能分别开关沙箱升级、规则询问、Skill 脚本、权限申请和 MCP elicitation，关掉某类意味着自动拒绝，不是静默放行。</p><p>当自动审查被启用且路由条件满足时，Guardian 可以代替用户裁决；它超时、执行失败或格式错误时都 fail-closed。受管网络还可以把出口收敛到代理，启用凭据 broker 时，沙箱进程只看到占位值，真实凭据在出口注入。</p><p>判断法：先问“谁拒绝”，再问“这个拒绝能否通过审批改变”。沙箱硬边界、企业约束和禁止规则不是点一下按钮就会消失。</p></article></div>
+          <div class="interview" data-reveal><span class="label-mono">CHECK YOUR MODEL</span><h4>“审批策略设成 never，是不是就没有安全边界了？”</h4><div class="qa"><details><summary>展开判断与答案</summary><div class="ans">不是。never 只表示系统绝不向用户升级询问，沙箱、权限画像与禁止规则仍然生效；越界结果会直接回给模型。审批是交互策略，沙箱才是执行强制。</div></details></div></div>
+          <div class="decision" data-reveal><span class="label-mono">BOUNDARY</span><p>实验台展示常见沙箱与审批组合；实际裁决还可能叠加 Granular 分类、企业 requirements、Guardian 与受管网络。不要从一个开关推断整条安全链。</p></div>
+          <p class="lesson-result" data-reveal><strong>本章小结：</strong>审批通过仍失败时，按“规则 → 询问策略 → 权限画像 → OS 沙箱”逐层找第一个收紧点。</p>
         </div>
       </section>
       <section class="chapter shell" id="context" data-spy>
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 05 · CONTEXT ENGINEERING</span><h2>上下文不是“聊天记录”，而是一份有预算的工作集。</h2><p class="lede">系统指令、项目规则、用户输入、工具输出与摘要争夺同一个窗口。真正的工程问题是：留下什么、压缩什么、何时让缓存前缀保持稳定。</p></header>
-        <div class="spread"><article class="prose" data-reveal><h3>预算与信息密度</h3><p>窗口越大，不等于每个 token 都同样有用。长日志、重复工具输出和过期分支会稀释关键约束。压缩的目标也不是“变短”，而是保留下一步决策所需的<strong>状态、证据与未完成工作</strong>。</p><p>Codex 的取舍是“写入即截断”：历史在 record_items 的那一刻就带着 TruncationPolicy（core/src/context_manager/history.rs:164），超限输出先归一化再入档，模型之后看到的永远是截断版。“模型忘了日志前半段”多半是归一化阶段的决定，不是注意力问题。自动压缩走窗口链：AutoCompactWindow（core/src/state/auto_compact_window.rs:34）记录首窗与祖先窗，预算触线时 run_inline_auto_compact_task（core/src/compact.rs:116）折叠历史并为新窗口重算 prefill。同类问题上，Pi 把截断点做成动态指针，DeepSeek 用表面替换折叠旧区间；Codex 把决策点前移到了写入时。</p></article><ol class="kp-list" data-reveal><li data-no="KEEP"><span>长期规则、当前目标、关键决定、验证证据。</span></li><li data-no="FOLD"><span>已完成步骤、重复输出、可从文件重读的细节。</span></li><li data-no="DROP"><span>无关分支、过期假设、没有影响后续的噪声。</span></li></ol></div>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 05 · CONTEXT ENGINEERING</span><h2>项目规则刚改，为什么模型下一步能看到、又不会重读全部历史？</h2><p class="lede">答案不是“更长的 system prompt”，而是分层：基础指令、动态世界状态、对话历史和工具面各走各的通道。本章教你判断模型究竟漏了哪一层。</p></header>
+        <div class="spread"><article class="prose" data-reveal><h3>先分层，再谈压缩</h3><p><strong>短 trace：</strong><code>本 step 状态快照 → 与上一步比较 → 只注入变化 → 从历史派生模型请求</code>。动态环境被拆成具名区块；前态可能是未出现、已知或未知。未知时宁可全量重发，也不假装模型已经知道。</p><p>单条工具输出在写入历史时就会按预算保留头尾并声明截断；整段历史到达窗口阈值后才进入 compaction。当前实现并存本地摘要、两种远端压缩和直接开启新窗口四条路径，触发原因还包括窗口限制、压缩兼容变化、模型降档与用户手动请求。</p><p>最关键的分账：compaction 改的是模型工作记忆，不是用户授权证据。原始审查转录与少量已验证回答另行保留；回滚才会同时撤销工作历史与对应证据。</p></article><ol class="kp-list" data-reveal><li data-no="KEEP"><span><strong>保留</strong>：目标、约束、关键决定、验证证据与未完成工作。</span></li><li data-no="DIFF"><span><strong>差分</strong>：项目指令、权限与环境只发送变化。</span></li><li data-no="FOLD"><span><strong>压缩</strong>：已完成步骤与长历史进入摘要或新窗口。</span></li><li data-no="PROOF"><span><strong>分账</strong>：授权证据不随模型摘要一起消失。</span></li></ol></div>
         <div class="machine" id="machine-context" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>上下文窗口计量表</strong></span><span class="label-mono">100k teaching window</span></div><div class="machine-body"><div class="ctx-bar" data-bar aria-label="上下文窗口占用"></div><div class="ctx-meta"><span data-counter></span><span data-cache></span></div><div class="ctx-legend"><span style="--dot: oklch(0.62 0.07 245)">系统</span><span style="--dot: oklch(0.70 0.09 205)">项目文档</span><span style="--dot: oklch(0.80 0.12 75)">用户</span><span style="--dot: oklch(0.74 0.10 165)">工具</span><span style="--dot: oklch(0.84 0.06 90)">模型</span></div><div class="m-controls" style="margin-block-start: var(--s-4)"><button class="cbtn primary" type="button" data-next>+ 下一回合</button><button class="cbtn" type="button" data-compact>压缩历史</button><button class="cbtn" type="button" data-reset>重置</button></div><div class="stream-log elog" data-log aria-live="polite"></div></div></div>
-        <div class="interview" data-reveal><span class="label-mono">INTERVIEW LENS</span><h4>“上下文快满了，先压缩历史还是先截断工具输出？”</h4><div class="qa"><details><summary>展开 30 秒模范答案</summary><div class="ans">两件事发生在不同时刻：单条工具输出在写入历史时按 TruncationPolicy 截，整段历史在预算触线时压缩成摘要。先归一化、后压缩——压缩保的是状态、证据与未完成工作，截断保的是体积。顺序反了，关键约束会被折进摘要里丢掉。</div></details></div></div>
+        <div class="interview" data-reveal><span class="label-mono">CHECK YOUR MODEL</span><h4>“上下文快满了，先压缩历史还是先截断工具输出？”</h4><div class="qa"><details><summary>展开判断与答案</summary><div class="ans">两者不在同一个时点竞争：单条输出入档时先截断，整个工作集到阈值后再压缩。更重要的是，压缩只改模型历史，不应清掉授权证据。先问“丢的是哪本账”，再判断是否符合预期。</div></details></div></div>
         <div class="decision" data-reveal><span class="label-mono">TEACHING SCALE</span><p>100k 窗口和 86% 自动压缩阈值只用于让变化可视化；真实窗口、压缩触发与缓存行为随模型和 Codex 版本变化。</p></div>
+        <p class="lesson-result" data-reveal><strong>本章小结：</strong>遇到“模型忘了”时，先区分未注入、被截断、被压缩、被回滚四种原因；它们的修复手段完全不同。</p>
       </section>
       <section class="chapter band-deep" id="platform" data-spy>
         <div class="shell">
-          <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 06 · PLATFORM EXTENSION BLUEPRINT</span><h2>生产平台不重写内核，它包住内核。</h2><p class="lede">本章是平台扩展参考架构，不是 Codex 上游模块清单：HTTP 生命周期、能力平面、示例事件存储与签名租约包住内核，Codex 回合循环仍保持独立。</p></header>
-          <div class="fact-boundary" data-reveal><span class="label-mono">FACT BOUNDARY</span><strong>上游事实</strong><span>Codex 提供 Thread / Turn / Item、App Server、工具与审批协议。</span><strong>本课蓝图</strong><span>PostgreSQL 投影、平台租约和服务面是可选实现，用于解释生产化所有权。</span></div>
-          <div class="spread"><article class="prose" data-reveal><h3>为什么包住，而不是改写</h3><p>内核拥有回合循环的正确性，平台拥有多租户、配额与审计。平台逻辑一旦写进内核，内核就再也追不动上游。Codex 把缝留在协议上：App Server 是唯一入口，审批与 elicitation 是服务端发起的反向请求——这两处恰好给了平台层“站在外面接管”的挂点。租约、投影、能力发放都发生在请求与通知的间隙里，内核不需要知道它们存在。判断一个平台方案健不健康，就看它有没有往内核里塞业务分支。</p></article></div>
-          <div class="machine" id="machine-platform" data-reveal><div class="machine-bar"><span class="title"><span class="led is-done"></span><strong>平台运行时剖面</strong></span><span class="label-mono">click a layer</span></div><div class="machine-body pmap-layout"><div class="layer-stack"><button class="layer-row" type="button" data-layer="http"><span>HTTP 服务面</span><span class="label-mono">edge</span></button><button class="layer-row" type="button" data-layer="lifecycle"><span>平台生命周期</span><span class="label-mono">control</span></button><button class="layer-row" type="button" data-layer="capability"><span>能力平面</span><span class="label-mono">policy</span></button><button class="layer-row" type="button" data-layer="approval"><span>审批控制</span><span class="label-mono">decision</span></button><button class="layer-row" type="button" data-layer="tool"><span>工具生命周期</span><span class="label-mono">execution</span></button><button class="layer-row" type="button" data-layer="core"><span>Codex 内核</span><span class="label-mono">model plane</span></button><button class="layer-row" type="button" data-layer="store"><span>事件存储</span><span class="label-mono">state</span></button><button class="layer-row" type="button" data-layer="lease"><span>签名租约</span><span class="label-mono">scope</span></button></div><div><div class="pmap-detail"><span class="label-mono" data-detail-en></span><h4 data-detail-name></h4><p data-detail></p></div><div class="journey"><span class="label-mono">一次请求的旅程</span><div class="seg-row"><button class="cbtn" type="button" data-jstep="① 创建线程">① 创建线程</button><button class="cbtn" type="button" data-jstep="② 预留回合">② 预留回合</button><button class="cbtn" type="button" data-jstep="③ 签发租约">③ 签发租约</button><button class="cbtn" type="button" data-jstep="④ 授予能力">④ 授予能力</button><button class="cbtn" type="button" data-jstep="⑤ 执行回合">⑤ 执行回合</button><button class="cbtn" type="button" data-jstep="⑥ 事件落库">⑥ 事件落库</button><button class="cbtn" type="button" data-jstep="⑦ 应答释放">⑦ 应答释放</button></div></div></div></div></div>
+          <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 06 · HARNESS ARCHITECTURE</span><h2>终端、IDE 和远程客户端，怎样共用一套行为而不各自漂移？</h2><p class="lede">Codex 把会话能力放在内核库里，把多端接入收口到 App Server 协议面。学完本章，你能判断一项平台需求应该进入内核、协议、客户端还是外围服务。</p></header>
+          <div class="fact-boundary" data-reveal><span class="label-mono">MENTAL MODEL</span><strong>内核拥有</strong><span>会话 actor、Turn 循环、工具与历史语义。</span><strong>协议拥有</strong><span>请求顺序、双向交互、类型生成与多种传输。</span></div>
+          <div class="spread"><article class="prose" data-reveal><h3>一个内核，两套协议，两种部署形态</h3><p><strong>短 trace：</strong><code>客户端 → App Server → 会话 actor → 工具与模型 → 事件返回客户端</code>。进程内提交用操作队列和回复通道；跨进程接入用双向 JSON-RPC。Rust 类型单向生成客户端类型与 schema，减少多端接口漂移。</p><p>TUI 可以内嵌 App Server，也可以通过 stdio、Unix socket 或 WebSocket 接入常驻服务。远程控制、daemon 和不同前端改变的是部署与传输，不改变 Thread / Turn / Item 的核心语义。</p><p>判断所有权时问一句：这项逻辑是否影响“任何客户端都必须遵守的事实”？是，就放进内核或协议；只是呈现、租户接入或产品工作流，则留在外层。</p></article></div>
+          <div class="machine" id="machine-platform" data-reveal><div class="machine-bar"><span class="title"><span class="led is-done"></span><strong>Harness 真实层次剖面</strong></span><span class="label-mono">click a layer</span></div><div class="machine-body pmap-layout"><div class="layer-stack"><button class="layer-row" type="button" data-layer="client"><span>客户端表面</span><span class="label-mono">client</span></button><button class="layer-row" type="button" data-layer="appserver"><span>App Server</span><span class="label-mono">protocol</span></button><button class="layer-row" type="button" data-layer="session"><span>会话 Actor</span><span class="label-mono">session</span></button><button class="layer-row" type="button" data-layer="turn"><span>Turn / Step 循环</span><span class="label-mono">control</span></button><button class="layer-row" type="button" data-layer="tool"><span>工具路由与派发</span><span class="label-mono">execution</span></button><button class="layer-row" type="button" data-layer="sandbox"><span>策略与系统沙箱</span><span class="label-mono">boundary</span></button><button class="layer-row" type="button" data-layer="history"><span>历史与 Rollout</span><span class="label-mono">state</span></button><button class="layer-row" type="button" data-layer="config"><span>配置与扩展</span><span class="label-mono">context</span></button></div><div><div class="pmap-detail"><span class="label-mono" data-detail-en></span><h4 data-detail-name></h4><p data-detail></p></div><div class="journey"><span class="label-mono">一次请求的旅程</span><div class="seg-row"><button class="cbtn" type="button" data-jstep="① 输入">① 输入</button><button class="cbtn" type="button" data-jstep="② 步快照">② 步快照</button><button class="cbtn" type="button" data-jstep="③ 模型">③ 模型</button><button class="cbtn" type="button" data-jstep="④ 工具">④ 工具</button><button class="cbtn" type="button" data-jstep="⑤ 回注">⑤ 回注</button><button class="cbtn" type="button" data-jstep="⑥ 收束">⑥ 收束</button><button class="cbtn" type="button" data-jstep="⑦ 持久化">⑦ 持久化</button></div></div></div></div></div>
+          <p class="lesson-result" data-reveal><strong>判断练习：</strong>“给网页增加一个新的进度样式”属于客户端；“所有客户端都必须串行同一 Thread 的写请求”属于协议并发规则。能分清这条线，就不会把产品逻辑塞进回合循环。</p>
         </div>
       </section>
       <section class="chapter shell" id="state" data-spy>
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 07 · THREAD / TURN / ITEM</span><h2>真正的状态骨架，是三层而不是一条消息链。</h2><p class="lede">Thread 是可持久化的对话容器，Turn 是一次用户请求及其后续工作，Item 是消息、命令、文件变更或工具调用等最小输入输出单元。</p></header>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 07 · THREAD / TURN / ITEM</span><h2>进程在半轮任务中重启，哪些状态必须回来？</h2><p class="lede">Thread、Turn、Item 不是三种命名，而是三种寿命。学完本章，你能解释恢复、分叉、中断和回滚分别作用在哪一层。</p></header>
         <div class="primitive-grid" data-reveal>
           <article><span class="primitive-no">01</span><h3>Thread</h3><p>拥有身份、历史与运行状态；可 start、resume、fork、archive，并包含多个 Turn。</p></article>
           <article><span class="primitive-no">02</span><h3>Turn</h3><p>一次请求与 Agent 工作；可 steer、interrupt，完成时发出明确 final status。</p></article>
           <article><span class="primitive-no">03</span><h3>Item</h3><p>最小可观察单元；拥有 started / completed 生命周期并承载增量更新。</p></article>
         </div>
-        <div class="spread"><article class="prose" data-reveal><h3>三层是三种生命周期</h3><p>拆三层不是名词好听，是三件事寿命不同：会话级状态（base instructions 的来源、回合计数，core/src/state/session.rs:28）跨 Turn 存活；TurnState 与 RunningTask（core/src/state/turn.rs:89）随一次请求开始与终结；Item 只管“可观察”。失败推演：只有一条消息链的运行时无法表达“半完成回合”——进程重启后，interrupt 要么丢整轮，要么重放半轮。三层结构下 ActiveTurn 被单独记账，中断收尾干净，已提交的 Item 一个不丢。这就是面试里“为什么不是 message list”的标准答案。</p></article></div>
+        <div class="spread"><article class="prose" data-reveal><h3>三层对应三种恢复问题</h3><p><strong>短 trace：</strong><code>Thread 持有历史 → Turn 持有本次任务 → Item 记录可观察事实</code>。Thread 可恢复、分叉与归档；Turn 可转向、中断并明确收尾；Item 则必须保持调用与输出配对。</p><p>会话记录采用追加日志与替换历史检查点。恢复时从日志尾部向前找到最近检查点，再正向重放尾部；回滚写成新的事实，而不是删除曾经发生的记录。这样在线视图与恢复视图可以由同一套重放语义生成。</p><p>如果只保存消息列表，“命令已经执行但最终回答还没完成”就无法准确表达。三层模型能保住已提交 Item，同时把未完成 Turn 标成中断，而不是假装它从未发生。</p></article></div>
         <div class="machine" id="machine-state" data-reveal>
           <div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>Thread 状态实验台</strong></span><span class="label-mono" data-state>尚未初始化</span></div>
           <div class="machine-body state-layout">
@@ -355,91 +261,36 @@
           </div>
         </div>
         <div class="decision" data-reveal><span class="label-mono">PROTOCOL NOTE</span><p>真实连接在任何业务请求前都要完成 initialize / initialized 握手；本实验从握手后的 Thread 生命周期开始，省略传输层细节。</p></div>
+        <p class="lesson-result" data-reveal><strong>判断练习：</strong>“回到两轮前并撤销对应授权证据”是回滚；“保留事实但缩短模型工作记忆”是 compaction。两者不能互换。</p>
       </section>
 
       <section class="chapter band-edge" id="extensions" data-spy>
         <div class="shell">
-          <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 08 · EXTENSION BUS</span><h2>扩展能力不是一个“插件”按钮，而是多条不同信任边界。</h2><p class="lede">内建命令与文件变更、MCP、Apps、动态工具和 Skills 都能进入 Turn，但它们的发现方式、执行位置、审批语义与生命周期并不相同。</p></header>
-          <div class="spread"><article class="prose" data-reveal><h3>先问四个问题</h3><p>能力从哪里被发现？谁执行？返回什么 Item？哪类副作用必须审批？只有把这四个问题答清，工具系统才真正可审计。</p><p>MCP 还能在 Turn 中发起表单或 URL elicitation；动态工具则通过客户端回调执行，目前属于实验性协议。</p><p>Dynamic tools 与 elicitation 在协议层是同一种结构：服务端发起的反向请求（common.rs:1698 的 item/tool/call、:1686 的 mcpServer/elicitation/request）。“工具在哪执行”因此是个方向问题：能力在哪一侧，执行与授权就跟到哪一侧。把这条想清楚，AGENTS.md 与 Hook 的边界也不用背——前者影响模型判断，后者根本不经过模型。</p></article><ol class="kp-list" data-reveal><li data-no="BUILT"><span><strong>Built-in</strong>：命令、文件变更、权限请求。</span></li><li data-no="MCP"><span><strong>MCP</strong>：工具、资源、认证与 elicitation。</span></li><li data-no="APP"><span><strong>Apps</strong>：经过产品与策略封装的连接器能力。</span></li><li data-no="DYN"><span><strong>Dynamic</strong>：Thread 启动时注入、由客户端回调执行。</span></li></ol></div>
+          <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 08 · EXTENSION BUS</span><h2>一个能力到底在哪里执行，谁为副作用负责？</h2><p class="lede">扩展不是同一种“插件”。内建工具、MCP、Apps、动态工具、Hooks 与 Subagents 分别跨越不同信任边界。本章给你一套不靠背名词的判断法。</p></header>
+          <div class="spread"><article class="prose" data-reveal><h3>每个扩展先回答四问</h3><p><strong>短 trace：</strong><code>从哪里发现？ → 在哪一侧执行？ → 产生什么回执？ → 谁批准副作用？</code>。这四问答不清，就不要接入生产。</p><p>MCP 可以在 Turn 中发起结构化表单或 URL elicitation；动态工具则由客户端回调执行。二者都可能表现为服务端发起的反向请求，因此“服务端通知了”不等于“服务端执行了”。</p><p>Hooks 是确定性生命周期拦截，可阻断或改写；AGENTS 与 Skills 影响模型判断；Subagents 创建独立会话并共享工作区。它们的控制强度、执行位置和资源账本完全不同。</p></article><ol class="kp-list" data-reveal><li data-no="BUILT"><span><strong>Built-in</strong>：内核管理执行、取消与回执。</span></li><li data-no="MCP"><span><strong>MCP / Apps</strong>：外部能力经协议、认证与审批接入。</span></li><li data-no="DYN"><span><strong>Dynamic</strong>：能力在客户端侧，服务端反向调用。</span></li><li data-no="TEAM"><span><strong>Subagents</strong>：独立会话协作，权限不能超过根任务。</span></li></ol></div>
           <div class="machine" id="machine-extensions" data-reveal>
             <div class="machine-bar"><span class="title"><span class="led is-done"></span><strong>扩展边界图谱</strong></span><span class="label-mono">select a capability</span></div>
             <div class="machine-body atlas-layout"><div class="atlas-choices"><button class="layer-row" type="button" data-atlas="agents">AGENTS.md</button><button class="layer-row" type="button" data-atlas="memory">Memories</button><button class="layer-row" type="button" data-atlas="skill">Skills</button><button class="layer-row" type="button" data-atlas="mcp">MCP</button><button class="layer-row" type="button" data-atlas="app">Apps</button><button class="layer-row" type="button" data-atlas="dynamic">Dynamic tools</button><button class="layer-row" type="button" data-atlas="hook">Hooks</button><button class="layer-row" type="button" data-atlas="subagent">Subagents</button></div><div class="atlas-detail"><span class="label-mono">SELECTED CAPABILITY</span><h3 data-atlas-title></h3><p data-atlas-role></p><div class="stage-note"><span class="label-mono">TRUST BOUNDARY</span><span data-atlas-boundary></span></div></div></div>
           </div>
 
           <article class="lesson-brief" id="codex-mcp-elicitation-code" data-reveal>
-            <span class="label-mono">SOURCE-ALIGNED TEACHING SKELETON · MCP ELICITATION</span>
-            <h3>MCP 交互式表单提示与参数补全运行时 (`CodexTurnElicitationHandler`)</h3>
-            <p>下面是帮助理解控制流的教学骨架，不是上游源码复制，也不能直接用于生产。真实入口请查 `codex-rs/core/src/session/mcp.rs` 的 `request_mcp_server_elicitation()` / `resolve_elicitation()`，以及 `codex-rs/app-server/tests/suite/v2/mcp_server_elicitation.rs`。</p>
-
-            <div class="stream-log elog" style="max-height: 480px; overflow-y: auto; padding: 16px; border-radius: var(--r-control); background: var(--surface-console); border: 1px solid var(--line-on-console);">
-<span class="k-sys">// teaching bridge; source anchors: core/src/session/mcp.rs</span>
-<span class="k-user">use</span> std::collections::HashMap;
-<span class="k-user">use</span> serde::{Deserialize, Serialize};
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-<span class="k-user">pub struct</span> <span class="k-model">McpFormField</span> {
-    <span class="k-user">pub</span> name: String,
-    <span class="k-user">pub</span> label: String,
-    <span class="k-user">pub</span> field_type: String, <span class="k-sys">// "string" | "secret" | "select"</span>
-    <span class="k-user">pub</span> required: bool,
-}
-
-#[derive(Clone, Debug, Serialize, Deserialize)]
-<span class="k-user">pub struct</span> <span class="k-model">McpElicitationRequest</span> {
-    <span class="k-user">pub</span> elicitation_id: String,
-    <span class="k-user">pub</span> server_name: String,
-    <span class="k-user">pub</span> message: String,
-    <span class="k-user">pub</span> fields: Vec&lt;McpFormField&gt;,
-}
-
-<span class="k-user">pub struct</span> <span class="k-model">CodexTurnElicitationHandler</span> {
-    <span class="k-user">pub</span> pending_elicitations: HashMap&lt;String, tokio::sync::oneshot::Sender&lt;HashMap&lt;String, String&gt;&gt;&gt;,
-}
-
-<span class="k-user">impl</span> <span class="k-model">CodexTurnElicitationHandler</span> {
-    <span class="k-user">pub fn</span> <span class="k-tool">new</span>() -&gt; Self {
-        Self { pending_elicitations: HashMap::new() }
-    }
-
-    <span class="k-sys">/// 步骤 1: MCP 工具在执行中请求用户结构化表单输入，挂起当前 Turn</span>
-    <span class="k-user">pub async fn</span> <span class="k-tool">request_user_elicitation</span>(
-        &amp;<span class="k-user">mut</span> self,
-        turn_id: &amp;str,
-        req: McpElicitationRequest,
-    ) -&gt; Result&lt;HashMap&lt;String, String&gt;, String&gt; {
-        <span class="k-user">let</span> (tx, rx) = tokio::sync::oneshot::channel();
-        <span class="k-user">let</span> elicitation_id = req.elicitation_id.clone();
-        self.pending_elicitations.insert(elicitation_id.clone(), tx);
-
-        <span class="k-sys">// 向 App Server 客户端广播双向通知: item/mcp_elicitation_request</span>
-        println!(<span class="k-model">"[App Server -&gt; Client] Turn: {}, Elicitation: {}"</span>, turn_id, elicitation_id);
-
-        <span class="k-sys">// 异步等待客户端提交表单并唤醒</span>
-        rx.<span class="k-user">await</span>.map_err(|_| <span class="k-model">"Elicitation cancelled or client disconnected"</span>.to_string())
-    }
-
-    <span class="k-sys">/// 步骤 2: 客户端提交用户表单结果，唤醒挂起工具继续执行</span>
-    <span class="k-user">pub fn</span> <span class="k-tool">submit_elicitation_response</span>(
-        &amp;<span class="k-user">mut</span> self,
-        elicitation_id: &amp;str,
-        form_data: HashMap&lt;String, String&gt;,
-    ) -&gt; Result&lt;(), String&gt; {
-        <span class="k-user">if let</span> Some(tx) = self.pending_elicitations.remove(elicitation_id) {
-            tx.send(form_data).map_err(|_| <span class="k-model">"Failed to resume suspended tool"</span>.to_string())
-        } <span class="k-user">else</span> {
-            Err(<span class="k-model">"Elicitation ID not found or already completed"</span>.to_string())
-        }
-    }
-}
-            </div>
-            <p class="lesson-result"><strong>架构精要：</strong>MCP Elicitation 允许在模型运行回合中安全发起结构化人机交互，通过 `oneshot::channel` 保持异步 Turn 不中断，表单数据提交后直接回注工具上下文而无需重置整个会话。</p>
+            <span class="label-mono">INCIDENT 08 · FORM SUBMITTED, TOOL STILL WAITING</span>
+            <h3>把 elicitation 当作一笔“有请求键的未决应答”。</h3>
+            <p>服务端发出结构化请求并登记等待项；客户端展示表单；用户提交时必须带回同一请求键；应答命中等待项后，工具才继续。如果连接断开、请求键错误或等待项被取消，就必须得到明确拒绝或中止结果，不能永久悬挂。</p>
+            <ol class="source-route">
+              <li><span><strong>REQUEST</strong>：服务端登记等待项并发送表单定义。</span></li>
+              <li><span><strong>DISPLAY</strong>：客户端展示输入，不擅自改写字段语义。</span></li>
+              <li><span><strong>RESOLVE</strong>：响应携带原请求键，命中对应等待者。</span></li>
+              <li><span><strong>CONTINUE</strong>：答案成为工具结果的一部分，Turn 继续。</span></li>
+            </ol>
+            <p class="lesson-result"><strong>判断练习：</strong>用户已点击提交但工具没继续，先核对请求键与等待项是否仍存活，再查超时或取消；不要先怀疑模型。</p>
           </article>
-          <div class="decision" data-reveal><span class="label-mono">边界</span><p>扩展面成熟度不齐：MCP 与内建能力稳定，dynamic tools、elicitation、thread/start.environments 在协议里仍带 experimental 标注，hooks 事件集也在演化。面试可以讲能力分类，但把实验项当稳定契约承诺给生产，是另一回事。</p></div>
+          <div class="decision" data-reveal><span class="label-mono">边界</span><p>扩展面成熟度不齐：dynamic tools、elicitation 与部分环境参数仍带实验性标记，hooks 事件集也会演化。生产接入要以运行时能力协商为准，不能只凭课程中的名字做兼容承诺。</p></div>
         </div>
       </section>
 
       <section class="chapter shell" id="customization" data-spy>
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 09 · CUSTOMIZATION SYSTEM</span><h2>把“这个 Agent 怎么工作”拆成五种互补机制。</h2><p class="lede">AGENTS.md 约束仓库行为，Memories 保留跨对话上下文，Skills 封装流程，MCP 连接外部系统，Subagents 负责有边界的专业委派；Hooks 则提供确定性生命周期扩展。</p></header>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 09 · CUSTOMIZATION SYSTEM</span><h2>一条新规则，应该写进 AGENTS、Skill、Hook，还是交给 Subagent？</h2><p class="lede">选错机制会制造重复提示、越权或不可复现。本章从“规则要让谁知道、由谁执行、要不要跨会话”三个问题出发，建立清晰的定制分工。</p></header>
         <div class="custom-stack" data-reveal>
           <div><span class="custom-key">GUIDE</span><strong>AGENTS.md</strong><p>随代码库传播的持久指导；适合命令、约定、评审标准和目录级规则。</p></div>
           <div><span class="custom-key">REMEMBER</span><strong>Memories</strong><p>把仍会影响后续工作的事实带到新对话；不是完整聊天记录，也不是模型参数。</p></div>
@@ -448,8 +299,8 @@
           <div><span class="custom-key">DELEGATE</span><strong>Subagents</strong><p>独立上下文与工具配置的专业执行者；并行不应扩大原任务授权。</p></div>
           <div><span class="custom-key">ENFORCE</span><strong>Hooks</strong><p>在 Session、Turn 和工具生命周期运行确定性脚本，用于校验、日志和安全控制。</p></div>
         </div>
-        <div class="decision" data-reveal><span class="label-mono">CHOOSING THE MECHANISM</span><p>需要模型“知道”规则 → AGENTS；需要复用判断流程 → Skill；需要访问系统 → MCP；需要硬性执行 → Hook；需要隔离并行工作 → Subagent；需要跨对话保留局部事实 → Memory。</p></div>
-        <div class="spread"><article class="prose" data-reveal><h3>两条容易记反的规则</h3><p>配置不是一个文件，是一条优先级阶梯（config/src/config_layer_source.rs:30）：打包默认 −10、MDM 0、System 10、企业托管 15、用户 20、项目 25、会话参数 30——而 legacy managed 在 40 与 50。结论：日常冲突里 <code>-c</code> 赢，共享机器上命令行赢不过合规层。AGENTS.md 则根本不是覆盖，是拼接：从项目根到 cwd 逐层收集加载、不越过项目根（core/src/agents_md.rs:13）；AGENTS.override.md 只替换所在目录的主文件（core/src/agents_md.rs:43）；总量受 project_doc_max_bytes 预算约束。下面的判定器考的就是这两条。</p></article></div>
+        <div class="decision" data-reveal><span class="label-mono">CHOOSING THE MECHANISM</span><p>让模型知道仓库规则 → AGENTS；复用一套判断流程 → Skill；访问外部系统 → MCP；确定性拦截或强制 → Hook；隔离并行工作 → Subagent；跨对话保留局部事实 → Memory。</p></div>
+        <div class="spread"><article class="prose" data-reveal><h3>两条容易记反的规则</h3><p><strong>配置是覆盖，项目指令是拼接。</strong>配置层有明确优先级：打包默认、设备管理、系统、企业、用户、项目、会话参数逐层合并，遗留托管层仍可能拥有更高优先级；企业 requirements 还能直接拒绝越界值。项目指令则从项目根到当前目录逐层收集，局部 override 只替换同目录主文件，总量还受字节预算限制。</p><p>Subagent 不是“多开一次模型调用”，而是独立会话：可选择继承全部、最近若干轮或不继承父历史；历史会洗掉推理过程和工具噪声，只保留适合交接的内容。消息可只排队，也可唤醒目标；最终答案会沿父子关系回传。资源还分别受并发、驻留与整棵树预算约束，权限只能收紧不能扩大。</p></article></div>
         <div class="machine" id="cx-customization" data-reveal>
           <div class="machine-bar"><span class="title"><span class="led"></span><strong>配置覆盖判定器</strong></span><span class="label-mono" data-status>题 1/4 · 待判定</span></div>
           <div class="machine-body sim-layout">
@@ -467,21 +318,22 @@
             </div>
           </div>
         </div>
-        <div class="interview" data-reveal><span class="label-mono">INTERVIEW LENS</span><h4>“AGENTS.md 是不是写得越长越保险？”</h4><div class="qa"><details><summary>展开 30 秒模范答案</summary><div class="ans">不是，它是有预算的资源：多层文件从根到 cwd 拼接加载，总量受 project_doc_max_bytes 约束，超限截尾——越长越可能截掉真正想要的尾部。写命令约束与评审标准，不写教程；可复用流程放 Skill，持久规则才留 AGENTS.md。再补一句优先级：子目录文件不覆盖根文件，只追加。</div></details></div></div>
+        <div class="interview" data-reveal><span class="label-mono">CHECK YOUR MODEL</span><h4>“AGENTS.md 是不是写得越长越保险？”</h4><div class="qa"><details><summary>展开判断与答案</summary><div class="ans">不是。它按层拼接且受总字节预算约束，越长越可能把真正重要的尾部截掉。仓库约束留在 AGENTS，可复用流程放 Skill，硬性执行放 Hook，外部访问放 MCP。</div></details></div></div>
+        <p class="lesson-result" data-reveal><strong>本章小结：</strong>先判断这是“知识、流程、连接、强制、记忆还是并行”，再选机制；不要把六类需求都塞进一份长提示词。</p>
       </section>
 
       <section class="chapter band-deep" id="environments" data-spy>
         <div class="shell">
-          <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 10 · CONFIG & ENVIRONMENTS</span><h2>同一个 Turn，会被配置层和执行环境重新解释。</h2><p class="lede">模型、推理强度、cwd、沙箱、审批、网络、工具可见性与权限 Profile 都来自有效配置快照；本地、Worktree、云端与远程宿主又提供不同的执行边界。</p></header>
+          <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 10 · CONFIG & ENVIRONMENTS</span><h2>“我明明改了配置”，为什么这一轮还是没生效？</h2><p class="lede">生效值来自配置覆盖、企业约束、step 快照与执行宿主的共同结果。本章教你沿来源追踪有效配置，而不是只盯着手边那一个文件。</p></header>
           <div class="environment-matrix" data-reveal>
             <div class="matrix-head"><span>层</span><span>决定什么</span><span>典型证据</span></div>
             <div><strong>配置合并</strong><span>模型、Provider、特性开关、MCP 与默认策略</span><code>config/read</code></div>
-            <div><strong>项目上下文</strong><span>cwd、AGENTS.md、Git 信息与工作树</span><code>thread/start</code></div>
+            <div><strong>项目上下文</strong><span>当前目录、项目指令、Git 信息与工作树</span><code>thread/start</code></div>
             <div><strong>权限 Profile</strong><span>文件、网络边界与审批 Reviewer</span><code>permissionProfile/list</code></div>
             <div><strong>执行环境</strong><span>Shell、依赖、可写根目录与隔离方式</span><code>environment/info</code></div>
             <div><strong>Turn 覆盖</strong><span>当前轮的模型、effort、personality 与 sandbox</span><code>turn/start</code></div>
           </div>
-          <div class="spread"><article class="prose" data-reveal><h3>环境不是实现细节</h3><p>本地项目、Git Worktree、云端隔离环境和远程宿主会改变文件寿命、网络可达性与并行方式。诊断前先确认“这轮到底跑在哪里”。</p><p>三个源码级误读：sandbox_mode 的默认值是 read-only，不是 workspace-write（protocol/src/config_types.rs:104）；workspace-write 的网络开关是 network_access 字段，默认断网；thread/start 的 environments 参数三态——省略选默认环境、空数组关闭环境访问、非空取第一个（app-server-protocol/src/protocol/v2/thread.rs:132，experimental）。远端执行时沙箱在宿主侧生效（exec-server/src/lib.rs:200），本机配置只是意图。最大失败模式是把本机结论搬到云任务上：本机 Seatbelt、云端环境模板、远程宿主，是三个不同的执法者。</p></article><ol class="kp-list" data-reveal><li data-no="LOCAL"><span><strong>Local</strong>：直接作用于本机项目边界。</span></li><li data-no="TREE"><span><strong>Worktree</strong>：用独立 Git 工作树隔离并行任务。</span></li><li data-no="CLOUD"><span><strong>Cloud</strong>：在托管隔离环境运行并受网络策略控制。</span></li><li data-no="REMOTE"><span><strong>Remote host</strong>：客户端与执行宿主分离。</span></li></ol></div>
+          <div class="spread"><article class="prose" data-reveal><h3>先问“谁赢”，再问“在哪里执行”</h3><p><strong>短 trace：</strong><code>读取各配置层 → 高优先级覆盖 → 企业约束校验 → 本 step 冻结快照 → 交给执行宿主强制</code>。会话参数通常能覆盖项目与用户值，但受管要求可以拒绝越界配置。</p><p>本地项目、Git Worktree、云端隔离环境和远程宿主会改变文件寿命、网络可达性与并行方式。远程执行时，沙箱在宿主侧落地；本机看到的配置只是请求意图。环境参数还可能区分“未指定”“明确不提供环境”“指定候选环境”，不能把空值都当默认值。</p><p>判断法：先记录有效模型、权限画像、审批策略、网络与宿主，再复现实验。把本地结论直接搬到云端或远程宿主，是最常见的错层排障。</p></article><ol class="kp-list" data-reveal><li data-no="LOCAL"><span><strong>Local</strong>：直接作用于当前机器的项目边界。</span></li><li data-no="TREE"><span><strong>Worktree</strong>：隔离 Git 工作树，适合并行改动。</span></li><li data-no="CLOUD"><span><strong>Cloud</strong>：受托管环境模板和网络策略约束。</span></li><li data-no="REMOTE"><span><strong>Remote host</strong>：客户端发意图，宿主负责真正执行与强制。</span></li></ol></div>
           <div class="machine" id="cx-environments" data-reveal>
             <div class="machine-bar"><span class="title"><span class="led"></span><strong>环境 × 沙箱 × 审批对比台</strong></span><span class="label-mono" data-status>local · workspace-write · on-request</span></div>
             <div class="machine-body sim-layout">
@@ -500,43 +352,38 @@
               </div>
             </div>
           </div>
+          <p class="lesson-result" data-reveal><strong>判断练习：</strong>同一命令本地成功、远程失败，先比较有效配置和执行宿主，不要先修改业务代码。</p>
         </div>
       </section>
 
       <section class="chapter shell" id="surfaces" data-spy>
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 11 · CLIENT SURFACES</span><h2>CLI、IDE、App Server 与 SDK，共享能力但不共享职责。</h2><p class="lede">客户端负责呈现上下文、审批和进度；App Server 暴露深度双向协议；SDK 面向程序化控制；codex exec 与 GitHub Action 面向自动化入口。</p></header>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 11 · CLIENT SURFACES</span><h2>同一个任务，什么时候用交互客户端，什么时候用批处理？</h2><p class="lede">不同表面共享核心能力，却拥有不同的等待、审批与恢复契约。本章让你按工作流选入口，而不是按“哪个看起来更高级”选。</p></header>
         <div class="machine" id="machine-surfaces" data-reveal>
           <div class="machine-bar"><span class="title"><span class="led is-done"></span><strong>客户端表面交换台</strong></span><span class="label-mono">choose by contract</span></div>
           <div class="machine-body surface-layout"><div class="surface-choices"><button class="cbtn" type="button" data-surface="cli">CLI</button><button class="cbtn" type="button" data-surface="ide">IDE</button><button class="cbtn" type="button" data-surface="appserver">App Server</button><button class="cbtn" type="button" data-surface="sdk">SDK</button><button class="cbtn" type="button" data-surface="exec">codex exec</button><button class="cbtn" type="button" data-surface="action">GitHub Action</button></div><dl class="surface-detail"><div><dt>契约</dt><dd data-surface-contract></dd></div><div><dt>最适合</dt><dd data-surface-best></dd></div><div><dt>连接方式</dt><dd data-surface-transport></dd></div></dl></div>
         </div>
-        <div class="spread"><article class="prose" data-reveal><h3>两个入口，一条协议</h3><p>所有表面共享同一个内核，分歧只在交互契约。App Server（app-server/src/main.rs:65）服务需要审批、流式事件与历史恢复的富客户端；MCP server 入口（mcp-server/src/main.rs:8）方向相反，把 Codex 本身暴露成别的 Agent 的一个工具。交互 CLI 与 codex exec 同源不同枝（cli/src/main.rs:139 挂出 Exec 子命令）：非交互世界里没有“随时能点头的人”，审批事实上退化为 never，失败直接返回模型或流水线，退出码就是结论。</p></article></div>
-          <div class="interview" data-reveal><span class="label-mono">INTERVIEW LENS</span><h4>“CI 里为什么选 codex exec，而不是接 App Server？”</h4><div class="qa"><details><summary>展开 30 秒模范答案</summary><div class="ans">CI 没有审批人。App Server 的双向请求（审批、elicitation）在流水线里全是死重；exec 一次进出、退出码即结论，失败直接回注模型或回日志，符合批处理语义。要程序化控制再接 SDK，也不必自研富客户端协议。</div></details></div></div>
-        <div class="decision" data-reveal><span class="label-mono">BOUNDARY</span><p>App Server 适合需要认证、历史、审批与流式事件的深度产品集成；CI 与批处理优先使用 SDK 或非交互式入口，不必自己复刻富客户端协议。</p></div>
+        <div class="spread"><article class="prose" data-reveal><h3>按交互契约选，不按功能清单选</h3><p><strong>短 trace：</strong>需要持续呈现 Item、接收反向审批、断线恢复 → App Server；需要人直接协作 → CLI 或 IDE；需要程序控制任务 → SDK；需要一次进出与明确退出码 → 非交互入口或自动化集成。</p><p>App Server 可内嵌，也可经 stdio、Unix socket 或 WebSocket 连接；MCP server 的方向相反，它把 Codex 暴露成其他 Agent 能调用的能力。两者都叫“server”，但调用方向和所有权完全不同。</p><p>无人值守环境没有随时可回答的用户，因此任何可能反向询问的能力都要提前给出明确策略：自动拒绝、自动审查，或根本不在这类流程中使用。</p></article></div>
+          <div class="interview" data-reveal><span class="label-mono">CHECK YOUR MODEL</span><h4>“CI 里为什么通常不直接复刻 App Server 富客户端？”</h4><div class="qa"><details><summary>展开判断与答案</summary><div class="ans">CI 的核心契约是一次进出、可重试、退出码清晰；它通常没有审批人，也不需要维护复杂 UI 投影。只有确实需要双向审批、历史恢复与细粒度流事件时，才值得接入完整 App Server。</div></details></div></div>
+        <div class="decision" data-reveal><span class="label-mono">BOUNDARY</span><p>表面可以不同，事实源不能分叉。无论 CLI、IDE 还是自定义客户端，都不应另造一套 Turn 或 Item 语义。</p></div>
+        <p class="lesson-result" data-reveal><strong>本章小结：</strong>先写清“是否有人在场、是否需要流式投影、是否需要恢复、失败如何返回”，入口选择通常就会自然收敛。</p>
       </section>
 
       <section class="chapter band-edge" id="practice" data-spy>
         <div class="shell">
-          <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 12 · PRACTICE & INTERVIEW</span><h2>把架构知识变成诊断顺序。</h2><p class="lede">真正有用的掌握，不是能背组件名，而是面对失败时知道先看哪一条证据、归属哪一层、做哪一个最小实验。</p></header>
+          <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 12 · PRACTICE & INTERVIEW</span><h2>面对真实故障，先看哪条证据？</h2><p class="lede">最后一章把前面的机制压缩成可执行顺序：定位容器、找到最后事实、检查边界、核对上下文，再设计一个能推翻假设的最小实验。</p></header>
           <div class="spread"><div><h3>五步诊断</h3><ol class="kp-list"><li data-no="A"><span><strong>定位容器</strong>：Thread、Turn 还是 Item 出了问题？</span></li><li data-no="B"><span><strong>读事件</strong>：事实停在 started、approval、delta 还是 completed？</span></li><li data-no="C"><span><strong>查边界</strong>：工具可见性、权限、沙箱、网络还是环境？</span></li><li data-no="D"><span><strong>查上下文</strong>：规则、历史、Skill 和结果回注是否完整？</span></li><li data-no="E"><span><strong>最小验证</strong>：设计一个能推翻当前假设的检查。</span></li></ol></div></div>
 
           <div class="interview" data-reveal>
             <span class="label-mono">PROBLEM SET 01 · 架构设计题</span>
-            <h4>“如何设计企业级高可用 Codex App Server 双向 JSON-RPC 会话管理体系？”</h4>
+            <h4>“流在工具执行后断开，重试为什么可能制造重复副作用？”</h4>
             <div class="qa">
               <details>
                 <summary>展开答题骨架与解耦推演</summary>
                 <div class="ans">
-                  <p><strong>【场景定义】</strong> 为支持数千名开发者同时在 Web IDE、桌面客户端与命令行中使用 Codex，需要构建一套高并发、支持长连接热迁移与流式双向通信的 App Server 架构。</p>
-                  <p><strong>【归属层/故障机理分析】</strong> 属于协议与服务解耦层（`Chapter 07: Thread / Turn / Item` & `Chapter 11: Client Surfaces`）。核心机理在于：Codex 状态模型严格拆分为 Thread（持久化状态容器）、Turn（执行生命周期）与 Item（最小可观察更新粒度）。App Server 采用双向 JSON-RPC 协议，将长连接管理与无状态执行引擎分离，实现流式通知与增量事件广播。</p>
-                  <p><strong>【关键证据链/判定条件】</strong>
-                    <br>1. <em>握手与协商</em>：客户端连接后必须通过 `initialize` / `initialized` 交换协议版本与 capability 集合。
-                    <br>2. <em>三层生命周期映射</em>：`thread/start` $\to$ `turn/start` $\to$ `item/agentMessage/delta` $\to$ `item/completed` $\to$ `turn/completed`。
-                    <br>3. <em>中断与恢复</em>：支持通过 `turn/interrupt` 触发取消令牌，后续通过 `turn/start` 增量续跑，不丢失已提交的 Item。
-                  </p>
-                  <p><strong>【解决方案与系统级防线】</strong>
-                    <br>• 客户端严禁私自维护业务状态镜像，所有 UI 渲染与进度推进均以 App Server 推送的 `item/*` 事件为准。
-                    <br>• 在 App Server 外围构建平台租约（Lease）与签名验权，实现会话多租户安全隔离与横向负载均衡。
-                  </p>
+                  <p><strong>【先定位】</strong> 工具 Item 已执行，但模型流没有自然完成。重试粒度通常是重新发送从历史派生的请求，不是从断开的字节位置继续。</p>
+                  <p><strong>【关键风险】</strong> 如果模型不知道调用已经执行，就可能再次触发同一命令。系统会记录已尝试调用并在重建请求时附回；这是“告诉模型事实”，不是事务回滚。</p>
+                  <p><strong>【最小验证】</strong> 检查第一次调用是否有稳定 call id、执行记录是否完整、重试请求是否带回已执行事实，以及外部动作本身能否设计为幂等。</p>
+                  <p><strong>【答题结论】</strong> Agent 重试的底线不是“绝不重复”，而是“重复前拥有足够事实，并让副作用尽量幂等”。</p>
                 </div>
               </details>
             </div>
@@ -544,22 +391,14 @@
 
           <div class="interview" data-reveal>
             <span class="label-mono">PROBLEM SET 02 · 故障排查题</span>
-            <h4>“Turn 执行中收到 `mcp_elicitation_request` 后，为什么下游工具无法获取参数并发生超时？”</h4>
+            <h4>“用户提交了 MCP 表单，为什么工具仍然超时？”</h4>
             <div class="qa">
               <details>
                 <summary>展开答题骨架与排查路径</summary>
                 <div class="ans">
-                  <p><strong>【场景定义】</strong> 模型调用外部 MCP 数据库迁移工具，该工具触发结构化密码填写表单，但用户在前端输入并提交后，后端工具迟迟没有恢复执行，最终因 30s 超时报错中断。</p>
-                  <p><strong>【归属层/故障机理分析】</strong> 属于 MCP 交互式表单总线（`Chapter 08: Extension Bus`）。故障机理为：App Server 内部维护的 `pending_elicitations` 回调映射表在多工作线程环境下发生竞争，或客户端在调用 `submit_elicitation_response` 时提交了错误的 `elicitation_id`，导致 `oneshot::Sender` 无法成功唤醒挂起工具。</p>
-                  <p><strong>【关键证据链/判定条件】</strong>
-                    <br>1. 协议抓包：检查 App Server 是否成功广播了包含 `elicitation_id` 的 `item/mcp_elicitation_request`。
-                    <br>2. 回包匹配：检查客户端提交响应时附带的 `elicitation_id` 与注册表键值是否完全一致。
-                    <br>3. 唤醒通道状态：检查 `oneshot::channel` 是否在提交前已被异常 drop 或由于超时提前关闭。
-                  </p>
-                  <p><strong>【解决方案与系统级防线】</strong>
-                    <br>• 使用带线程安全锁的 <code>Arc&lt;Mutex&lt;HashMap&lt;String, oneshot::Sender&gt;&gt;&gt;</code> 严格保护未决请求映射。
-                    <br>• 为交互式 Elicitation 设置独立的长超时策略（如 300s），并支持客户端显式取消（Cancel）优雅退出。
-                  </p>
+                  <p><strong>【先定位】</strong> 这是反向请求的应答关联问题，不是模型生成问题。先确认请求已发出、客户端已展示、响应已返回、等待项已命中四个事实。</p>
+                  <p><strong>【关键证据】</strong> 请求键是否一致？等待项在响应前是否被取消或清理？连接断开后有没有明确的中止结果？</p>
+                  <p><strong>【避免误判】</strong> 不要在没有证据时断言“多线程竞争”或随意延长超时。先找最后一个已确认事件，再修拥有断点的那一层。</p>
                 </div>
               </details>
             </div>
@@ -567,29 +406,22 @@
 
           <div class="interview" data-reveal>
             <span class="label-mono">PROBLEM SET 03 · 安全攻防题</span>
-            <h4>“在正交权限矩阵中，`SandboxPolicy::WorkspaceWrite` 与 `ApprovalPolicy::OnRequest` 发生冲突时如何判定？”</h4>
+            <h4>“WorkspaceWrite 与 OnRequest 同时存在，跨工作区写入该怎么判？”</h4>
             <div class="qa">
               <details>
                 <summary>展开答题骨架与权限决策</summary>
                 <div class="ans">
-                  <p><strong>【场景定义】</strong> 用户设置了允许工作区写（`WorkspaceWrite`），但命令审批策略配置为按需询问（`OnRequest`）。模型发起了跨越工作区根目录的编辑操作（如修改 `/etc/hosts` 或用户全局配置文件）。</p>
-                  <p><strong>【归属层/故障机理分析】</strong> 属于权限与沙箱正交决策体系（`Chapter 04: Permissions & Sandboxing`）。核心认知：<strong>`SandboxPolicy`（沙箱物理能力）与 `ApprovalPolicy`（人机交互策略）是正交独立的二维矩阵</strong>。物理越权必须在沙箱层被绝对拦截，即使审批策略设置为自动放行也无法越界。</p>
-                  <p><strong>【关键证据链/判定条件】</strong>
-                    <br>1. 审批判定：`ApprovalPolicy` 评估目标动作是否需要发起人机交互审批弹窗。
-                    <br>2. 沙箱判定：`SandboxPolicy` 评估该路径是否在可写根目录允许列表中。
-                    <br>3. 冲突决议：若动作超出 `WorkspaceWrite` 范围，系统直接拒绝执行或降级报错，绝不因用户点击批准而静默关闭底层沙箱隔离。
-                  </p>
-                  <p><strong>【解决方案与系统级防线】</strong>
-                    <br>• 坚守“最小特权原则”：沙箱层负责硬性物理隔离（OS 命名空间 / Landlock / Seatbelt），审批层仅负责策略偏好。
-                    <br>• 任何需要突破当前沙箱边界的临时越权操作，必须通过显式重新配置沙箱 Profile 完成，禁止隐式动态提权。
-                  </p>
+                  <p><strong>【先分轴】</strong> WorkspaceWrite 描述当前可写边界，OnRequest 描述何时允许询问。命令规则与企业约束还可能进一步收紧。</p>
+                  <p><strong>【判断顺序】</strong> 先看规则是否禁止或要求询问，再看策略是否允许展示询问，最后由权限画像与系统沙箱执行。某些模式可在明确批准后尝试升级执行，但绝不能把“用户点了同意”直接等同于“沙箱已被关闭”。</p>
+                  <p><strong>【答题结论】</strong> 三轴是组合关系，不是二选一。要回答谁能放行，必须先指出当前拒绝来自哪一轴。</p>
                 </div>
               </details>
             </div>
           </div>
-          <div class="decision" data-reveal><span class="label-mono">边界</span><p>五步诊断与三道题的骨架都绑定快照 2df6705。experimental 项与事件命名会继续漂移；面试答案里凡是字段名，先声明“以当前版本生成的 schema 为准”再展开。能背结论是及格，能说出结论的失效条件才是这一章的考点。</p></div>
+          <div class="decision" data-reveal><span class="label-mono">边界</span><p>课程事实边界为快照 498d40b29f60。实验性能力、事件名和默认配置会继续变化；生产集成应以运行版本的能力协商与生成 schema 为准。能说出结论的失效条件，才算真正掌握。</p></div>
+          <p class="lesson-result" data-reveal><strong>毕业检查：</strong>任选一个失败，能否在 60 秒内说清“最后事实、拥有它的层、一个可证伪假设、最小验证动作”？能做到，就已经把课程从知识变成了工程能力。</p>
           <section aria-labelledby="glossary-title" data-reveal><h3 id="glossary-title">速查术语</h3><dl class="gloss"><div><dt>Thread</dt><dd>包含多个 Turn 的对话与持久状态容器。</dd></div><div><dt>Turn</dt><dd>一次用户请求及 Agent 随后完成的全部工作。</dd></div><div><dt>Item</dt><dd>消息、命令、文件变更或工具调用等最小输入输出单元。</dd></div><div><dt>SandboxPolicy</dt><dd>命令实际可访问的文件系统与网络边界。</dd></div><div><dt>ApprovalPolicy</dt><dd>何时暂停并请求越界授权的交互策略。</dd></div><div><dt>Compaction</dt><dd>把旧历史折叠成保留关键状态的摘要。</dd></div><div><dt>Elicitation</dt><dd>MCP 在 Turn 中请求结构化表单输入或 URL 流程的机制。</dd></div><div><dt>Hook</dt><dd>在 Codex 生命周期节点运行的确定性脚本。</dd></div></dl></section>
-          <section class="source-notes" aria-labelledby="sources-title" data-reveal><span class="label-mono">SOURCE BOUNDARY · UPDATED 2026-08-23</span><h3 id="sources-title">继续查证</h3><p>协议字段与实验性 API 会随版本变化；生产集成应以当前版本生成的 schema 和官方文档为准。</p><div><a href="https://learn.chatgpt.com/docs/app-server">App Server 协议</a><a href="https://learn.chatgpt.com/docs/customization/overview">定制体系</a><a href="https://learn.chatgpt.com/docs/hooks">Hooks</a><a href="https://learn.chatgpt.com/docs/sandboxing">沙箱与审批</a><a href="https://learn.chatgpt.com/docs/config-file/config-reference">配置参考</a><a href="https://learn.chatgpt.com/docs/open-source">开源组件</a></div></section>
+          <section class="source-notes" aria-labelledby="sources-title" data-reveal><span class="label-mono">VERSION BOUNDARY · UPDATED 2026-09-03</span><h3 id="sources-title">继续查证</h3><p>协议字段与实验性 API 会随版本变化；生产集成应以当前版本生成的 schema 和官方文档为准。</p><div><a href="https://learn.chatgpt.com/docs/app-server">App Server 协议</a><a href="https://learn.chatgpt.com/docs/customization/overview">定制体系</a><a href="https://learn.chatgpt.com/docs/hooks">Hooks</a><a href="https://learn.chatgpt.com/docs/sandboxing">沙箱与审批</a><a href="https://learn.chatgpt.com/docs/config-file/config-reference">配置参考</a><a href="https://learn.chatgpt.com/docs/open-source">开源组件</a></div></section>
         </div>
       </section>
     </main>

@@ -5,56 +5,56 @@
  */
 
 const LAYERS: Record<string, { name: string; en: string; role: string }> = {
-  "http": {
-    name: "HTTP 服务面（平台扩展）",
-    en: "http_service",
-    role: "对外唯一入口：线程与回合的生命周期路由、鉴权与签名校验、错误模型、健康检查。把「平台语义」翻译成内核调用。",
+  "client": {
+    name: "客户端表面",
+    en: "client surface",
+    role: "CLI、IDE 与应用负责收集输入、展示事件和承接审批；它们是运行状态的投影，不另造一份权威会话。",
   },
-  "lifecycle": {
-    name: "平台生命周期（平台扩展）",
-    en: "platform_lifecycle",
-    role: "启动自举 → 就绪门控 → 排水（drain）→ 优雅停机。保证升级/扩缩容时不打断进行中的回合。",
+  "appserver": {
+    name: "App Server 协议边界",
+    en: "app server",
+    role: "把 start、resume、steer、interrupt 与审批等双向动作翻译成会话操作，再把 Item 和 Turn 事件送回客户端。",
   },
-  "capability": {
-    name: "能力平面（平台扩展）",
-    en: "capability_plane",
-    role: "声明式地回答「这个身份在这个作用域里能做什么」：能力授予、范围限定、只读模式与撤销。",
+  "session": {
+    name: "会话与提交队列",
+    en: "session actor",
+    role: "串行接收用户操作，拥有活动 Turn、信箱与取消句柄；同一会话的并发写入在这里收口。",
   },
-  "approval": {
-    name: "审批控制",
-    en: "approval_control",
-    role: "把交互式 CLI 的「问一句」变成服务端可审计的决策流：谁批准的、依据什么、超时后默认如何。",
+  "turn": {
+    name: "Turn 与 step 循环",
+    en: "turn loop",
+    role: "冻结本步输入后请求模型；只要还有工具结果、排队输入或明确跟进，就进入下一个 step，直到收束。",
   },
   "tool": {
-    name: "工具生命周期",
-    en: "tool_lifecycle",
-    role: "工具的注册、启用、授权与调用管线：每一次工具使用都经过能力检查并被记录。",
+    name: "工具路由与回执",
+    en: "tool router",
+    role: "按本步快照生成可见工具，校验调用、执行并把结果与 call id 配对；工具失败通常回给模型自纠。",
   },
-  "core": {
-    name: "Codex 内核（模型平面）",
-    en: "codex core",
-    role: "上一章的回合循环：上下文组装、流式响应、工具分发、沙箱执行——平台不重写它，只包裹它。",
+  "sandbox": {
+    name: "审批与执行边界",
+    en: "policy + sandbox",
+    role: "审批决定是否向人请求升级，沙箱和命令规则决定操作最终能做什么；两条轴不能互相替代。",
   },
-  "store": {
-    name: "示例事件存储（平台扩展）",
-    en: "postgres_store",
-    role: "参考平台可用事件溯源与投影支撑线程查询和恢复；这不是 Codex 上游唯一或必需的存储实现。",
+  "history": {
+    name: "历史与重放",
+    en: "rollout history",
+    role: "记录已提交的输入、模型输出、工具调用和回执；resume 与在线运行共用重放语义，compaction 只改变模型工作视图。",
   },
-  "lease": {
-    name: "示例签名租约（平台扩展）",
-    en: "signed lease",
-    role: "参考平台可把能力变成绑定作用域和回合的短期凭据；签名租约属于本课程的平台蓝图，不是 Codex 上游通用原语。",
+  "config": {
+    name: "本步有效配置",
+    en: "step context",
+    role: "模型、基础指令、项目规则、环境事实、工具面与权限在 step 开始时被冻结；中途变化到下一个边界再生效。",
   },
 };
 
 const JOURNEY: Array<{ label: string; layers: string[]; story: string }> = [
-  { label: "① 创建线程", layers: ["http", "store"], story: "POST /threads 落入 HTTP 服务面，鉴权通过后向事件存储追加 ThreadCreated，投影出线程行。" },
-  { label: "② 预留回合", layers: ["http", "lifecycle", "core"], story: "请求预留一个 Codex 回合；生命周期确认实例处于就绪态且未在排水，内核侧锁定回合槽位。" },
-  { label: "③ 签发租约", layers: ["lease", "capability"], story: "按请求的作用域计算摘要，签发绑定该摘要与回合 ID 的租约——凭据从此不可挪用到别的线程。" },
-  { label: "④ 授予能力", layers: ["capability", "tool"], story: "能力平面按最小特权授予本轮可用能力；工具生命周期据此决定哪些工具对这轮可见。" },
-  { label: "⑤ 执行回合", layers: ["core", "approval", "tool"], story: "内核跑回合循环；需要越界操作时由审批控制裁决并留痕，工具调用全程经过授权管线。" },
-  { label: "⑥ 事件落库", layers: ["store"], story: "TurnStarted / ExecCommandEnd / TurnCompleted…逐条追加；投影增量更新，查询永远读投影而非重放全史。" },
-  { label: "⑦ 应答释放", layers: ["http", "lease"], story: "响应返回，租约到期作废；排水期间新请求被拒、旧回合被允许跑完。" },
+  { label: "① 输入", layers: ["client", "appserver", "session"], story: "客户端提交请求；协议层把它变成会话操作，提交队列保证同一会话只有一个权威写入顺序。" },
+  { label: "② 步快照", layers: ["session", "turn", "config", "tool"], story: "Turn 开始一个 step，冻结本步模型、指令、环境与可见工具；中途更新留到下一个边界。" },
+  { label: "③ 模型", layers: ["turn", "history"], story: "模型基于重放出的工作历史返回文本或工具调用；流式片段可展示，完整输出项才进入可重放历史。" },
+  { label: "④ 工具", layers: ["turn", "tool", "sandbox"], story: "调用先校验和裁决，再在执行边界内运行；成功、失败、取消都要生成与原调用配对的回执。" },
+  { label: "⑤ 回注", layers: ["tool", "history", "turn"], story: "工具回执写入历史并进入下一次模型请求。模型此时才知道操作实际发生了什么。" },
+  { label: "⑥ 收束", layers: ["turn", "session", "history"], story: "没有待处理工具、排队输入或跟进条件时 Turn 收束；中断也必须写下明确终态，而不是丢掉半轮。" },
+  { label: "⑦ 持久化", layers: ["history", "appserver", "client"], story: "已提交事实可用于 resume、fork 与 UI 重建；客户端收到终态事件后再把本轮显示为完成。" },
 ];
 
 export function initPlatformMap(root: HTMLElement | null): void {
@@ -102,6 +102,5 @@ export function initPlatformMap(root: HTMLElement | null): void {
     });
   });
 
-  // 默认聚焦最核心的一层
-  showLayer("core");
+  showLayer("turn");
 }

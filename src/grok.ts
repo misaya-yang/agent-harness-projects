@@ -25,7 +25,7 @@ function initChoiceDetail(id: string, data: Record<string, Detail>): void {
       const item = data[button.dataset.key ?? ""];
       if (!item || !detail) return;
       qsa<HTMLButtonElement>(root, "[data-key]").forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === button)));
-      detail.innerHTML = `<span class="label-mono">OWNING PATH</span><h3>${item.title}</h3><p>${item.body}</p>`;
+      detail.innerHTML = `<span class="label-mono">OWNING LAYER</span><h3>${item.title}</h3><p>${item.body}</p>`;
       if (status) status.textContent = item.status ?? button.textContent ?? "selected";
     });
   });
@@ -36,14 +36,14 @@ function initTurn(): void {
   if (!root) return;
   const steps = qsa<HTMLElement>(root, "[data-steps] li");
   const logs = [
-    "session.append(user_prompt)", "AgentBuilder.build(tools + prompt)", "sampling.request(messages, tools)",
-    "SessionUpdate::AgentMessageChunk", "tool_call: run_terminal_command", "PermissionManager → Workspace.call",
-    "tool_result appended to Conversation", "stop_reason=end_turn → persist",
+    "authoritative_queue.push(user_prompt)", "assemble(stable prompt + effective tools)", "sampling.request(messages, tools)",
+    "stream event → client + usage ledger", "tool proposal: run command", "hook → plan gate → permission",
+    "terminal result paired and appended", "TurnOutcome → round decision",
   ];
   const notes = [
-    "Prompt 先成为会话事实。", "Agent 在本回合得到明确的提示词、模型与工具面。", "宿主向模型发起一次可取消的流式采样。",
-    "消息、thinking 与调用增量被转换为事件。", "模型只提出结构化调用，不直接碰工作区。", "权限决策后，Workspace 承担真实副作用。",
-    "输出经过归一化，再进入下一次采样的消息历史。", "没有新工具调用时，回合完成并持久化。",
+    "输入先进入唯一权威队列。", "稳定前缀、现场上下文与裁剪后的工具面在这里汇合。", "宿主发起一次可取消的流式采样。",
+    "增量先被消费；终端确认到达后才允许提交响应。", "模型只提出结构化动作，不直接碰执行世界。", "动作依次经过 hook、计划模式与权限闸门。",
+    "每个 tool_use 都得到配对结果，再进入下一次采样。", "模型提出结束，harness 再检查插话、待办与外层续跑条件。",
   ];
   let index = -1;
   let timer = 0;
@@ -62,7 +62,7 @@ function initTurn(): void {
   const step = () => { if (index < steps.length - 1) { index += 1; draw(); } else clearInterval(timer); };
   qs<HTMLButtonElement>(root, "[data-step]")?.addEventListener("click", step);
   qs<HTMLButtonElement>(root, "[data-run]")?.addEventListener("click", () => { clearInterval(timer); if (index === steps.length - 1) reset(); step(); timer = window.setInterval(step, 650); });
-  const reset = () => { clearInterval(timer); index = -1; if (log) log.innerHTML = ""; if (note) note.textContent = "逐步观察控制权在模型与宿主之间如何交接。"; draw(); };
+  const reset = () => { clearInterval(timer); index = -1; if (log) log.innerHTML = ""; if (note) note.textContent = "逐步观察提议、裁决、执行、证据回填与终止如何交接。"; draw(); };
   qs<HTMLButtonElement>(root, "[data-reset]")?.addEventListener("click", reset);
 }
 
@@ -120,10 +120,10 @@ function initSession(): void {
   qsa<HTMLButtonElement>(root, "[data-action]").forEach((button) => button.addEventListener("click", () => {
     const action = button.dataset.action;
     if (action === "prompt") { updates += 3; render("prompt → message chunks → end_turn"); }
-    if (action === "checkpoint") { checkpoint = updates; render("CompactionCheckpoint persisted"); }
-    if (action === "rewind") { if (checkpoint !== null) { updates = checkpoint; render("RewindMarker restored checkpoint boundary"); } else render("rewind ignored: no checkpoint"); }
-    if (action === "fork") { session += 1; updates += 1; render("child session created with parent relationship"); }
-    if (action === "resume") { updates += 1; render("ACP + XAI updates replayed into host"); }
+    if (action === "checkpoint") { checkpoint = updates; render("recoverable boundary persisted"); }
+    if (action === "rewind") { if (checkpoint !== null) { updates = checkpoint; render("conversation restored to the recorded boundary"); } else render("rewind ignored: no checkpoint"); }
+    if (action === "fork") { session += 1; updates += 1; render("new session derived without a second active writer"); }
+    if (action === "resume") { updates += 1; render("persisted conversation repaired and resumed"); }
     if (action === "reset") { session = 1; updates = 0; checkpoint = null; if (log) log.innerHTML = ""; render(); }
   }));
 }
@@ -132,8 +132,8 @@ function initContext(): void {
   const root = document.querySelector("#grok-context"); if (!root) return; let percent = 42;
   const render = (note?: string) => { const fill = qs<HTMLElement>(root, "[data-fill]"); if (fill) fill.style.width = `${percent}%`; const p = qs<HTMLElement>(root, "[data-percent]"); if (p) p.textContent = `${percent}%`; const s = qs<HTMLElement>(root, "[data-status]"); if (s) s.textContent = `${percent}%`; const policy = qs<HTMLElement>(root, "[data-policy]"); if (policy) policy.textContent = percent >= 85 ? "触发 auto compact" : percent >= 72 ? "接近阈值" : "继续采样"; if (note) { const n = qs<HTMLElement>(root, "[data-note]"); if (n) n.textContent = note; } };
   qsa<HTMLButtonElement>(root, "[data-add]").forEach((b) => b.addEventListener("click", () => { percent = Math.min(100, percent + Number(b.dataset.add)); render(); }));
-  qs<HTMLButtonElement>(root, "[data-compact]")?.addEventListener("click", () => { percent = 31; render("历史被摘要化，并记录 compaction checkpoint；不是简单删除最旧消息。"); });
-  qs<HTMLButtonElement>(root, "[data-reset]")?.addEventListener("click", () => { percent = 42; render("85% 是当前文档中的默认配置值，真实触发还受模型窗口、估算与版本影响。"); });
+  qs<HTMLButtonElement>(root, "[data-compact]")?.addEventListener("click", () => { percent = 31; render("旧历史被摘要替换；规则、最新请求与运行态随后显式重建。"); });
+  qs<HTMLButtonElement>(root, "[data-reset]")?.addEventListener("click", () => { percent = 42; render("85% 是该快照的默认触发值，实际值可被配置覆盖。"); });
 }
 
 function initSurface(id: string, data: Record<string, Array<[string, string]>>): void {
@@ -155,10 +155,10 @@ function boot(): void {
   initSession();
   initContext();
   initChoiceDetail("#grok-architecture", {
-    render: { title: "xai-grok-pager", body: "先检查 scrollback block、布局约束和 render snapshot；Session 事件可能完全正确。", status: "PAGER" },
-    stall: { title: "xai-grok-shell / sampling", body: "核对 stop reason、pending tool call、取消状态和回合完成事件。", status: "SHELL" },
-    missing: { title: "AgentBuilder → ToolRegistry", body: "核对 definition 的 allowlist/denylist、tool name override 与最终 tool_definitions。", status: "AGENT / TOOLS" },
-    dirty: { title: "xai-grok-workspace", body: "检查命令进程、VCS 状态、checkpoint 与工具完成通知是否一致。", status: "WORKSPACE" },
+    render: { title: "展示与承载层", body: "先比较客户端收到的事件与最终布局；会话事实可能完全正确，只是投影错了。", status: "SURFACE" },
+    stall: { title: "会话与采样层", body: "核对 TurnOutcome、待回填工具结果、插话、取消和外层续跑闸门。", status: "SESSION" },
+    missing: { title: "能力装配与工具注册层", body: "区分工具是否被发现、是否可见、是否可派发，以及是否被当前工具集裁掉。", status: "CAPABILITY" },
+    dirty: { title: "执行世界与工作区层", body: "检查命令终态、实际 VCS/文件状态与回填证据是否一致。", status: "WORKSPACE" },
   });
   initChoiceDetail("#grok-tools", {
     hidden: { title: "Agent capability selection", body: "读取最终 tool definitions，确认工具没有被 allowlist、denylist、mode 或 feature gate 裁掉。" },
@@ -173,18 +173,18 @@ function boot(): void {
     rewind: { title: "Checkpoint → VCS/filesystem restore", body: "回退应以已记录边界恢复副作用，再用 Session update 让客户端重建视图。" },
   });
   initChoiceDetail("#grok-extensions", {
-    rules: { title: "AGENTS.md · 行为约束", body: "从全局与项目路径发现，注入系统提示；它不新增可执行工具。" },
-    skills: { title: "Skills · 渐进式流程知识", body: "按名称或匹配发现 SKILL.md，向 Agent 注入专门工作流；仍需现有工具执行。" },
-    mcp: { title: "MCP · 外部能力协议", body: "发现服务器工具并纳入 registry；调用仍经过权限、通知与输出归一化。" },
-    plugins: { title: "Plugins · 可分发扩展包", body: "把 Skills、Hooks、MCP 等能力组织成安装和市场分发单元。" },
-    hooks: { title: "Hooks · 确定性生命周期代码", body: "在明确事件上执行脚本或策略，适合审计和阻断，不应冒充模型推理。" },
-    memory: { title: "Memory · 跨 Session 检索层", body: "通过观察、索引与 memory_search 提供长期事实；命中仍需接受当前上下文验证。" },
+    rules: { title: "AGENTS.md · 行为约束", body: "规则以独立的项目指令项注入，并在压缩后逐字重建；它不新增可执行工具。" },
+    skills: { title: "Skills · 渐进式流程知识", body: "SKILL.md 提供专门工作流；同名项按来源优先级去重，执行仍依赖已有工具。" },
+    mcp: { title: "MCP · 外部能力协议", body: "工具先注册和索引，模型再通过 search/use 两段式发现；调用仍经过权限与结果归一化。" },
+    plugins: { title: "Plugins · 可分发扩展包", body: "把 agents、Skills、Hooks 与 MCP 组合为分发单元；项目来源仍要过目录信任。" },
+    hooks: { title: "Hooks · 确定性生命周期代码", body: "在明确事件上裁决、改写或补充上下文；改写工具参数后必须重新通过 schema。" },
+    memory: { title: "Memory · 跨会话证据层", body: "markdown 保存可审计真相，检索索引可重建；旧命中必须用当前现场复核。" },
   });
   initSurface("#grok-surfaces", {
     tui: [["消费者", "开发者"], ["输入", "全屏 Prompt / slash commands"], ["输出", "Scrollback、diff、modal"], ["共享内核", "Session + Agent + Workspace"]],
-    headless: [["消费者", "脚本与 CI"], ["输入", "grok -p"], ["输出", "plain / JSON / streaming JSON"], ["关键边界", "非交互授权必须显式配置"]],
+    headless: [["消费者", "远端与无人值守客户端"], ["输入", "relay 会话消息"], ["输出", "流式会话事件"], ["关键边界", "ping、半开检测与重连"]],
     acp: [["消费者", "IDE 与 Agent 客户端"], ["输入", "ACP PromptRequest"], ["输出", "SessionUpdate / ToolCallUpdate"], ["关键边界", "客户端不拥有运行时状态"]],
-    serve: [["消费者", "本地网络客户端"], ["输入", "WebSocket"], ["输出", "ACP 会话流"], ["关键边界", "本地 server 生命周期与访问边界"]],
+    serve: [["消费者", "可信远端执行消费者"], ["输入", "JSON-RPC 工具调用"], ["输出", "本地工作区工具结果"], ["关键边界", "完整提示与工具结果可能离开本机"]],
     leader: [["消费者", "多个 CLI/会话"], ["输入", "本地传输协议"], ["输出", "复用常驻宿主"], ["关键边界", "锁、认证刷新与进程生命周期"]],
   });
   initChapterReader();

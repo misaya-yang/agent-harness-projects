@@ -10,7 +10,7 @@
 - **OpenClaw 内核图谱**：三层循环、有界 run 预算、双 SQLite 状态、记忆/自动化唤醒、多通道网关与人格扩展。
 - **Hermes Agent 内核图谱**：Python 单体内核、学习闭环、窄腰工具、七个执行后端、状态库、网关与两代演化谱系。
 
-每门课程都用「理论 → 心智模型 → 交互实验 → 调试/面试视角」讲解，并明确区分源码事实、版本相关默认值与参考设计。阅读器以课程地图和单章舞台组织内容，支持章节直达、前后章切换与浏览器返回；JS 失效时仍保留完整静态长文。
+每门课程都用「具体问题 → 短运行轨迹 → 交互实验 → 工程判断」讲解。网页正文不要求学生追文件路径或行号；版本与证据映射保留在独立分析资料中。阅读器以课程地图和单章舞台组织内容，支持章节直达、前后章切换与浏览器返回；JS 失效时仍保留完整静态长文。
 
 ## 运行
 
@@ -64,15 +64,10 @@ Hermes Agent 课程另含回合生命周期步进机、Footprint Ladder 判定�
 
 ## 事实边界
 
-- App Server、Thread / Turn / Item、MCP、Skills 与审批协议以 OpenAI 官方文档为准。
-- PostgreSQL 投影、签名租约和 HTTP 服务面属于课程中的平台扩展参考架构，不代表 Codex 上游唯一实现。
-- 固定上下文窗口与压缩阈值均为教学示意；生产配置随模型和版本变化。
-- Grok Build 课程以本地开源快照的 `SOURCE_REV`、随仓用户指南与 Rust 源码为事实边界；默认值和实验性模块可能随版本变化。
-- DeepSeek Harness 课程以本地提交 `b150a55` 为事实边界；项目仍处于 developer preview，E2B、Dynamic Cordis 与平台隔离能力均按源码中的 POC、opt-in 或 probe 边界表述。
-- Pi Agent 课程以本地提交 `a470b121b` 为事实边界；基础 Agent、Coding Agent JSONL Session 与实验性 Server Protocol 分层表述，并明确 Pi 默认没有内建权限系统或 Sandbox。
-- OpenCode 课程以本地 checkout 的 TypeScript 源码（`packages/opencode`）为事实边界；TUI 已重写为 @opentui + Solid，文中行号引用适合教学定位、不适合当长期链接。
-- OpenClaw 课程以本地快照 `e6915d09` 为事实边界；审批、状态 schema 与通道行为均按源码中的版本相关默认值表述。
-- Hermes Agent 课程以本地 Python 快照（单 commit checkout）为事实边界；43 万字符单体类的行号引用同理，只作教学定位。
+- 本轮课程依据 2026-09-03 的预整理分析资料更新，七个快照依次为 Codex `498d40b2`、Grok Build `72a61251`、DeepSeek Harness `49a606bc`、Pi `4e69b0c2`、OpenCode `b578b726`、OpenClaw `5e9875ab`、Hermes `97f3229d`。
+- 网页只呈现学生需要的机制、运行轨迹、取舍与练习；源码文件、行号和证据映射不再混入课程正文。
+- 数字默认值、实验特性和迁移中能力只对对应快照与入口成立；页面会明确区分当前实现、实验能力与教学简化。
+- 交互装置用于解释状态变化，不模拟官方 API，也不构成性能、安全或产品能力承诺。
 
 ## 技术选型
 

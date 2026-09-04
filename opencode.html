@@ -1,322 +1,141 @@
 <!doctype html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="从 runLoop 终止判定到事件投影、权限审批与子代理，交互式拆解 OpenCode 的服务器内核。" />
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="OpenCode 内核图谱 · 顶级 Agent 教学系列" />
-    <meta property="og:description" content="沿着 POST /session/:id/message、GET /event、Tools Registry、Permission Deferred 与 Compaction，读懂终端优先的 Agent 服务器。" />
-    <meta property="og:url" content="https://codex-kernel-atlas.lvy-u.chatgpt.site/opencode" />
-    <link rel="canonical" href="https://codex-kernel-atlas.lvy-u.chatgpt.site/opencode" />
-    <meta name="twitter:card" content="summary" />
-    <title>OpenCode 内核图谱 · 顶级 Agent 教学系列</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=Noto+Sans+SC:wght@400;500;700&amp;family=Noto+Serif+SC:wght@700;900&amp;display=swap" rel="stylesheet" />
-    <link href="/src/styles/tokens.css" rel="stylesheet" />
-    <script>
-      document.documentElement.classList.add("js");
-      try { const t = localStorage.getItem("codex-atlas-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch {}
-      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) document.documentElement.classList.add("rm");
-    </script>
-  </head>
-  <body class="opencode-page" data-agent="opencode">
-    <a class="skip-link" href="#main">跳到正文</a>
-    <div class="progress-line" aria-hidden="true"></div>
-    <header class="topbar">
-      <a class="brand" href="#top"><span class="brand-long">OpenCode</span><span class="brand-short">OC</span> 图谱 <span class="label-mono">FIELD GUIDE</span></a>
-      <div class="topbar-actions"><div data-series-nav data-variant="top"><a class="series-fallback" href="/codex">Agent 系列</a></div><button class="theme-btn" type="button" data-theme-toggle aria-label="切换到深色模式"><span aria-hidden="true" data-theme-icon>◐</span><span data-theme-label>深色模式</span></button><button class="menu-btn" type="button" data-menu-btn aria-expanded="false" aria-controls="chapter-nav">章节</button></div>
-    </header>
-    <nav class="chapter-nav" id="chapter-nav" data-menu-panel hidden aria-label="课程章节">
-      <a href="#top" data-spy-link><span class="no">00</span>课程入口</a>
-      <a href="#loop" data-spy-link><span class="no">01</span>主循环与终止</a>
-      <a href="#server" data-spy-link><span class="no">02</span>客户端与服务器</a>
-      <a href="#projection" data-spy-link><span class="no">03</span>会话与状态投影</a>
-      <a href="#tools" data-spy-link><span class="no">04</span>工具注册表</a>
-      <a href="#permission" data-spy-link><span class="no">05</span>权限与审批</a>
-      <a href="#system" data-spy-link><span class="no">06</span>上下文组装</a>
-      <a href="#compaction" data-spy-link><span class="no">07</span>压缩与溢出</a>
-      <a href="#subagent" data-spy-link><span class="no">08</span>子代理</a>
-      <a href="#models" data-spy-link><span class="no">09</span>模型双运行时</a>
-      <a href="#extensions" data-spy-link><span class="no">10</span>扩展生态</a>
-      <a href="#governance" data-spy-link><span class="no">11</span>资源治理</a>
-      <a href="#practice" data-spy-link><span class="no">12</span>实践与面试</a>
-    </nav>
-    <aside class="rail" aria-label="课程章节">
-      <a class="brand" href="#top">OpenCode 图谱</a>
-      <a href="#top" data-spy-link><span class="no">00</span>课程入口</a>
-      <a href="#loop" data-spy-link><span class="no">01</span>主循环与终止</a>
-      <a href="#server" data-spy-link><span class="no">02</span>客户端与服务器</a>
-      <a href="#projection" data-spy-link><span class="no">03</span>会话与状态投影</a>
-      <a href="#tools" data-spy-link><span class="no">04</span>工具注册表</a>
-      <a href="#permission" data-spy-link><span class="no">05</span>权限与审批</a>
-      <a href="#system" data-spy-link><span class="no">06</span>上下文组装</a>
-      <a href="#compaction" data-spy-link><span class="no">07</span>压缩与溢出</a>
-      <a href="#subagent" data-spy-link><span class="no">08</span>子代理</a>
-      <a href="#models" data-spy-link><span class="no">09</span>模型双运行时</a>
-      <a href="#extensions" data-spy-link><span class="no">10</span>扩展生态</a>
-      <a href="#governance" data-spy-link><span class="no">11</span>资源治理</a>
-      <a href="#practice" data-spy-link><span class="no">12</span>实践与面试</a>
-      <button class="theme-btn rail-theme" type="button" data-theme-toggle aria-label="切换到深色模式"><span aria-hidden="true" data-theme-icon>◐</span><span data-theme-label>深色模式</span></button>
-    </aside>
-    <main id="main">
-      <div data-series-nav data-variant="tabs"><nav class="course-tabs" aria-label="选择 Agent 课程"><a href="/codex">Codex</a><a href="/grok">Grok Build</a><a href="/deepseek">DeepSeek Harness</a><a href="/pi">Pi Agent</a><a href="/opencode" aria-current="page">OpenCode</a><a href="/openclaw">OpenClaw</a><a href="/hermes">Hermes Agent</a></nav></div>
-      <section class="hero shell" id="top" data-spy>
-        <div class="hero-grid">
-          <div data-reveal>
-            <p class="eyebrow label-mono">SERVER AS KERNEL · SOURCE-LED</p>
-            <h1>看懂 OpenCode 如何<span class="alt">把服务器当内核，让终端只是一个壳。</span></h1>
-            <p class="sub">跟踪一条“删掉 tmp 目录”的指令：<code>POST /session/:id/message</code> 是把用户消息喂进主循环的主入口（<code>/command</code>、<code>/shell</code>、<code>prompt_async</code> 同样落在 <code>SessionPrompt</code>），<code>runLoop</code> 组装、推理、执行、判定；权限审批、压缩、子代理与回退全部被表达为这个循环的输入或事件，而不是循环之外的旁路。</p>
-            <ul class="hero-outcomes" aria-label="学完本课程你将能够"><li>用终止三条件与 hasToolCalls 的两类排除，解释一个回合为什么停、为什么续</li><li>沿 <code>/event</code> SSE 流与 opencode.db 事件行还原模型实际见过什么</li><li>把审批、压缩、子代理放回 runLoop 的输入与事件里理解</li></ul>
-            <div class="hero-cta"><a class="btn-primary" href="#loop">进入主循环 <span class="arrow" aria-hidden="true">→</span></a><a class="btn-secondary" href="#opencode-source-route">先看源码路线</a></div>
-          </div>
-          <figure class="hero-loop" data-hero-loop data-reveal data-reveal-delay="120">
-            <svg viewBox="0 0 480 360" role="img" aria-labelledby="oc-hero-title oc-hero-desc">
-              <title id="oc-hero-title">OpenCode runLoop 主循环图</title>
-              <desc id="oc-hero-desc">输入、组装、推理、执行、判定五节点循环，判定后回到组装或空闲广播。</desc>
-              <circle class="ring" cx="240" cy="180" r="128" />
-              <g class="hnode"><circle cx="240" cy="48" r="38"/><text x="240" y="44" text-anchor="middle">输入</text><text class="hno" x="240" y="61" text-anchor="middle">IN</text></g>
-              <g class="hnode"><circle cx="365" cy="140" r="38"/><text x="365" y="136" text-anchor="middle">组装</text><text class="hno" x="365" y="153" text-anchor="middle">AS</text></g>
-              <g class="hnode"><circle cx="318" cy="288" r="38"/><text x="318" y="284" text-anchor="middle">推理</text><text class="hno" x="318" y="301" text-anchor="middle">LL</text></g>
-              <g class="hnode"><circle cx="162" cy="288" r="38"/><text x="162" y="284" text-anchor="middle">执行</text><text class="hno" x="162" y="301" text-anchor="middle">TO</text></g>
-              <g class="hnode"><circle cx="115" cy="140" r="38"/><text x="115" y="136" text-anchor="middle">判定</text><text class="hno" x="115" y="153" text-anchor="middle">EX</text></g>
-              <circle class="packet" cx="240" cy="52" r="5">
-                <animateTransform attributeName="transform" type="rotate" from="0 240 180" to="360 240 180" dur="7s" repeatCount="indefinite" />
-              </circle>
-            </svg>
-            <figcaption>
-              <span>runLoop / kernel map</span>
-              <button class="pause-btn" type="button" data-loop-pause aria-pressed="false">⏸ 暂停</button>
-            </figcaption>
-          </figure>
-        </div>
-        <div class="hero-meta label-mono" aria-label="课程范围"><span>SOURCE SNAPSHOT · 754bb7e</span><span>12 章 · 09 个实验</span><span>读循环 → 追事件 → 换表面</span></div>
-      </section>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="事故驱动的 OpenCode Agent Harness 课程：分清当前 v1 CLI 与迁移中 v2。" />
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content="OpenCode 生存指南 · 顶级 Agent 教学系列" />
+  <meta property="og:description" content="从失控事故到判断法，学会循环、上下文、权限、子代理与错误恢复。" />
+  <meta property="og:url" content="https://harness.lvy-u.chatgpt.site/opencode" />
+  <link rel="canonical" href="https://harness.lvy-u.chatgpt.site/opencode" />
+  <meta name="twitter:card" content="summary" />
+  <title>OpenCode 生存指南 · 顶级 Agent 教学系列</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=Noto+Sans+SC:wght@400;500;700&amp;family=Noto+Serif+SC:wght@700;900&amp;display=swap" rel="stylesheet" />
+  <link href="/src/styles/tokens.css" rel="stylesheet" />
+  <script>
+    document.documentElement.classList.add("js");
+    try { const t = localStorage.getItem("codex-atlas-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch {}
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) document.documentElement.classList.add("rm");
+  </script>
+</head>
+<body class="opencode-page" data-agent="opencode">
+  <a class="skip-link" href="#main">跳到正文</a><div class="progress-line" aria-hidden="true"></div>
+  <header class="topbar"><a class="brand" href="#top"><span class="brand-long">OpenCode</span><span class="brand-short">OC</span> 指南 <span class="label-mono">FIELD GUIDE</span></a><div class="topbar-actions"><div data-series-nav data-variant="top"><a class="series-fallback" href="/codex">Agent 系列</a></div><button class="theme-btn" type="button" data-theme-toggle aria-label="切换到深色模式"><span aria-hidden="true" data-theme-icon>◐</span><span data-theme-label>深色模式</span></button><button class="menu-btn" type="button" data-menu-btn aria-expanded="false" aria-controls="chapter-nav">章节</button></div></header>
+  <nav class="chapter-nav" id="chapter-nav" data-menu-panel hidden aria-label="课程章节">
+    <a href="#top" data-spy-link><span class="no">00</span>课程入口</a><a href="#loop" data-spy-link><span class="no">01</span>主循环与终止</a><a href="#server" data-spy-link><span class="no">02</span>客户端与服务器</a><a href="#projection" data-spy-link><span class="no">03</span>会话与状态投影</a><a href="#tools" data-spy-link><span class="no">04</span>工具注册表</a><a href="#permission" data-spy-link><span class="no">05</span>权限与审批</a><a href="#system" data-spy-link><span class="no">06</span>上下文组装</a><a href="#compaction" data-spy-link><span class="no">07</span>压缩与溢出</a><a href="#subagent" data-spy-link><span class="no">08</span>子代理</a><a href="#models" data-spy-link><span class="no">09</span>模型与错误</a><a href="#extensions" data-spy-link><span class="no">10</span>扩展生态</a><a href="#governance" data-spy-link><span class="no">11</span>资源治理</a><a href="#practice" data-spy-link><span class="no">12</span>实践与面试</a>
+  </nav>
+  <aside class="rail" aria-label="课程章节">
+    <a class="brand" href="#top">OpenCode 指南</a><a href="#top" data-spy-link><span class="no">00</span>课程入口</a><a href="#loop" data-spy-link><span class="no">01</span>主循环与终止</a><a href="#server" data-spy-link><span class="no">02</span>客户端与服务器</a><a href="#projection" data-spy-link><span class="no">03</span>会话与状态投影</a><a href="#tools" data-spy-link><span class="no">04</span>工具注册表</a><a href="#permission" data-spy-link><span class="no">05</span>权限与审批</a><a href="#system" data-spy-link><span class="no">06</span>上下文组装</a><a href="#compaction" data-spy-link><span class="no">07</span>压缩与溢出</a><a href="#subagent" data-spy-link><span class="no">08</span>子代理</a><a href="#models" data-spy-link><span class="no">09</span>模型与错误</a><a href="#extensions" data-spy-link><span class="no">10</span>扩展生态</a><a href="#governance" data-spy-link><span class="no">11</span>资源治理</a><a href="#practice" data-spy-link><span class="no">12</span>实践与面试</a><button class="theme-btn rail-theme" type="button" data-theme-toggle aria-label="切换到深色模式"><span aria-hidden="true" data-theme-icon>◐</span><span data-theme-label>深色模式</span></button>
+  </aside>
+  <main id="main">
+    <div data-series-nav data-variant="tabs"><nav class="course-tabs" aria-label="选择 Agent 课程"><a href="/codex">Codex</a><a href="/grok">Grok Build</a><a href="/deepseek">DeepSeek Harness</a><a href="/pi">Pi Agent</a><a href="/opencode" aria-current="page">OpenCode</a><a href="/openclaw">OpenClaw</a><a href="/hermes">Hermes Agent</a></nav></div>
+    <section class="hero shell" id="top" data-spy>
+      <div class="hero-grid"><div data-reveal><p class="eyebrow label-mono">ACCIDENT-DRIVEN · SNAPSHOT B578B72</p><h1>一个失控的 Agent，怎样靠<span class="alt">持久状态重新站起来。</span></h1><p class="sub">一条普通指令可能卡在审批、重复调用工具、塞满上下文，或在重启后留下半截调用。本课把事故串成一条可推演的链：输入怎样成为轮次，状态怎样决定续停，失败怎样重新变成下一步。</p><ul class="hero-outcomes" aria-label="学完本课程你将能够"><li>定位卡住、停不下、提前结束的真正归属层</li><li>画出工具从可见、获批、执行到结算的短 trace</li><li>设计可恢复的会话、权限与错误机制</li><li>准确区分当前 v1 CLI 与迁移中 v2</li></ul><div class="hero-cta"><a class="btn-primary" href="#loop">从事故开始 <span class="arrow" aria-hidden="true">→</span></a><a class="btn-secondary" href="#models">先看版本边界</a></div></div>
+        <figure class="hero-loop" data-hero-loop data-reveal data-reveal-delay="120"><svg viewBox="0 0 480 360" role="img" aria-labelledby="oc-hero-title oc-hero-desc"><title id="oc-hero-title">OpenCode 单轮循环图</title><desc id="oc-hero-desc">输入、组装、推理、执行、判定五节点循环。</desc><circle class="ring" cx="240" cy="180" r="128" /><g class="hnode"><circle cx="240" cy="48" r="38"/><text x="240" y="44" text-anchor="middle">输入</text><text class="hno" x="240" y="61" text-anchor="middle">IN</text></g><g class="hnode"><circle cx="365" cy="140" r="38"/><text x="365" y="136" text-anchor="middle">组装</text><text class="hno" x="365" y="153" text-anchor="middle">AS</text></g><g class="hnode"><circle cx="318" cy="288" r="38"/><text x="318" y="284" text-anchor="middle">推理</text><text class="hno" x="318" y="301" text-anchor="middle">LL</text></g><g class="hnode"><circle cx="162" cy="288" r="38"/><text x="162" y="284" text-anchor="middle">执行</text><text class="hno" x="162" y="301" text-anchor="middle">TO</text></g><g class="hnode"><circle cx="115" cy="140" r="38"/><text x="115" y="136" text-anchor="middle">判定</text><text class="hno" x="115" y="153" text-anchor="middle">EX</text></g><circle class="packet" cx="240" cy="52" r="5"><animateTransform attributeName="transform" type="rotate" from="0 240 180" to="360 240 180" dur="7s" repeatCount="indefinite" /></circle></svg><figcaption><span>persistent state → next action</span><button class="pause-btn" type="button" data-loop-pause aria-pressed="false">⏸ 暂停</button></figcaption></figure>
+      </div>
+      <div class="hero-meta label-mono" aria-label="课程范围"><span>VERIFIED SNAPSHOT · b578b7261fc9</span><span>12 章 · 09 个实验</span><span>事故 → 白话 → 判断 → 迁移</span></div>
+    </section>
 
-      <section class="chapter shell" id="loop" data-spy>
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 01 · THE EXIT TEST</span><h2>循环没有“完成检测器”，只有“无话可续”证明——最后一条 assistant 消息不带待处理工具调用，就是回合的终点。</h2><p class="lede"><code>runLoop</code> 是一个朴素的 <code>while(true)</code>。本章逐步拆解主循环环节，重点在 :1111-1115 的终止三条件合取，以及 <code>hasToolCalls</code>（:1106-1108）对“provider 谎报 stop”的防御。</p></header>
-        <article class="lesson-brief" id="opencode-source-route" data-reveal>
-          <span class="label-mono">SOURCE ROUTE · OPENCODE 754bb7e</span><h3>先读四个入口，再操作下面的主循环步进器。</h3><p>四处源码分别回答“一个用户回合如何展开成 N 个 step、客户端如何进入同一个大脑、工具清单怎样过滤、上下文快爆时怎么办”。</p>
-          <ol class="source-route">
-            <li><span><code>packages/opencode/src/session/prompt.ts</code><strong>runLoop</strong>（:1081-1341）：一个用户回合如何展开成 N 个 step？循环凭什么停下？</span></li>
-            <li><span><code>packages/opencode/src/server/routes/instance/httpapi/groups/session.ts</code><strong>Session / Event 路由组</strong>（+ <code>groups/event.ts</code>、<code>handlers/event.ts</code>）：所有客户端如何进入同一个大脑、如何收广播？</span></li>
-            <li><span><code>packages/opencode/src/tool/registry.ts</code><strong>registry.tools + SessionTools.resolve</strong>（:231-303 / tools.ts:41-121）：工具清单如何按模型 / agent / 权限三层过滤后交给 LLM？</span></li>
-            <li><span><code>packages/opencode/src/session/overflow.ts</code><strong>isOverflow + compaction</strong>（:8-34）：上下文快爆时，内核是丢消息、报错还是自己给自己喂摘要？</span></li>
-          </ol>
-          <p class="lesson-result"><strong>学完本章你能：</strong>把任意一次“卡住 / 停不下来 / 提前收摊”的异常，翻译成终止三条件与循环事件流上的一次可验证检查。</p>
-        </article>
-        <ol class="kp-list" data-reveal><li data-no="01"><span><strong>终止三条件</strong>：<code>finish ∉ {tool-calls, unknown}</code> ∧ <code>!hasToolCalls</code> ∧ <code>lastAssistant.parentID === lastUser.id</code>，三条合取即 break（prompt.ts:1111-1115）。<code>hasToolCalls</code> 只数<b>非 providerExecuted、非孤儿中断</b>的 tool part（:1106-1108）——这是对 “provider 谎报 stop” 的防御；存在孤儿中断工具时照样退出，只是先打 <code>loop exit with orphaned interrupted tool</code> 告警（:1116-1127）。</span></li><li data-no="02"><span><strong>历史重建</strong>：每轮先 <code>filterCompacted</code> 从最近一条摘要消息之后重建历史（message-v2.ts:521-578），压缩对循环完全透明。</span></li><li data-no="03"><span><strong>并行杂务</strong>：<code>step === 1</code> 时异步 spawn title agent 起标题、summary 统计 diff（prompt.ts:1133,1252），不阻塞主线。</span></li><li data-no="04"><span><strong>同 session 串行</strong>：靠 <code>ensureRunning</code> + <code>RunnerBusy</code>（run-state.ts:88-107），忙则 BusyError——单飞是设计而非 bug。</span></li></ol>
-        <div class="machine" id="oc-loop" data-reveal><div class="machine-bar"><span class="title"><span class="led" data-led></span><strong>runLoop 主循环步进机</strong></span><span class="label-mono" data-phase>idle</span></div><div class="machine-body loop-layout"><ol class="m-steps" data-steps><li data-no="01">落用户消息</li><li data-no="02">循环开闸</li><li data-no="03">历史重建</li><li data-no="04">终止检查</li><li data-no="05">装工具</li><li data-no="06">流式推理</li><li data-no="07">工具审批</li><li data-no="08">步结算</li><li data-no="09">压缩续跑</li><li data-no="10">收摊广播</li></ol><div><div class="m-controls"><button class="cbtn primary" type="button" data-run>▶ 连续</button><button class="cbtn" type="button" data-step>单步 →</button><button class="cbtn" type="button" data-reset>重置</button></div><p class="stage-note" data-note>逐步观察一个回合怎样被展开成事件流。</p></div><div class="loop-logwrap stream-log elog" data-log aria-live="polite"></div></div></div>
-        <div class="decision" data-reveal><span class="label-mono">EXIT TEST</span><p>“provider 报了 finish=stop”不足以退出循环：只要 assistant 消息上还挂着未处理的 tool part，循环继续。这就是 <code>hasToolCalls</code> 存在的理由——终止判定防御的是模型侧的谎报与截断。</p></div>
+    <section class="chapter shell" id="loop" data-spy>
+      <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 01 · WHY WON'T IT STOP?</span><h2>模型已经说“完成”，Agent 却又跑了一轮。</h2><p class="lede">当前 v1 CLI 不只听模型口头说“停”。每轮重读持久历史，再检查回复结论、工具痕迹和父子消息关系；三项同时成立才退出。</p></header>
+      <article class="lesson-brief" id="oc-runloop-code" data-reveal><span class="label-mono">SHORT TRACE · CURRENT CLI V1</span><h3>把循环压成六步</h3><p><code>重读历史 → 判断续停 → 组装上下文与工具 → 调模型 → 结算工具与用量 → 再读历史</code>。用户插话只是新增一条用户消息，下一轮自然改变“最后问题”。</p><div class="stream-log elog"><span class="k-user">while</span> (<span class="k-user">true</span>) {
+  history = <span class="k-tool">readDurableHistory</span>()
+  <span class="k-user">if</span> (<span class="k-tool">finishedNormally</span>(history)
+      &amp;&amp; !<span class="k-tool">hasLocalToolPart</span>(history)
+      &amp;&amp; <span class="k-tool">answersLatestUser</span>(history)) <span class="k-user">break</span>
+  <span class="k-tool">persistEverySettledPart</span>(<span class="k-user">yield</span> <span class="k-tool">runOneModelStep</span>(history))
+}</div><p class="lesson-result"><strong>判断法：</strong>先问“持久历史现在长什么样”，不要先问内存 finished 标志。</p></article>
+      <div class="machine" id="oc-loop" data-reveal><div class="machine-bar"><span class="title"><span class="led" data-led></span><strong>主循环步进机</strong></span><span class="label-mono" data-phase>idle</span></div><div class="machine-body loop-layout"><ol class="m-steps" data-steps><li data-no="01">落用户消息</li><li data-no="02">循环开闸</li><li data-no="03">历史重建</li><li data-no="04">终止检查</li><li data-no="05">装工具</li><li data-no="06">流式推理</li><li data-no="07">工具审批</li><li data-no="08">步结算</li><li data-no="09">压缩续跑</li><li data-no="10">收摊广播</li></ol><div><div class="m-controls"><button class="cbtn primary" type="button" data-run>▶ 连续</button><button class="cbtn" type="button" data-step>单步 →</button><button class="cbtn" type="button" data-reset>重置</button></div><p class="stage-note" data-note>逐步观察一个请求如何展开为多个轮次。</p></div><div class="loop-logwrap stream-log elog" data-log aria-live="polite"></div></div></div>
+      <div class="decision" data-reveal><span class="label-mono">小结 · 30 秒自测</span><p>provider 报 <code>stop</code>，但回复里有本地工具调用：v1 续一轮。练习：把自己的退出条件改写成可从持久数据重算的谓词。</p></div>
+    </section>
 
-        <article class="lesson-brief" id="oc-runloop-code" data-reveal>
-          <span class="label-mono">SOURCE-ALIGNED TEACHING SKELETON · SESSIONPROMPT.RUNLOOP</span>
-          <h3>主循环教学骨架（对齐 <code>packages/opencode/src/session/prompt.ts:1081-1341</code>）</h3>
-          <p>下面是结构、命名、语义对齐真实源码的教学骨架，省略日志、中断与错误分支，<strong>非上游源码复制</strong>；注释行号是真实源码位置。</p>
-          <div class="stream-log elog" style="max-height: 480px; overflow-y: auto; padding: 16px; border-radius: var(--r-control); background: var(--surface-console); border: 1px solid var(--line-on-console);">
-<span class="k-sys">// SessionPrompt.runLoop — 教学骨架（对齐 prompt.ts，注释行号为真实源码位置）</span>
-<span class="k-user">import</span> { Effect } <span class="k-user">from</span> <span class="k-model">"effect"</span>;
+    <section class="chapter band-deep" id="server" data-spy><div class="shell">
+      <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 02 · ONE BRAIN, MANY SURFACES</span><h2>TUI 正常，Web 却看见另一份状态。</h2><p class="lede">终端、Web、桌面、IDE 与 SDK 经过同一张 HTTP/事件契约；本地嵌入只是把网络 fetch 换成进程内或线程内 fetch。</p></header>
+      <ol class="kp-list" data-reveal><li data-no="01"><span><strong>最短 trace</strong>：<code>客户端 → 统一路由 → 按目录实例 → 会话循环 → 事件流 → 客户端</code>。</span></li><li data-no="02"><span><strong>实例边界</strong>：一个进程服务多个目录；首次并发加载合并成一次，销毁时广播。</span></li><li data-no="03"><span><strong>实时边界</strong>：会话事件走 SSE；交互终端字节流才走 WebSocket。</span></li><li data-no="04"><span><strong>安全边界</strong>：开启局域网发现会扩大绑定面，未配置认证时应视为暴露风险。</span></li></ol>
+      <div class="machine" id="oc-surfaces" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>表面接线板</strong></span><span class="label-mono" data-status>选择表面</span></div><div class="machine-body surface-layout"><div class="surface-choices"><button class="cbtn" type="button" data-key="tui" aria-pressed="false">终端 TUI</button><button class="cbtn" type="button" data-key="serve" aria-pressed="false">HTTP 服务</button><button class="cbtn" type="button" data-key="run" aria-pressed="false">Headless CLI</button><button class="cbtn" type="button" data-key="github" aria-pressed="false">GitHub Actions</button><button class="cbtn" type="button" data-key="acp" aria-pressed="false">IDE（Zed 等）</button><button class="cbtn" type="button" data-key="desktop" aria-pressed="false">桌面 / Web</button></div><dl class="surface-detail" data-detail><div><dt>消费者</dt><dd>选择一种运行表面</dd></div><div><dt>共同内核</dt><dd>同一个 server app 与会话循环</dd></div></dl></div></div>
+      <div class="decision" data-reveal><span class="label-mono">小结 · 能做什么</span><p>用“传输不同、协议相同”设计嵌入式 Agent。排障先比较目录实例与事件订阅，不要同时改两个前端。</p></div>
+    </div></section>
 
-<span class="k-user">function*</span> <span class="k-tool">runLoop</span>(sessionID: <span class="k-model">SessionID</span>) {
-  <span class="k-user">let</span> step = 0;
-  <span class="k-user">while</span> (<span class="k-user">true</span>) {
-    <span class="k-user">yield*</span> status.<span class="k-tool">set</span>(sessionID, { type: <span class="k-model">"busy"</span> });              <span class="k-sys">// :1089</span>
+    <section class="chapter shell" id="projection" data-spy>
+      <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 03 · WHAT SURVIVES A CRASH?</span><h2>进程重启后，半截工具调用让下一次请求非法。</h2><p class="lede">v1 以消息与 part 表作为循环判据；v2 把 durable 事件当权威、查询表当投影。两代都守一条底线：恢复后的历史必须仍是合法对话。</p></header>
+      <div class="machine" id="oc-projection" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>事件 → 状态投影台</strong></span><span class="label-mono">teaching projection</span></div><div class="machine-body state-layout"><div><div class="state-counters"><div><span class="label-mono">SQL ROWS</span><strong data-sqlite>0</strong></div><div><span class="label-mono">SSE EVENTS</span><strong data-sse>0</strong></div><div><span class="label-mono">PENDING</span><strong data-pending>0</strong></div><div><span class="label-mono">COST</span><strong data-cost>¥0.00</strong></div></div><div class="state-actions"><button class="cbtn primary" type="button" data-event="created">+ session.created</button><button class="cbtn" type="button" data-event="user">+ message.updated (user)</button><button class="cbtn" type="button" data-event="part">+ part.updated (delta)</button><button class="cbtn" type="button" data-event="stepfinish">+ step-finish</button><button class="cbtn" type="button" data-event="asked">+ permission.asked</button><button class="cbtn" type="button" data-event="replied">+ permission.replied</button><button class="cbtn" type="button" data-event="idle">+ session.idle</button><button class="cbtn" type="button" data-event="reset">重置</button></div></div><div class="stream-log elog" data-log aria-live="polite"></div></div></div>
+      <ol class="kp-list" data-reveal><li data-no="01"><span><strong>v1 当前</strong>：文本增量给 UI，完整 part 在结束或清理边界落库。</span></li><li data-no="02"><span><strong>v2 方向</strong>：事件序号单调；事件与投影同事务提交，之后才通知订阅者。</span></li><li data-no="03"><span><strong>重放判断</strong>：同序号、id、版本、数据才幂等；分歧就响亮失败。</span></li><li data-no="04"><span><strong>工具不变量</strong>：退出结算、重放补洞、重启清账，保证每个 <code>tool_use</code> 都有结果。</span></li></ol>
+      <div class="decision" data-reveal><span class="label-mono">小结 · 判断题</span><p>收到 SSE 不等于已持久化；先分 durable 与 live-only。练习：写出重复、乱序、分歧三类事件的处理规则。</p></div>
+    </section>
 
-    <span class="k-sys">// 1) 历史重建：只取最后一条 compaction 摘要之后的有效消息        :1092</span>
-    <span class="k-user">let</span> msgs = <span class="k-user">yield*</span> MessageV2.<span class="k-tool">filterCompactedEffect</span>(sessionID);
-    <span class="k-user">const</span> { user: lastUser, assistant: lastAsst, finished } = MessageV2.<span class="k-tool">latest</span>(msgs);
+    <section class="chapter band-edge" id="tools" data-spy><div class="shell">
+      <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 04 · THE TOOL THAT DISAPPEARED</span><h2>工具明明注册了，模型却根本看不见。</h2><p class="lede">v1 汇入内建、自定义、插件与 MCP 工具，再按模型、agent 与权限生成当轮视图；v2 正升级为带版本身份的 materialize 快照。</p></header>
+      <div class="machine" id="oc-tools" data-reveal><div class="machine-bar"><span class="title"><span class="led"></span><strong>工具装配流水线</strong></span><span class="label-mono" data-status>选择两个维度</span></div><div class="machine-body sim-layout"><div><div class="sim-group" data-modelgrp><span class="label-mono">01 · 模型家族</span><div class="seg-row"><button class="cbtn" type="button" data-v="claude" aria-pressed="false">claude 系</button><button class="cbtn" type="button" data-v="gpt5" aria-pressed="false">GPT-5 系</button></div></div><div class="sim-group" data-agentgrp><span class="label-mono">02 · agent 身份</span><div class="seg-row"><button class="cbtn" type="button" data-v="build">build</button><button class="cbtn" type="button" data-v="plan">plan</button><button class="cbtn" type="button" data-v="explore">explore</button><button class="cbtn" type="button" data-v="subagent">subagent 派生</button></div></div></div><div><div class="verdict-badge" data-verdict="ask"><span data-verdict-label aria-live="polite">等待选择</span></div><ol class="trace-list" data-trace><li>选择模型与 agent，观察最终工具视图。</li></ol></div></div></div>
+      <ol class="kp-list" data-reveal><li data-no="01"><span><strong>短 trace</strong>：<code>发现 → schema → 模型规则 → 权限 → 广告 → 执行再校验</code>。</span></li><li data-no="02"><span><strong>错误可修</strong>：参数错时给“重写输入”的动作指令，而不是堆栈。</span></li><li data-no="03"><span><strong>输出可找回</strong>：超长结果保留 2000 行或 50KB 预览并另存全文，明确“调用成功”。</span></li><li data-no="04"><span><strong>v2 防线</strong>：结算时 identity 不一致报 stale；MCP/plugin 尚未完整接入 v2 registry。</span></li></ol>
+      <div class="decision" data-reveal><span class="label-mono">小结 · 排障顺序</span><p>依次查最终清单、schema、执行权限、结算结果。练习：为热更新工具设计 definition identity。</p></div>
+    </div></section>
 
-    <span class="k-sys">// 2) 终止判定（本课 hero）：finish 是正常收尾、没有待回注的        :1111-1130</span>
-    <span class="k-sys">//    工具调用、且 assistant 确实挂在这条 user 之下 → 回合结束</span>
-    <span class="k-user">const</span> hasToolCalls = lastAsst?.parts.<span class="k-tool">some</span>(
-      (p) =&gt; p.type === <span class="k-model">"tool"</span> &amp;&amp; !p.metadata?.providerExecuted &amp;&amp; !<span class="k-tool">isOrphaned</span>(p),
-    );
-    <span class="k-user">if</span> (lastAsst?.finish &amp;&amp; ![<span class="k-model">"tool-calls"</span>, <span class="k-model">"unknown"</span>].<span class="k-tool">includes</span>(lastAsst.finish)
-        &amp;&amp; !hasToolCalls &amp;&amp; lastAsst.parentID === lastUser.id) <span class="k-user">break</span>;
+    <section class="chapter shell" id="permission" data-spy>
+      <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 05 · APPROVAL WITHOUT FREEZING</span><h2>工具等待批准，整个 Agent 看起来像死机。</h2><p class="lede">工具识别真实资源后主动 ask 并挂起。v1 的等待与 always 授权主要活在进程内；v2 把 asked/replied 与保存规则做成 durable 状态。</p></header>
+      <div class="machine" id="oc-permission" data-reveal><div class="machine-bar"><span class="title"><span class="led"></span><strong>审批裁决矩阵</strong></span><span class="label-mono" data-status>选择四个维度</span></div><div class="machine-body sim-layout"><div><div class="sim-group" data-perm><span class="label-mono">01 · permission</span><div class="seg-row"><button class="cbtn" type="button" data-v="bash">bash</button><button class="cbtn" type="button" data-v="edit">edit</button><button class="cbtn" type="button" data-v="read">read</button><button class="cbtn" type="button" data-v="task">task</button><button class="cbtn" type="button" data-v="external">external_directory</button><button class="cbtn" type="button" data-v="doom_loop">doom_loop</button></div></div><div class="sim-group" data-agentgrp><span class="label-mono">02 · agent</span><div class="seg-row"><button class="cbtn" type="button" data-v="build">build（宽松）</button><button class="cbtn" type="button" data-v="plan">plan（edit deny）</button><button class="cbtn" type="button" data-v="explore">explore（*:deny）</button><button class="cbtn" type="button" data-v="subagent">subagent 派生</button></div></div><div class="sim-group" data-rulepos><span class="label-mono">03 · 规则位置</span><div class="seg-row"><button class="cbtn" type="button" data-v="pre">前置 allow</button><button class="cbtn" type="button" data-v="post">后置覆盖</button><button class="cbtn" type="button" data-v="none">无匹配</button></div></div><div class="sim-group" data-replygrp><span class="label-mono">04 · reply</span><div class="seg-row"><button class="cbtn" type="button" data-v="once">once</button><button class="cbtn" type="button" data-v="always">always</button><button class="cbtn" type="button" data-v="reject">reject + 反馈</button></div></div></div><div><div class="verdict-badge" data-verdict="ask"><span data-verdict-label aria-live="polite">等待选择</span></div><ol class="trace-list" data-trace><li>选择资源、agent、规则位置与回复。</li></ol></div></div></div>
+      <ol class="kp-list" data-reveal><li data-no="01"><span><strong>短 trace</strong>：<code>识别资源 → findLast → ask → 挂起 → reply → 结算/停止</code>。</span></li><li data-no="02"><span><strong>always</strong> 会放行同会话已排队且被新规则覆盖的请求；reject 可携带修正反馈。</span></li><li data-no="03"><span><strong>默认拒绝停循环</strong>，避免模型在人明确说“不”后绕路。</span></li><li data-no="04"><span><strong>规则不是沙箱</strong>：获批的 shell 仍以宿主用户能力运行。</span></li></ol>
+      <div class="decision" data-reveal><span class="label-mono">小结 · 事故判断</span><p><code>asked</code> 无 <code>replied</code> 时先找应答者。练习：调整规则顺序验证“后写规则赢”。</p></div>
+    </section>
 
-    step++;                                                       <span class="k-sys">// :1132</span>
-    <span class="k-user">if</span> (step === 1) <span class="k-user">yield*</span> <span class="k-tool">fork</span>(fEffect(<span class="k-tool">title</span>({ session, history: msgs }))); <span class="k-sys">// :1133</span>
+    <section class="chapter band-deep" id="system" data-spy><div class="shell">
+      <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 06 · THE PROMPT CHANGED OVERNIGHT</span><h2>日期或规则一变，长会话缓存全部失效。</h2><p class="lede">v1 每次请求按稳定顺序组装 system；v2 把固定 agent 指令与环境基线分开，用 context epoch 让大多数变化只追加尾部补丁。</p></header>
+      <div class="custom-stack" data-reveal><div><span class="custom-key">V1 · BASE</span><strong>固定指令</strong><p>按模型选择底稿；agent 指令可替换基础段。</p></div><div><span class="custom-key">V1 · CONTEXT</span><strong>变化分片</strong><p>环境、项目规则、MCP、技能清单按稳定顺序装配，常态不超过两条 system。</p></div><div><span class="custom-key">V2 · EPOCH</span><strong>类型化源</strong><p>每个源定义 baseline、update、removed，并区分“暂时不可观察”与“不存在”。</p></div><div><span class="custom-key">V2 · PATCH</span><strong>三分支</strong><p>未变复用；兼容变化追加；不兼容或压缩越界才换代。</p></div></div>
+      <div class="machine" id="oc-system" data-reveal><div class="machine-bar"><span class="title"><span class="led"></span><strong>system 拼装台</strong></span><span class="label-mono" data-status>选择 provider 家族</span></div><div class="machine-body state-layout"><div><div class="state-counters"><div><span class="label-mono">BASE 段</span><strong data-base>未选</strong></div><div><span class="label-mono">指令池</span><strong>14</strong></div><div><span class="label-mono">家族分支</span><strong>9</strong></div><div><span class="label-mono">回合提醒</span><strong>3</strong></div></div><div class="state-actions"><button class="cbtn" type="button" data-key="claude" aria-pressed="false">anthropic 家族</button><button class="cbtn" type="button" data-key="gpt" aria-pressed="false">openai gpt 家族</button><button class="cbtn" type="button" data-key="codex" aria-pressed="false">gpt-codex 家族</button></div></div><dl class="surface-detail" data-detail aria-live="polite"><div><dt>① BASE</dt><dd>选择 provider 家族，看上下文从哪里进入</dd></div><div><dt>段序</dt><dd>稳定指令先行，变化事实随后</dd></div></dl></div></div>
+      <div class="decision" data-reveal><span class="label-mono">小结 · 三分支练习</span><p>给“日期”和“项目规则”分别写 baseline/update/removed；暂时读不到时保留旧值，不要误判为删除。</p></div>
+    </div></section>
 
-    <span class="k-sys">// 3) 任务分流：subtask / compaction 都是循环的输入而非旁路        :1144-1159</span>
-    <span class="k-user">const</span> task = MessageV2.<span class="k-tool">nextTask</span>(msgs);
-    <span class="k-user">if</span> (task?.type === <span class="k-model">"subtask"</span>)     { <span class="k-user">yield*</span> <span class="k-tool">handleSubtask</span>(task); <span class="k-user">continue</span>; }
-    <span class="k-user">if</span> (task?.type === <span class="k-model">"compaction"</span>)  {
-      <span class="k-user">if</span> ((<span class="k-user">yield*</span> compaction.<span class="k-tool">process</span>(task)) === <span class="k-model">"stop"</span>) <span class="k-user">break</span>;    <span class="k-sys">// :1149-1157</span>
-      <span class="k-user">continue</span>;
-    }
-    <span class="k-user">if</span> (finished &amp;&amp; (<span class="k-user">yield*</span> compaction.<span class="k-tool">isOverflow</span>({ tokens: finished.tokens, model }))) {
-      <span class="k-user">yield*</span> compaction.<span class="k-tool">create</span>({ sessionID, auto: <span class="k-user">true</span> });        <span class="k-sys">// :1161-1168 预检</span>
-      <span class="k-user">continue</span>;
-    }
+    <section class="chapter shell" id="compaction" data-spy>
+      <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 07 · MEMORY WITHOUT AMNESIA</span><h2>上下文装不下；删完历史，Agent 也忘了目标。</h2><p class="lede">compaction 保语义，prune 只减工具输出体积，溢写保原文。三种“遗忘”解决不同问题。</p></header>
+      <ol class="kp-list" data-reveal><li data-no="01"><span><strong>短 trace</strong>：<code>超限 → 摘要旧历史 → 保留近期原文 → 重建合法消息 → 继续</code>。</span></li><li data-no="02"><span><strong>五段锚点</strong>：目标、细节、工作状态、下一步、相关对象；旧摘要滚动合并。</span></li><li data-no="03"><span><strong>v1 当前</strong>：按 turn 保留约 25% 可用预算（2k–15k），可 prune，并可能注入“继续”消息。</span></li><li data-no="04"><span><strong>v2 方向</strong>：请求前估算加 20k 缓冲，默认保留 8k recent；prune 尚未接线。</span></li><li data-no="05"><span><strong>一次恢复</strong>：压缩后仍 overflow 就硬停，不能无限递归压缩。</span></li></ol>
+      <div class="decision" data-reveal><span class="label-mono">小结 · 设计练习</span><p>标出必须逐字留、可以摘要、只留检索句柄的三类数据。工具配对和当前阻塞项不能只靠自由摘要。</p></div>
+    </section>
 
-    <span class="k-user">const</span> agent = <span class="k-user">yield*</span> agents.<span class="k-tool">get</span>(lastUser.agent);              <span class="k-sys">// :1170</span>
-    <span class="k-user">const</span> isLastStep = step &gt;= (agent.steps ?? Infinity);         <span class="k-sys">// :1178-1179</span>
+    <section class="chapter band-edge" id="subagent" data-spy><div class="shell">
+      <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 08 · THE CHILD THAT NEVER REPORTED BACK</span><h2>父 Agent 等子任务卡死，兄弟还在重复工作。</h2><p class="lede">当前 v1 把子代理实现成 <code>task</code> 工具创建的普通子会话：不共享父 transcript，没有 swarm 或横向通信，只回一条文本结果与状态信封。</p></header>
+      <div class="custom-stack" data-reveal><div><span class="custom-key">SPAWN</span><strong>复用同一循环</strong><p>压缩、重试、权限、事件观察都继承。</p></div><div><span class="custom-key">ISOLATE</span><strong>上下文隔离</strong><p>默认 fresh；带 <code>task_id</code> 才续旧会话。</p></div><div><span class="custom-key">RETURN</span><strong>单文本信封</strong><p>限制父上下文吸收量。</p></div><div><span class="custom-key">LIMIT</span><strong>deny 向下传</strong><p>allow 不膨胀，默认深度 1。</p></div></div>
+      <div class="machine" id="oc-subagent" data-reveal><div class="machine-bar"><span class="title"><span class="led"></span><strong>task 派生实验台</strong></span><span class="label-mono" data-status>选择两个维度</span></div><div class="machine-body sim-layout"><div><div class="sim-group" data-parentgrp><span class="label-mono">01 · 父会话权限</span><div class="seg-row"><button class="cbtn" type="button" data-v="clean" aria-pressed="false">无覆盖</button><button class="cbtn" type="button" data-v="deny" aria-pressed="false">父含 edit:deny</button><button class="cbtn" type="button" data-v="allow" aria-pressed="false">父含 edit:allow</button></div></div><div class="sim-group" data-budgetgrp><span class="label-mono">02 · 深度与步数预算</span><div class="seg-row"><button class="cbtn" type="button" data-v="d1sinf" aria-pressed="false">depth=1 · steps 未设</button><button class="cbtn" type="button" data-v="d2s5" aria-pressed="false">depth=2 · steps=5</button><button class="cbtn" type="button" data-v="d1s3" aria-pressed="false">depth=1 · steps=3</button></div></div></div><div><div class="verdict-badge" data-verdict="ask"><span data-verdict-label aria-live="polite">等待选择</span></div><ol class="trace-list" data-trace><li>设好父规则与预算，看子会话拿到什么限制。</li></ol></div></div></div>
+      <ol class="kp-list" data-reveal><li data-no="01"><span><strong>后台不是轮询</strong>：实验 job 完成后以合成消息注入父会话；前台任务也可转后台或追加指令。</span></li><li data-no="02"><span><strong>取消级联</strong>：沿父子关系求完整后代集合，逐批取消。</span></li><li data-no="03"><span><strong>边界</strong>：BackgroundJob 非持久，重启会丢；v2 尚无同等 <code>task</code> 工具。</span></li></ol>
+      <div class="decision" data-reveal><span class="label-mono">小结 · 派活模板</span><p>写全目标、输入、边界、返回物。练习：拆两个不重叠子任务，并说明父 Agent 如何合并。</p></div>
+    </div></section>
 
-    <span class="k-sys">// 4) 先建空 assistant 消息占位，流式全程往它身上贴 parts          :1186-1201</span>
-    <span class="k-user">const</span> msg = { id: MessageID.<span class="k-tool">ascending</span>(), parentID: lastUser.id,
-                  role: <span class="k-model">"assistant"</span>, cost: 0, tokens: <span class="k-tool">zeroTokens</span>() };
-    <span class="k-user">yield*</span> sessions.<span class="k-tool">updateMessage</span>(msg);                           <span class="k-sys">// publish → 投影落库</span>
-    <span class="k-user">const</span> handle = <span class="k-user">yield*</span> processor.<span class="k-tool">create</span>({ assistantMessage: msg, model }); <span class="k-sys">// :1213</span>
+    <section class="chapter shell" id="models" data-spy>
+      <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 09 · TWO GENERATIONS, TWO RETRY OWNERS</span><h2>一次瞬时错误，触发了十几次请求。</h2><p class="lede">SDK、HTTP 和会话层若都重试，次数会相乘。OpenCode 关闭通用 SDK 自动重试，再让不同层只处理自己拥有的失败。</p></header>
+      <div class="machine" id="oc-models" data-reveal><div class="machine-bar"><span class="title"><span class="led"></span><strong>换模型看工具视图</strong></span><span class="label-mono" data-status>选择模型家族</span></div><div class="machine-body surface-layout"><div class="surface-choices"><button class="cbtn" type="button" data-key="claude" aria-pressed="false">claude 系</button><button class="cbtn" type="button" data-key="gpt5" aria-pressed="false">GPT-5 系</button><button class="cbtn" type="button" data-key="codex" aria-pressed="false">codex 系</button></div><dl class="surface-detail" data-detail aria-live="polite"><div><dt>工具面</dt><dd>选择模型家族，对比当轮实际清单</dd></div><div><dt>system 段</dt><dd>与推理方言一并切换</dd></div></dl></div></div>
+      <div class="custom-stack" data-reveal><div><span class="custom-key">V1 · SHIPPED</span><strong>当前 CLI</strong><p>消息/part 驱动旧循环，通常经 AI SDK；session 层最多 5 次可见重试。</p></div><div><span class="custom-key">V2 · MIGRATING</span><strong>事件驱动 Runner</strong><p>自持工具 fiber、类型化错误、context epoch；HTTP executor 最多 2 次快速重试。</p></div><div><span class="custom-key">DO NOT BLEND</span><strong>迁移未完成</strong><p>v2 尚缺 task、多来源工具完整接入、prune 等能力。</p></div></div>
+      <ol class="kp-list" data-reveal><li data-no="01"><span><strong>错误三去向</strong>：回模型自纠、抛用户、自动重试但对 UI 可见。</span></li><li data-no="02"><span><strong>整轮风险</strong>：流中途失败后重跑可能重复已执行写操作；当前未见复用已完成结果的守卫。</span></li><li data-no="03"><span><strong>中断不重试</strong>：用户取消是控制信号，不能被重试器复活。</span></li></ol>
+      <div class="fact-boundary" data-reveal><span class="label-mono">FACT BOUNDARY · B578B7261FC9EC4917FE272DF5CC4BD8A056CD5D</span><strong>v1 是当前 CLI；v2 是迁移中的事件驱动核心。</strong><span>包、类型或路线图存在，不等于产品主路径已经切换。</span></div>
+      <div class="decision" data-reveal><span class="label-mono">小结 · 重试表</span><p>为每类错误只指定一个 owner，并写清单位、次数、退避、幂等条件、UI 可见性。</p></div>
+    </section>
 
-    <span class="k-sys">// 5) 工具视图 = 注册表(按模型/agent 过滤) ∪ MCP，execute 内嵌审批纤  :1226</span>
-    <span class="k-user">const</span> tools = <span class="k-user">yield*</span> SessionTools.<span class="k-tool">resolve</span>({ agent, session, model, handle });
+    <section class="chapter band-deep" id="extensions" data-spy><div class="shell">
+      <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 10 · EXTENSIONS WITHOUT A BACKDOOR</span><h2>插件改得了请求，却绕开了对外契约。</h2><p class="lede">插件拿普通生成客户端访问同一服务器契约；技能正文按需加载；工具开关应同步改变 schema。</p></header>
+      <div class="custom-stack" data-reveal><div><span class="custom-key">HOOK</span><strong>Plugin</strong><p>进程内按序执行钩子，错误是否可见取决于阶段。</p></div><div><span class="custom-key">TOOL</span><strong>工具来源</strong><p>v1 汇入四类来源；关闭能力时也应从 schema 消失。</p></div><div><span class="custom-key">KNOWLEDGE</span><strong>Skills</strong><p>清单常驻、正文按需；远程版本消毒路径并原子换入。</p></div><div><span class="custom-key">PROTOCOL</span><strong>SDK / MCP / ACP</strong><p>SDK 从协议生成，CI 检查生成物漂移。</p></div></div>
+      <ol class="kp-list" data-reveal><li data-no="01"><span><strong>短 trace</strong>：<code>声明 → 兼容门禁 → 注册 → 权限过滤 → 统一客户端 → 事件观察</code>。</span></li><li data-no="02"><span><strong>配置判断</strong>：多来源后加载者覆盖前者，企业托管层最终兜底。</span></li><li data-no="03"><span><strong>代际边界</strong>：v2 远程 skill 防护更严格，不代表 v1 完全等价。</span></li><li data-no="04"><span><strong>实验边界</strong>：受限解释器限制脚本环境，不把被调用工具变成 OS 沙箱。</span></li></ol>
+      <div class="decision" data-reveal><span class="label-mono">小结 · 扩展审查</span><p>回答：模型何时看见？谁能调用？异常去哪？开关关闭时 schema 是否消失？</p></div>
+    </div></section>
 
-    <span class="k-sys">// 6) system 五段现场拼装（agent.prompt 存在则替换基础段）          :1257-1269</span>
-    <span class="k-user">const</span> [skills, env, instructions, mcpIns, modelMsgs] = <span class="k-user">yield*</span> Effect.<span class="k-tool">all</span>([
-      sys.<span class="k-tool">skills</span>(agent), sys.<span class="k-tool">environment</span>(model), instruction.<span class="k-tool">system</span>(), sys.<span class="k-tool">mcp</span>(agent, session.permission),
-      MessageV2.<span class="k-tool">toModelMessagesEffect</span>(msgs, model),
-    ]);
+    <section class="chapter shell" id="governance" data-spy>
+      <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 11 · WHEN SELF-CORRECTION LOOPS</span><h2>模型连续三次用同一参数撞同一堵墙。</h2><p class="lede">自纠是能力，重复自纠是失控。步数、重复检测、审批、输出预算和取消共同治理，但没有覆盖一切的全局计时器。</p></header>
+      <ol class="kp-list" data-reveal><li data-no="01"><span><strong>短 trace</strong>：<code>失败回模型 → 重写 → 再调用 → 同名同参三次 → doom_loop 审批</code>。</span></li><li data-no="02"><span><strong>步数墙</strong>：v1 主要靠 assistant 预填收尾；v2 同时摘除工具并设 <code>toolChoice:none</code>。</span></li><li data-no="03"><span><strong>资源墙</strong>：默认子代理深度 1、工具输出限额、会话可取消；没有任务树总预算。</span></li><li data-no="04"><span><strong>路径墙</strong>：词法与真实路径双查防符号链接逃逸，但仍非系统隔离。</span></li><li data-no="05"><span><strong>观测墙</strong>：重试、结算、审批、会话状态都应可见。</span></li></ol>
+      <div class="fact-boundary" data-reveal><span class="label-mono">KNOWN RISK</span><strong>整轮流级重试可能重复副作用。</strong><span>写工具仍需幂等键、执行记录或事务，不能只靠退避。</span></div>
+      <div class="decision" data-reveal><span class="label-mono">小结 · 故障演练</span><p>模拟第三次相同调用：展示什么证据？放行多大范围？拒绝后能否绕路？把答案写进产品。</p></div>
+    </section>
 
-    <span class="k-sys">// 7) 一次模型流：AI SDK streamText（或实验 native），             :1272</span>
-    <span class="k-sys">//    processor 逐 LLMEvent 消费：tool-call→ask→execute→truncate→</span>
-    <span class="k-sys">//    tool-result 回注；step-finish 写 usage 并裁决 needsCompaction</span>
-    <span class="k-user">const</span> result = <span class="k-user">yield*</span> handle.<span class="k-tool">process</span>({
-      user: lastUser, agent, system: [...env, ...instructions, ...],
-      messages: [...modelMsgs, ...(isLastStep ? [MAX_STEPS_PROMPT] : [])],
-      tools, model,
-    });
-
-    <span class="k-sys">// 8) 裁决："stop"（含 content-filter/结构化输出）退出，            :1319-1328</span>
-    <span class="k-sys">//    "compact" 排压缩任务下一轮处理，其余 continue</span>
-    <span class="k-user">if</span> (result === <span class="k-model">"stop"</span>) <span class="k-user">break</span>;
-    <span class="k-user">if</span> (result === <span class="k-model">"compact"</span>) <span class="k-user">yield*</span> compaction.<span class="k-tool">create</span>({ sessionID, auto: <span class="k-user">true</span>, overflow: !msg.finish });
-  }
-  <span class="k-user">yield*</span> <span class="k-tool">forkEffect</span>(compaction.<span class="k-tool">prune</span>({ sessionID }));             <span class="k-sys">// :1338</span>
-  <span class="k-user">return</span> <span class="k-user">yield*</span> <span class="k-tool">lastAssistant</span>(sessionID);                         <span class="k-sys">// :1339</span>
-}
-          </div>
-          <p class="lesson-result"><strong>架构精要：</strong>所有花哨能力——压缩、子代理、审批、续跑——都是这个 <code>while(true)</code> 的输入或事件；读懂判定，就读懂了 OpenCode 的一个回合。</p>
-        </article>
-      </section>
-
-      <section class="chapter band-deep" id="server" data-spy><div class="shell">
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 02 · ONE SERVER, EVERY SURFACE</span><h2>TUI 与内核之间隔着一次“假装的 HTTP”——in-worker fetch 让本地模式与远程模式共享同一条协议。</h2><p class="lede"><code>opencode serve</code> 起真 HTTP；默认 TUI 模式把同一个 app 塞进 Bun Worker，用 RPC 转发 fetch 和 <code>global.event</code>，不占 TCP 端口。SDK 由 OpenAPI 代码生成（hey-api），保证客户端与契约同源。</p></header>
-        <ol class="kp-list" data-reveal><li data-no="01"><span><strong>入口端点</strong>：<code>POST /session/:id/message</code> 之外还有 <code>/prompt_async</code>、<code>/abort</code>、<code>/fork</code>、<code>/revert</code>、<code>/command</code>、<code>/shell</code>（groups/session.ts:78-105）。</span></li><li data-no="02"><span><strong>事件一律 SSE</strong>：WebSocket 只用于 PTY 终端流（groups/pty.ts:116-168）；<code>GET /event</code> 以 <code>text/event-stream</code> + 10s heartbeat 广播（handlers/event.ts:24-78）。</span></li><li data-no="03"><span><strong>远程接入</strong>：<code>--attach</code> 直连远端 server；<code>OPENCODE_SERVER_PASSWORD</code> 缺省时无鉴权并有裸奔警告（cli/cmd/serve.ts:7-20）。</span></li></ol>
-        <div class="machine" id="oc-surfaces" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>表面接线板</strong></span><span class="label-mono" data-status>选择表面</span></div><div class="machine-body surface-layout"><div class="surface-choices"><button class="cbtn" type="button" data-key="tui" aria-pressed="false">终端 TUI</button><button class="cbtn" type="button" data-key="serve" aria-pressed="false">HTTP 服务</button><button class="cbtn" type="button" data-key="run" aria-pressed="false">Headless CLI</button><button class="cbtn" type="button" data-key="github" aria-pressed="false">GitHub Actions</button><button class="cbtn" type="button" data-key="acp" aria-pressed="false">IDE（Zed 等）</button><button class="cbtn" type="button" data-key="desktop" aria-pressed="false">桌面 / Web</button></div><dl class="surface-detail" data-detail><div><dt>消费者</dt><dd>选择一种运行表面</dd></div><div><dt>共同内核</dt><dd>同一个 server app 与 runLoop</dd></div></dl></div></div>
-        <div class="fact-boundary" data-reveal><span class="label-mono">MYTH CHECK</span><strong>此版本的 TUI 已不是 Go。</strong><span>旧版 Go/bubbletea TUI 在此 checkout 不存在，现为 TypeScript（@opentui + Solid）（packages/tui/package.json:50-67）。引用“TS 内核 + Go 外壳”的二手资料已过时。[源码确认]</span></div>
-      </div></section>
-
-      <section class="chapter shell" id="projection" data-spy>
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 03 · EVENTS PROJECT TO SQL</span><h2>写路径不是“存数据库”，而是“发事件”——SQLite 行是事件流的投影副产品。</h2><p class="lede">Session / Message / Part 三层 schema 齐全（含 cost、tokens.cache、parentID、revert、share）。内核只 publish <code>MessageUpdated</code> / <code>PartUpdated</code>，projector 落库，share 同步订阅同一事件流增量推送。</p></header>
-        <div class="machine" id="oc-projection" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>事件 → SQLite 投影台</strong></span><span class="label-mono">teaching projection</span></div><div class="machine-body state-layout"><div><div class="state-counters"><div><span class="label-mono">SQL ROWS</span><strong data-sqlite>0</strong></div><div><span class="label-mono">SSE EVENTS</span><strong data-sse>0</strong></div><div><span class="label-mono">PENDING</span><strong data-pending>0</strong></div><div><span class="label-mono">COST</span><strong data-cost>¥0.00</strong></div></div><div class="state-actions"><button class="cbtn primary" type="button" data-event="created">+ session.created</button><button class="cbtn" type="button" data-event="user">+ message.updated (user)</button><button class="cbtn" type="button" data-event="part">+ part.updated (delta)</button><button class="cbtn" type="button" data-event="stepfinish">+ step-finish</button><button class="cbtn" type="button" data-event="asked">+ permission.asked</button><button class="cbtn" type="button" data-event="replied">+ permission.replied</button><button class="cbtn" type="button" data-event="idle">+ session.idle</button><button class="cbtn" type="button" data-event="reset">重置</button></div></div><div class="stream-log elog" data-log aria-live="polite"></div></div></div>
-        <ol class="kp-list" data-reveal><li data-no="01"><span><strong>存储位置</strong>：<code>~/.local/share/opencode/opencode.db</code>——仅 latest/beta/prod 通道；其余通道落 <code>opencode-&lt;channel&gt;.db</code>（database.ts:48-55，可用 <code>OPENCODE_DISABLE_CHANNEL_DB</code> 关闭）；V1 JSON storage 仅剩 <code>session_diff</code> 写入（revert.ts:77）。</span></li><li data-no="02"><span><strong>会话树</strong>：Session.Info 含 <code>parentID</code>，<code>fork()</code> 复制消息前缀（session.ts:691-711）。</span></li><li data-no="03"><span><strong>Part 12 变体</strong>：text / subtask / reasoning / file / tool / step-start / step-finish / snapshot / patch / agent / retry / compaction（schema/src/v1/session.ts:357-370）。</span></li><li data-no="04"><span><strong>回退快照</strong>：独立 git-dir <code>snapshot/&lt;projectID&gt;/&lt;hash(worktree)&gt;</code>，track/restore/revert 全走 <code>--git-dir</code>（snapshot/index.ts:70-75,388,427），不碰用户仓库。</span></li></ol>
-        <div class="fact-boundary" data-reveal><span class="label-mono">VERIFICATION BOUNDARY</span><strong>share 服务端未运行验证。</strong><span>share 后端（opncd.ai / console）与 <code>~/.local/share/opencode/storage</code> 的 V1 JSON 老用户数据，本教学底稿仅代码走读。[源码确认（代码）/未验证（运行时）]</span></div>
-      </section>
-
-      <section class="chapter band-edge" id="tools" data-spy><div class="shell">
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 04 · TOOLS AS FILTERED VIEWS</span><h2>模型看到的工具清单，是注册表被“模型家族、agent 白名单、权限”三把刀各削一刀之后的残影。</h2><p class="lede">17 个内建工具 + MCP + 自定义 JS/TS 文件 + 插件注册，汇入 <code>registry.tools()</code>。最惊人的细节：GPT 系新模型只给 <code>apply_patch</code>、隐藏 <code>edit</code>/<code>write</code>——工具视图按模型行为特性定制。</p></header>
-        <ol class="kp-list" data-reveal><li data-no="01"><span><strong>工具即 Schema</strong>：Effect Schema decoder + execute + 编译期 import 的 <code>.txt</code> 描述（tool/tool.ts:99-169）。</span></li><li data-no="02"><span><strong>模型过滤</strong>：<code>usePatch = modelID.includes("gpt-") &amp;&amp; !oss &amp;&amp; !gpt-4</code>（registry.ts:297-300）。</span></li><li data-no="03"><span><strong>MCP 命名与闸门</strong>：工具命名 <code>sanitize(server)_sanitize(tool)</code>，调用前强制 <code>ctx.ask</code>（mcp/catalog.ts:117-119 + tools.ts:408）。</span></li><li data-no="04"><span><strong>输出截断</strong>：2000 行 / 50KB，超限全文落盘并回 <code>outputPath</code>（tool/truncate.ts:12-15,78-81）。</span></li><li data-no="05"><span><strong>参数错误不抛异常</strong>：解码失败回一个模型可读的“请重写输入”错误（tool.ts:24-34 InvalidArgumentsError）。</span></li></ol>
-        <div class="machine" id="oc-tools" data-reveal><div class="machine-bar"><span class="title"><span class="led"></span><strong>工具装配流水线</strong></span><span class="label-mono" data-status>选择两个维度</span></div><div class="machine-body sim-layout"><div><div class="sim-group" data-modelgrp><span class="label-mono">01 · 模型家族</span><div class="seg-row"><button class="cbtn" type="button" data-v="claude" aria-pressed="false">claude 系</button><button class="cbtn" type="button" data-v="gpt5" aria-pressed="false">GPT-5 系</button></div></div><div class="sim-group" data-agentgrp><span class="label-mono">02 · agent 身份</span><div class="seg-row"><button class="cbtn" type="button" data-v="build">build</button><button class="cbtn" type="button" data-v="plan">plan</button><button class="cbtn" type="button" data-v="explore">explore</button><button class="cbtn" type="button" data-v="subagent">subagent 派生</button></div></div></div><div><div class="verdict-badge" data-verdict="ask"><span data-verdict-label aria-live="polite">等待选择</span></div><ol class="trace-list" data-trace><li>选模型家族与 agent 身份，追踪 <code>SessionTools.resolve</code> 之后模型实际拿到的清单。</li></ol></div></div></div>
-        <div class="decision" data-reveal><span class="label-mono">FILTERED VIEW</span><p>同一个 <code>edit</code> 工具在 Claude 系与 GPT-5 系模型下的可见性不同——排查“模型为什么不用某工具”之前，先看 <code>registry.tools()</code> 给这个模型的实际清单，而不是配置文档。</p></div>
-      </div></section>
-
-      <section class="chapter shell" id="permission" data-spy>
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 05 · DEFERRED AS APPROVAL</span><h2>一次审批 = 一个挂起的 Deferred + 一条 SSE 事件：阻塞的不是进程，是 Effect 纤绳。</h2><p class="lede"><code>permission.ask()</code> 把请求挂进 pending、publish <code>permission.asked</code>，工具执行纤在此处 await；任意客户端（TUI 弹窗、CLI <code>--yolo</code>、远端 HTTP reply）都可解开。规则匹配用 <code>findLast</code>——越靠后的规则越优先，默认动作是 <code>ask</code>。</p></header>
-        <div class="machine" id="oc-permission" data-reveal><div class="machine-bar"><span class="title"><span class="led"></span><strong>审批裁决矩阵</strong></span><span class="label-mono" data-status>选择四个维度</span></div><div class="machine-body sim-layout"><div><div class="sim-group" data-perm><span class="label-mono">01 · permission</span><div class="seg-row"><button class="cbtn" type="button" data-v="bash">bash</button><button class="cbtn" type="button" data-v="edit">edit</button><button class="cbtn" type="button" data-v="read">read</button><button class="cbtn" type="button" data-v="task">task</button><button class="cbtn" type="button" data-v="external">external_directory</button><button class="cbtn" type="button" data-v="doom_loop">doom_loop</button></div></div><div class="sim-group" data-agentgrp><span class="label-mono">02 · agent</span><div class="seg-row"><button class="cbtn" type="button" data-v="build">build（宽松）</button><button class="cbtn" type="button" data-v="plan">plan（edit deny）</button><button class="cbtn" type="button" data-v="explore">explore（*:deny）</button><button class="cbtn" type="button" data-v="subagent">subagent 派生</button></div></div><div class="sim-group" data-rulepos><span class="label-mono">03 · 规则位置</span><div class="seg-row"><button class="cbtn" type="button" data-v="pre">前置 allow</button><button class="cbtn" type="button" data-v="post">后置覆盖</button><button class="cbtn" type="button" data-v="none">无匹配</button></div></div><div class="sim-group" data-replygrp><span class="label-mono">04 · reply</span><div class="seg-row"><button class="cbtn" type="button" data-v="once">once</button><button class="cbtn" type="button" data-v="always">always</button><button class="cbtn" type="button" data-v="reject">reject + 反馈</button></div></div></div><div><div class="verdict-badge" data-verdict="ask"><span data-verdict-label aria-live="polite">等待选择</span></div><ol class="trace-list" data-trace><li>选一个 permission、agent、规则位置与 reply，观察 evaluate 的裁决链。</li></ol></div></div></div>
-        <ol class="kp-list" data-reveal><li data-no="01"><span><strong>Rule 与 Reply</strong>：Rule{permission, pattern, action}，Reply 三选 once / always / reject（schema/src/v1/permission.ts:16-38）。</span></li><li data-no="02"><span><strong>findLast 裁决</strong>：<code>evaluate()</code> 用 flat().findLast + 双通配（permission/index.ts:28-37）；ask 阻塞并级联拒绝 pending（:67-165）。</span></li><li data-no="03"><span><strong>bash 拆命令</strong>：tree-sitter 解析命令提取 pattern，<code>arity.ts</code> 决定 always 规则的 token 前缀粒度（tool/shell.ts:257-291,378-411）。</span></li><li data-no="04"><span><strong>子代理派生</strong>：只继承父 deny 与 external_directory，allow 不继承，默认禁 <code>task</code>/<code>todowrite</code>（agent/subagent-permissions.ts:14-27）。</span></li></ol>
-        <div class="decision" data-reveal><span class="label-mono">FINDLAST, NOT FIRST-MATCH</span><p>OpenCode 的“越靠后的规则赢”与 Claude Code settings 的“首匹配”方向相反。迁移规则集时，同一条 allow 写在列表不同位置会得到相反结果——这是配置类故障的高发面。</p></div>
-      </section>
-
-      <section class="chapter band-deep" id="system" data-spy><div class="shell">
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 06 · SYSTEM IS ASSEMBLED</span><h2>system prompt 不是一份文案，而是五个供应者在每次 step 现场拼装的产物。</h2><p class="lede">基础 prompt 从 14 个内嵌 <code>.txt</code> 中选一——<code>provider()</code> 实走 9 个家族分支（claude→anthropic.txt，gpt-4/o1/o3→beast.txt；plan/build-switch 等 5 个由 reminders.ts 用作回合提醒），叠加 <code>&lt;env&gt;</code> 块、AGENTS.md 指令链、<code>&lt;mcp_instructions&gt;</code>、<code>&lt;available_skills&gt;</code>；agent.prompt 可整体替换基础段。</p></header>
-        <div class="custom-stack" data-reveal><div><span class="custom-key">BASE</span><strong>provider 基础段</strong><p>14 个内嵌 .txt，<code>SystemPrompt.provider(model)</code> 字符串分支从中选 9 个家族之一（session/system.ts:26-47）。</p></div><div><span class="custom-key">ENV</span><strong>&lt;env&gt; 块</strong><p>工作目录、平台、时间等运行时事实，每次 step 现生成。</p></div><div><span class="custom-key">RULES</span><strong>AGENTS.md 指令链</strong><p>全局 <code>~/.config/opencode/</code> + 项目 findUp 首个命中即停 + config.instructions glob/URL（instruction.ts:61-65,122-168）。</p></div><div><span class="custom-key">MCP</span><strong>&lt;mcp_instructions&gt;</strong><p>来自当前挂起的 MCP server 的指令段。</p></div><div><span class="custom-key">SKILLS</span><strong>&lt;available_skills&gt;</strong><p>skill 目录的 name/description 清单，模型按需加载全文。</p></div></div>
-        <div class="machine" id="oc-system" data-reveal><div class="machine-bar"><span class="title"><span class="led"></span><strong>system 拼装台</strong></span><span class="label-mono" data-status>选择 provider 家族</span></div><div class="machine-body state-layout"><div><div class="state-counters"><div><span class="label-mono">BASE 段</span><strong data-base>未选</strong></div><div><span class="label-mono">TXT 池</span><strong>14</strong></div><div><span class="label-mono">system.ts 引入</span><strong>9</strong></div><div><span class="label-mono">reminders</span><strong>3</strong></div></div><div class="state-actions"><button class="cbtn" type="button" data-key="claude" aria-pressed="false">anthropic 家族</button><button class="cbtn" type="button" data-key="gpt" aria-pressed="false">openai gpt 家族</button><button class="cbtn" type="button" data-key="codex" aria-pressed="false">gpt-codex 家族</button></div></div><dl class="surface-detail" data-detail aria-live="polite"><div><dt>① BASE</dt><dd>选择 provider 家族，看五段拼装各从哪来</dd></div><div><dt>段序</dt><dd>五个供应者在每次 step 现场合流</dd></div></dl></div></div>
-        <div class="decision" data-reveal><span class="label-mono">ASSEMBLY ORDER</span><p>拼装点在 prompt.ts:1257-1269，最终段序 <code>[agent.prompt|基础, ...env, ...instructions, mcp?, skills?]</code>（llm/request.ts:55-65）；<code>experimental.chat.system.transform</code> 插件钩子还能在末端改段（:68-73）。</p></div>
-      </div></section>
-
-      <section class="chapter shell" id="compaction" data-spy>
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 07 · COMPACT THEN CONTINUE</span><h2>OpenCode 把“上下文满了”实现成循环里的一种任务类型，而不是一个异常。</h2><p class="lede">三处检测（每步 usage 后、ContextOverflowError、prompt 前预检）都归结为 <code>needsCompaction</code>；压缩生成一条 <code>mode:"compaction"</code> 的 assistant 摘要消息，保留最近 tail turns，然后自动注入“Continue…”合成消息续跑。</p></header>
-        <ol class="kp-list" data-reveal><li data-no="01"><span><strong>阈值公式</strong>：<code>isOverflow</code> 先被 <code>compaction.auto === false</code> 与 <code>context === 0</code> 短路；计数取 <code>tokens.total ||</code> input+output+cache.read+cache.write，≥ usable 才压缩（usable = input 上限 − reserved，缺省 min(20k, maxOutput)；无 input 上限时兜底 context − maxOutput）（overflow.ts:8-34）。</span></li><li data-no="02"><span><strong>tail 预算</strong>：<code>preserve_recent_tokens ?? clamp(2k,15k,usable*0.25)</code>，按 user 轮次从后往前累计（compaction.ts:115-120,223-269）。</span></li><li data-no="03"><span><strong>摘要五段</strong>：Objective / Important Details / Work State / Next Move / Relevant Files，增量更新 <code>&lt;prior-summary&gt;</code>（core/session/compaction.ts:16-55）。</span></li><li data-no="04"><span><strong>PRUNE</strong>：更老工具输出清空为“[Old tool result content cleared]”，skill 工具受保护（compaction.ts:28-31,273-317）。</span></li></ol>
-        <div class="decision" data-reveal><span class="label-mono">SEE IT RUN</span><p>压缩续跑已并入<a href="#loop">第 01 章主循环步进机</a>的第 9 步：摘要消息落库后注入合成 “Continue if you have next steps…”，回到历史重建，而不是抛错终止回合。</p></div>
-      </section>
-
-      <section class="chapter band-edge" id="subagent" data-spy><div class="shell">
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 08 · TASK SPAWNS CHILD SESSIONS</span><h2>subagent 不是新机制，而是“一个带 parentID 的普通会话 + 一次递归 prompt 调用”。</h2><p class="lede">task 工具沿 parentID 链计深度（默认 <code>subagent_depth=1</code>，禁止嵌套），子会话复用 <code>promptOps.prompt()</code> 主链路，事件在共享总线上以自身 sessionID 发布，TUI 靠 metadata 里的 parentSessionId 折叠渲染。</p></header>
-        <div class="custom-stack" data-reveal><div><span class="custom-key">PRIMARY</span><strong>build / plan</strong><p>面向用户的两个主 agent；plan 用权限实现“只读 + 可写 plans 目录”（edit deny 仅 <code>.opencode/plans/*.md</code> allow，agent.ts:156-175）。</p></div><div><span class="custom-key">SUBAGENT</span><strong>general / explore</strong><p>只能被 task 工具派生；explore 用 <code>*:deny</code> 白名单收成只读侦察兵。</p></div><div><span class="custom-key">HIDDEN</span><strong>compaction / title / summary</strong><p>循环自己雇的杂务工：起标题、统计 diff、写摘要，用户看不见。</p></div></div>
-        <ol class="kp-list" data-reveal><li data-no="01"><span><strong>内建 agent 表</strong>：build/plan（primary）、general/explore（subagent）、compaction/title/summary（hidden）（agent/agent.ts:140-265）。</span></li><li data-no="02"><span><strong>续跑机制</strong>：task 工具靠 <code>task_id</code> 续用旧子会话（tool/task.ts:47-50）；background 异步需实验 flag（:100）。</span></li><li data-no="03"><span><strong>动态清单</strong>：task 工具描述动态注入可用 subagent 清单（registry.ts:325-331 describeTask）。</span></li></ol>
-        <div class="machine" id="oc-subagent" data-reveal><div class="machine-bar"><span class="title"><span class="led"></span><strong>task 派生实验台</strong></span><span class="label-mono" data-status>选择两个维度</span></div><div class="machine-body sim-layout"><div><div class="sim-group" data-parentgrp><span class="label-mono">01 · 父会话权限</span><div class="seg-row"><button class="cbtn" type="button" data-v="clean" aria-pressed="false">无覆盖</button><button class="cbtn" type="button" data-v="deny" aria-pressed="false">父含 edit:deny</button><button class="cbtn" type="button" data-v="allow" aria-pressed="false">父含 edit:allow</button></div></div><div class="sim-group" data-budgetgrp><span class="label-mono">02 · 深度与步数预算</span><div class="seg-row"><button class="cbtn" type="button" data-v="d1sinf" aria-pressed="false">depth=1 · steps 未设</button><button class="cbtn" type="button" data-v="d2s5" aria-pressed="false">depth=2 · steps=5</button><button class="cbtn" type="button" data-v="d1s3" aria-pressed="false">depth=1 · steps=3</button></div></div></div><div><div class="verdict-badge" data-verdict="ask"><span data-verdict-label aria-live="polite">等待选择</span></div><ol class="trace-list" data-trace><li>设好父会话规则与预算，看派生出的一般子会话拿到什么 deny 链、撞哪两道墙。</li></ol></div></div></div>
-        <div class="decision" data-reveal><span class="label-mono">边界</span><p>防子代理失控不靠运行时栈检测，而是两道声明式预算：<code>subagent_depth</code> 在 task 入口沿 parentID 链计数把关（<code>tool/task.ts:104-117</code>），派生规则集再把 <code>task</code> 与 <code>todowrite</code> 直接 deny（<code>agent/subagent-permissions.ts:14-27</code>）——即使有人调高 depth，子代理手里也没有派生工具。<code>agent.steps</code> 是同一思路的时间墙：预算耗尽时 isLastStep 注入 MAX_STEPS_PROMPT，禁工具、逼模型收口成文本（<code>prompt.ts:1178-1179,1281</code>）。</p></div>
-      </div></section>
-
-      <section class="chapter shell" id="models" data-spy>
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 09 · TWO RUNTIMES ONE STREAM</span><h2>同一个循环消费统一 LLMEvent 流，底下可以是 Vercel AI SDK，也可以是实验中的 Effect 原生客户端。</h2><p class="lede">providers 目录来自 models.dev（缓存 + 锁 + 构建期内嵌），<code>@ai-sdk/*</code> 动态 import 出 LanguageModelV3；<code>OPENCODE_EXPERIMENTAL_NATIVE_LLM</code> 打开时先探测 <code>packages/llm</code> 原生流，<code>supported</code> 才切换，否则 log fallback。</p></header>
-        <ol class="kp-list" data-reveal><li data-no="01"><span><strong>凭据优先级是 provider 自选</strong>：以 <code>snowflake-cortex</code> 为例，<code>token = env ?? api.key ?? oauth.access ?? config</code>（provider.ts:883-894）——单个 provider 的 auth 函数实现，不是系统级不变量。</span></li><li data-no="02"><span><strong>OAuth 皆插件</strong>：全部来自插件 <code>x.auth</code> 钩子——anthropic 无内置 OAuth（走 API key/env），codex/copilot/xai 为内置插件（provider/auth.ts:116-125）。</span></li><li data-no="03"><span><strong>推理方言翻译</strong>：gemini thinkingBudget / openai reasoning_effort 档位按发布日期裁剪（transform.ts:584-644,713-722）。</span></li><li data-no="04"><span><strong>重试策略</strong>：<code>retry-after(-ms)</code> 优先，否则指数退避 2s×2^n±25% 抖动封顶 30s、共 5 次（retry.ts:26-78）。</span></li></ol>
-        <div class="machine" id="oc-models" data-reveal><div class="machine-bar"><span class="title"><span class="led"></span><strong>换模型看工具视图</strong></span><span class="label-mono" data-status>选择模型家族</span></div><div class="machine-body surface-layout"><div class="surface-choices"><button class="cbtn" type="button" data-key="claude" aria-pressed="false">claude 系</button><button class="cbtn" type="button" data-key="gpt5" aria-pressed="false">GPT-5 系</button><button class="cbtn" type="button" data-key="codex" aria-pressed="false">codex 系</button></div><dl class="surface-detail" data-detail aria-live="polite"><div><dt>工具面</dt><dd>选择模型家族，对比 <code>registry.tools()</code> 实际给出的清单</dd></div><div><dt>system 段</dt><dd>与 reasoning 方言一并切换</dd></div></dl></div></div>
-        <div class="fact-boundary" data-reveal><span class="label-mono">MIGRATION IN FLIGHT</span><strong>此 checkout 处于 V1→V2（Effect 重写）中途。</strong><span><code>packages/core</code> 已有一整套 v2 session/runner 与 <code>@opencode-ai/llm</code> 原生客户端，但产品主链路仍是 <code>packages/opencode</code> + AI SDK；native 运行时被 <code>OPENCODE_EXPERIMENTAL_NATIVE_LLM</code> 门控且 unsupported 时静默回落（llm.ts:224-267）。叙述“主循环”必须钉在 prompt.ts，不要误引 v2 runner。[源码确认]</span></div>
-      </section>
-
-      <section class="chapter band-deep" id="extensions" data-spy><div class="shell">
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 10 · PLUGINS, SKILLS, COMMANDS, MCP</span><h2>扩展面分四个同心圆：改行为的钩子、加能力的工具、加知识的技能、加表面的协议。</h2><p class="lede">plugin 是 ESM 动态 import 的 npm 包或本地文件，挂 18 个钩子（chat.message、tool.execute.before/after、tool.definition、shell.env、experimental.*）；skills 兼容 <code>.claude/skills</code> 目录约定；command 是带 frontmatter 的 markdown；MCP 支持 stdio / streamable-HTTP / SSE + OAuth。</p></header>
-        <div class="custom-stack" data-reveal><div><span class="custom-key">HOOK</span><strong>Plugin</strong><p>npm 包 <code>@opencode-ai/plugin</code>，加载前 <code>checkPluginCompatibility</code> 版本门禁（plugin/loader.ts:124-133）。</p></div><div><span class="custom-key">TOOL</span><strong>自定义工具即放即用</strong><p><code>.opencode/{tool,tools}/*.{js,ts}</code> 放文件即注册（registry.ts:183-197）。</p></div><div><span class="custom-key">KNOWLEDGE</span><strong>Skills</strong><p>发现五路：<code>~/.claude/skills</code>、项目 <code>.claude/.agents</code>、配置目录、skills.paths、远程 urls 版本化缓存（skill/index.ts:183-232）。</p></div><div><span class="custom-key">PROTOCOL</span><strong>MCP / ACP</strong><p>ACP 是 Zed 发起的 Agent Client Protocol，opencode 作为 agent 后端（acp/agent.ts）。</p></div></div>
-        <div class="decision" data-reveal><span class="label-mono">8-LAYER CONFIG</span><p>配置合并八层：全局 → <code>$OPENCODE_CONFIG</code> → 项目 → <code>.opencode/</code> 目录 → env 内联 → 账号远端 → managed → MDM（config/config.ts:316-551）。改配置先问“哪一层赢”。</p></div>
-        <div class="fact-boundary" data-reveal><span class="label-mono">EXPERIMENTAL GATE</span><strong>包存在，不等于能力已上线。</strong><span><code>execute</code>（code-mode）、plan 模式、LSP 工具、background subagents 分别藏在 <code>--experimentalCodeMode/--experimentalPlanMode/--experimentalLspTool/OPENCODE_EXPERIMENTAL_BACKGROUND_SUBAGENTS</code> 之后；codemode README 自述不含文件系统/进程沙箱，“confined”仅指解释器面。[文档声明]+[源码确认]</span></div>
-      </div></section>
-
-      <section class="chapter shell" id="governance" data-spy>
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 11 · STEPS, RETRIES, DOOM LOOPS</span><h2>防失控是三件套：步数上限翻译成一条“禁工具”提示注入、连续三次同调用触发 doom_loop 审批、重试尊重服务端 retry-after。</h2><p class="lede">OpenCode 不用超时器管住循环，而是把预算与审批织进循环本身——每一步都要花掉预算或过一次闸门。</p></header>
-        <ol class="kp-list" data-reveal><li data-no="01"><span><strong>步数预算</strong>：<code>agent.steps</code> 用尽时 isLastStep 在 messages 尾部注入 MAX_STEPS_PROMPT 假消息——禁工具、要求文本总结（prompt.ts:1178-1179,1281 + core/session/runner/max-steps.ts）。</span></li><li data-no="02"><span><strong>doom loop 检测</strong>：最近 3 个 part 同工具同参数 → <code>permission.ask({permission:"doom_loop"})</code>，把“鬼打墙”升级成一次人工裁决（processor.ts:29,356-380）。</span></li><li data-no="03"><span><strong>输出封顶</strong>：<code>OUTPUT_TOKEN_MAX=32_000</code>（可 env 覆盖），取 <code>min(model.limit.output, cap)</code>（transform.ts:18,1418）。</span></li></ol>
-        <div class="fact-boundary" data-reveal><span class="label-mono">NO WALL-CLOCK KILL</span><strong>循环没有全局超时。</strong><span>防失控靠 steps 上限、doom_loop 审批、abort 端点三件套——面试中“OpenCode 如何防死循环”不要答成有超时器。[合理推断]（grep 未命中 loop 级 timeout + 三机制均有源码）</span></div>
-      </section>
-
-      <section class="chapter band-edge" id="practice" data-spy><div class="shell">
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 12 · PRACTICE &amp; INTERVIEW</span><h2>诊断 OpenCode 永远从两样东西开始：<code>~/.local/share/opencode/opencode.db</code> 的事件行，和 <code>/event</code> 的 SSE 流。</h2><p class="lede">本章把 1-11 章收拢成五步诊断法和三套面试题；atlas-locator 做症状→归属层映射。</p></header>
-        <div class="machine" id="oc-atlas" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>症状定位器</strong></span><span class="label-mono" data-status>选择症状</span></div><div class="machine-body atlas-layout"><div class="atlas-choices"><button class="layer-row" type="button" data-key="stuck" aria-pressed="false">TUI 卡住不出字</button><button class="layer-row" type="button" data-key="approve" aria-pressed="false">工具疯狂弹审批</button><button class="layer-row" type="button" data-key="dumb" aria-pressed="false">会话越跑越蠢</button><button class="layer-row" type="button" data-key="model" aria-pressed="false">换模型后行为突变</button></div><div class="atlas-detail" data-detail><span class="label-mono">FIRST EVIDENCE</span><h3>选择一种症状</h3><p>查看最先查看的层与源码锚点。</p></div></div></div>
-        <div class="spread"><article class="prose" data-reveal><h3>五步诊断法</h3><p>① 看表面——<code>session.status</code>（busy/idle）与 SSE 心跳判定是内核忙还是链路断；② 看投影——<code>opencode.db</code> 的 Message/Part 行还原模型“实际见过什么”（尤其 <code>mode:"compaction"</code> 摘要行与 step-finish 的 tokens）；③ 看裁决——对照 prompt.ts:1111-1115 终止三条件解释“为什么续 / 为什么停”，孤儿中断工具只打告警照样退出（:1116-1127）不算第四条件；④ 看闸门——permission pending（<code>permission.asked</code> 有而 replied 无 = 卡在审批纤）与 retry.ts 退避日志（retry-after 被尊重与否）；⑤ 看边界——<code>agent.steps</code>、<code>subagent_depth</code>、truncate 的 <code>outputPath</code> 落盘文件，这三处是“行为变怪”最常藏身的预算墙。</p><div class="decision"><span class="label-mono">SOURCE BOUNDARY · 754bb7e</span><p>本课基于本地 checkout 源码走读。静态源码能证明实现关系，不能替代真实运行验证——尤其 share 云端与 V1 存量数据的运行时行为。“服务器为核、终端为壳”等章节叙事是本课程作者的教学框架，不代表 OpenCode 官方定位。</p></div></article></div>
-
-        <div class="interview" data-reveal>
-          <span class="label-mono">PROBLEM SET 01 · 架构设计题</span>
-          <h4>“把 opencode 的 agent 内核嵌入自研平台，但要求会话历史、计费统计归平台所有，怎么做？”</h4>
-          <div class="qa">
-            <details>
-              <summary>展开答题骨架与解耦推演</summary>
-              <div class="ans">
-                <p><strong>【场景定义】</strong> 复用 runLoop / 工具 / 权限引擎，替换存储与事件消费方；TUI 弃用，平台自研前端。</p>
-                <p><strong>【归属层/机制】</strong> 内核与持久化的解耦点恰是“事件投影”（<code>Chapter 03: Events Project to SQL</code>）：内核只 publish（session.ts:629-643 updateMessage→Event），落库是 projector 的订阅副作用（core/session/projector.ts:260-318）。计费字段 assistant 消息自带 cost/tokens.cache。</p>
-                <p><strong>【关键证据链】</strong> EventV2 Interface（core/src/event.ts:126-149 publish/subscribe/durable/replay）；<code>event-v2-bridge.ts</code> 的双向桥示范了“换总线”的既有先例；share-next.ts 用同一订阅面做增量同步——平台计费可完全复刻此模式。</p>
-                <p><strong>【方案与防线】</strong> 写自己的 projector 替换默认投影（或禁用默认层注入平台 DB）；防线：durable 事件的 seq/aggregateID 必须保留否则回放断链；<code>Instance</code>/directory 上下文注入别丢（bridge 的 Location.Info），否则多租户路由错乱。</p>
-              </div>
-            </details>
-          </div>
-        </div>
-
-        <div class="interview" data-reveal>
-          <span class="label-mono">PROBLEM SET 02 · 故障排查题</span>
-          <h4>“CI 里 opencode run 跑一半静默退出，无任何工具输出，先查什么？”</h4>
-          <div class="qa">
-            <details>
-              <summary>展开答题骨架与证据链</summary>
-              <div class="ans">
-                <p><strong>【场景定义】</strong> headless 模式、非交互 TTY，进程以退出码结束但 assistant 消息只有半截。</p>
-                <p><strong>【归属层/机制】</strong> 两个高发：(a) 审批纤——CI 无应答者，非 auto 模式收到 <code>permission.asked</code> 直接自动 reject（run.ts:801-816）；(b) provider 侧 finish=stop 谎报——循环靠 <code>hasToolCalls</code> 防御，但 content-filter 收尾会主动 break（prompt.ts:1295-1307）。</p>
-                <p><strong>【关键证据链】</strong> 退出前最后事件是 <code>permission.asked</code>（无 replied）→ 审批；<code>handle.message.finish === "content-filter"</code> → 过滤；retry.ts 5 次耗尽后 Cause.done 静默收场。查 <code>OPENCODE=1</code> 进程日志 <code>loop exit with orphaned interrupted tool</code> 告警。</p>
-                <p><strong>【方案与防线】</strong> 给 CI 配 <code>--yolo</code>/permission allow 规则，并把 reject 转义成显式失败（CorrectedError message 进日志）；防线：CI 前端设外层 job timeout，补上内核缺失的 wall-clock 治理。</p>
-              </div>
-            </details>
-          </div>
-        </div>
-
-        <div class="interview" data-reveal>
-          <span class="label-mono">PROBLEM SET 03 · 安全扩展题</span>
-          <h4>“用插件体系给公司写一道‘生产库禁连 + 密钥不落盘’护栏，钩子挂在哪？”</h4>
-          <div class="qa">
-            <details>
-              <summary>展开答题骨架与三把锁</summary>
-              <div class="ans">
-                <p><strong>【场景定义】</strong> agent 可自由跑 bash，需拦截 <code>psql prod</code> 类命令，并防止 .env 被 read。</p>
-                <p><strong>【归属层/机制】</strong> 三把锁正交：permission 规则（evaluate findLast，后写 deny 压过先写 allow）、内置 .env 读取默认 ask（agent.ts:119-136 全局 defaults）、外部路径 <code>external_directory</code>（external-directory.ts:15-45）。插件钩子 <code>tool.execute.before</code>（tools.ts:106-112）在 execute 前可抛错硬拦；<code>permission.ask</code> 钩子存在但服务端无触发点（预留，别依赖）。</p>
-                <p><strong>【关键证据链】</strong> bash pattern 由 tree-sitter 命令节点还原（shell.ts:378-411），<code>rm -rf</code> 拆管道/子命令逐一评估——规则要写通配前缀（arity 字典决定 always 粒度）；deny 返回的 DeniedError 文本会回注模型，可引导其改用安全路径。</p>
-                <p><strong>【方案与防线】</strong> plugin 里 <code>tool.execute.before</code> 对 bash/edit 类工具做 AST 级二次审查 + 写自定义审计事件；防线：allow 规则不要写 <code>bash:"*"</code>——MCP 工具每次调用才 ask（tools.ts:409-410），把 server 名纳入 pattern 管理。</p>
-              </div>
-            </details>
-          </div>
-        </div>
-
-        <dl class="gloss" data-reveal><div><dt>part</dt><dd>消息的原子内容块（12 种），流式更新的粒度单位，逐 part 落库广播。</dd></div><div><dt>runLoop / step</dt><dd>主 <code>while(true)</code> 与其一次迭代 = 一次完整模型请求-工具执行周期；step 计数喂给 agent.steps 预算。</dd></div><div><dt>事件投影</dt><dd>内核只 publish 事件，SQLite 行由 projector 订阅写入——状态是事件流的物化视图。</dd></div><div><dt>doom loop</dt><dd>连续 3 次同工具同参数被 processor 识别后升级为一次 doom_loop 权限审批。</dd></div><div><dt>compaction</dt><dd>溢出前把老历史摘要成一条 <code>mode:"compaction"</code> assistant 消息、保留 tail 并自动续跑的循环内任务。</dd></div><div><dt>PRUNE</dt><dd>压缩的姊妹操作：倒序跳过最近 2 轮，把更老非保护工具输出清空为占位文本。</dd></div><div><dt>revert / snapshot</dt><dd>用独立 git-dir 对工作区做文件级快照，会话可退回任意消息点（含 unrevert）。</dd></div><div><dt>subagent / task</dt><dd>带 parentID 的子会话，由 task 工具递归调用主 prompt 管线实现；默认 depth=1 禁嵌套。</dd></div></dl>
-        <section class="source-notes" aria-labelledby="opencode-sources" data-reveal><span class="label-mono">PRIMARY SOURCES</span><h3 id="opencode-sources">继续查证</h3><p>课程事实来自本地 checkout（anomalyco/opencode @ 754bb7e）的源码走读；以下 permalink 指向对应文件。</p><div><a href="https://github.com/anomalyco/opencode/blob/754bb7e3903df6276e6ddc96e3d6daced7160902/packages/opencode/src/session/prompt.ts">prompt.ts · runLoop</a><a href="https://github.com/anomalyco/opencode/blob/754bb7e3903df6276e6ddc96e3d6daced7160902/packages/opencode/src/session/processor.ts">processor.ts · LLMEvent/doom loop</a><a href="https://github.com/anomalyco/opencode/blob/754bb7e3903df6276e6ddc96e3d6daced7160902/packages/opencode/src/tool/registry.ts">registry.ts · 工具过滤</a><a href="https://github.com/anomalyco/opencode/blob/754bb7e3903df6276e6ddc96e3d6daced7160902/packages/opencode/src/permission/index.ts">permission/index.ts · ask/reply</a><a href="https://github.com/anomalyco/opencode/blob/754bb7e3903df6276e6ddc96e3d6daced7160902/packages/opencode/src/session/compaction.ts">compaction.ts · 压缩/prune</a><a href="https://github.com/anomalyco/opencode/blob/754bb7e3903df6276e6ddc96e3d6daced7160902/packages/opencode/src/server/routes/instance/httpapi/groups/event.ts">event.ts · SSE /event</a><a href="https://github.com/anomalyco/opencode/blob/754bb7e3903df6276e6ddc96e3d6daced7160902/packages/opencode/src/cli/tui/worker.ts">worker.ts · TUI↔server RPC</a><a href="https://github.com/anomalyco/opencode/blob/754bb7e3903df6276e6ddc96e3d6daced7160902/packages/core/src/session/projector.ts">projector.ts · 事件→SQLite</a><a href="https://opencode.ai">opencode.ai · 官方文档</a></div></section>
-      </div></section>
-    </main>
-    <footer class="site"><div class="shell"><span>顶级 Agent 内核图谱 · OpenCode</span><div><a href="/codex">Codex</a> · <a href="/grok">Grok Build</a> · <a href="/deepseek">DeepSeek Harness</a> · <a href="/pi">Pi Agent</a> · <a href="/opencode">OpenCode</a> · <a href="/openclaw">OpenClaw</a> · <a href="/hermes">Hermes Agent</a> · <a href="#top">返回顶部 ↑</a></div></div></footer>
-    <script type="module" src="/src/opencode.ts"></script>
-  </body>
+    <section class="chapter band-edge" id="practice" data-spy><div class="shell">
+      <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 12 · DIAGNOSE FROM STATE</span><h2>“Agent 卡住了”不是诊断，只是症状。</h2><p class="lede">先看会话状态，再看最后合法历史，再看工具结算与审批，最后检查预算、重试和 v1/v2 边界。</p></header>
+      <div class="machine" id="oc-atlas" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>症状定位器</strong></span><span class="label-mono" data-status>选择症状</span></div><div class="machine-body atlas-layout"><div class="atlas-choices"><button class="layer-row" type="button" data-key="stuck" aria-pressed="false">TUI 卡住不出字</button><button class="layer-row" type="button" data-key="approve" aria-pressed="false">工具疯狂弹审批</button><button class="layer-row" type="button" data-key="dumb" aria-pressed="false">会话越跑越蠢</button><button class="layer-row" type="button" data-key="model" aria-pressed="false">换模型后行为突变</button></div><div class="atlas-detail" data-detail><span class="label-mono">FIRST EVIDENCE</span><h3>选择一种症状</h3><p>查看最先检查的状态与判断点。</p></div></div></div>
+      <div class="spread"><article class="prose" data-reveal><h3>五步诊断法</h3><p>① 状态：idle、busy、retry，还是事件断线？② 历史：最后问题是谁，回复是否属于它，是否有本地工具 part？③ 结算：每个 tool use 是否完成、失败或补成 interrupted？④ 闸门：是否有未回复审批、retry-after、步数或深度限制？⑤ 代际：解释的是当前 v1 还是迁移中的 v2？</p><div class="decision"><span class="label-mono">课程事实边界</span><p>静态快照能证明实现关系，不能代替线上运行证据；未来版本需要重新核对。</p></div></article></div>
+      <div class="interview" data-reveal><span class="label-mono">PROBLEM SET 01 · 主循环题</span><h4>“provider 返回 stop，为什么 Agent 仍继续？”</h4><div class="qa"><details><summary>展开答题骨架</summary><div class="ans"><p>finish reason 与工具事实可能不一致。v1 同时检查正常 finish、没有本地工具 part、回复属于最新用户；任一不成立就续。判据来自持久历史，崩溃恢复和插话可复用。</p></div></details></div></div>
+      <div class="interview" data-reveal><span class="label-mono">PROBLEM SET 02 · 长会话题</span><h4>“规则变化，怎样兼顾新鲜度与缓存？”</h4><div class="qa"><details><summary>展开答题骨架</summary><div class="ans"><p>先分版本：v1 稳定重组 system；v2 才有 context epoch。再答未变复用、兼容变化追加、不兼容才换代，以及快照和序号窗口的成本。</p></div></details></div></div>
+      <div class="interview" data-reveal><span class="label-mono">PROBLEM SET 03 · 可靠性题</span><h4>“如何保证崩溃后还能继续工具会话？”</h4><div class="qa"><details><summary>展开答题骨架</summary><div class="ans"><p>守住每个 tool use 必有 result：退出结算、重放补洞、重启清账。先验证消息合法，再验证副作用幂等；进程启动成功不算完成。</p></div></details></div></div>
+      <dl class="gloss" data-reveal><div><dt>step</dt><dd>一次模型采样；是否再采样由外层循环决定。</dd></div><div><dt>steer</dt><dd>运行中插话，在下一轮边界进入历史；v2 将其显式持久化。</dd></div><div><dt>settle</dt><dd>工具从 pending/running 到 success/error 的生命周期。</dd></div><div><dt>materialize</dt><dd>生成当轮模型真正可见的工具快照。</dd></div><div><dt>context epoch</dt><dd>v2 环境基线的版本边界，不是固定 agent 指令。</dd></div><div><dt>compaction</dt><dd>摘要旧历史并保留近期原文；不同于 prune。</dd></div><div><dt>durable</dt><dd>写入事件日志、可重放；live-only 断线后不可找回。</dd></div><div><dt>subagent</dt><dd>v1 的普通子会话；v2 尚无同等 task 工具。</dd></div></dl>
+      <div class="decision" data-reveal><span class="label-mono">毕业练习</span><p>任选症状，用四句话回答：事故、短 trace、持久判据、失败路径验证。能答完，你学到的是可迁移的 Harness 思考法。</p></div>
+    </div></section>
+  </main>
+  <footer class="site"><div class="shell"><span>顶级 Agent 教学系列 · OpenCode</span><div><a href="/codex">Codex</a> · <a href="/grok">Grok Build</a> · <a href="/deepseek">DeepSeek Harness</a> · <a href="/pi">Pi Agent</a> · <a href="/opencode">OpenCode</a> · <a href="/openclaw">OpenClaw</a> · <a href="/hermes">Hermes Agent</a> · <a href="#top">返回顶部 ↑</a></div></div></footer>
+  <script type="module" src="/src/opencode.ts"></script>
+</body>
 </html>

@@ -25,7 +25,7 @@ function initChoiceDetail(id: string, data: Record<string, Detail>): void {
     const item = data[button.dataset.key ?? ""];
     if (!item || !detail) return;
     qsa<HTMLButtonElement>(root, "[data-key]").forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === button)));
-    detail.innerHTML = `<span class="label-mono">OWNING PATH</span><h3>${item.title}</h3><p>${item.body}</p>`;
+    detail.innerHTML = `<span class="label-mono">MECHANISM OWNER</span><h3>${item.title}</h3><p>${item.body}</p>`;
     if (status) status.textContent = item.status ?? button.textContent ?? "selected";
   }));
 }
@@ -34,8 +34,8 @@ function initLoop(): void {
   const root = document.querySelector("#dsh-loop");
   if (!root) return;
   const steps = qsa<HTMLElement>(root, "[data-steps] li");
-  const events = ["turn/start", "agent/inbox/claimed", "step/start", "user/message", "request/header + request/context", "assistant/chunk*", "assistant/message", "tool/call → tool/result", "step/end → turn/end"];
-  const notes = ["先记录持久 Turn，再开始认领输入。", "Inbox 同时承担排队和可恢复 splice 事实。", "一个 Step 对应一次模型请求及其工具批次。", "进入本步的消息成为可投影 Surface 节点。", "有效配置、Prompt 与工具顺序被记录后再请求模型。", "Chunk 保留回放证据，但不直接进入模型历史。", "成功 Provider 调用落成 committed assistant message。", "工具经过策略管线，唯一结果按模型顺序写回日志。", "没有欠下的 next-step 工作时，Turn 才关闭。"];
+  const events = ["turn/start", "agent/inbox/claimed", "step/start", "user/message", "request/header + runtime snapshot", "assistant/chunk*", "assistant/message", "tool/call → tool/result", "step/end → turn/end"];
+  const notes = ["先记录持久 Turn，再开始认领输入。", "Inbox 用两条持久队列保存下一步与下一轮输入。", "一个 Step 对应一次模型请求及其工具批次。", "本步领取的消息成为可投影 Surface 节点。", "记录实际生效配置；变化的运行时政策作为历史快照进入。", "Chunk 保留回放证据，但不直接进入模型历史。", "完整或中断的输出收束为 assistant message。", "工具经过策略管线，唯一结果按模型顺序写回日志。", "只有没有欠下的 next-step 工作时，Turn 才关闭。"];
   let index = -1;
   let timer = 0;
   const log = qs<HTMLElement>(root, "[data-log]");
@@ -116,13 +116,13 @@ function initPromptAssembly(): void {
   const root = document.querySelector("#dsh-prompt");
   if (!root) return;
   type Sec = { name: string; order: number; text: string };
-  const identity: Sec = { name: "harness:identity", order: -100, text: "You are an AI agent powered by DeepSeek Harness." };
+  const identity: Sec = { name: "harness:identity", order: -1000, text: "You are an AI agent powered by DeepSeek Harness." };
   const personaText = (rewritten: boolean): Sec => ({ name: "deployment:persona", order: 0, text: rewritten ? "改写后的 persona" : "默认部署 persona" });
   const optional: Record<string, Sec> = {
     repo: { name: "repo-rules", order: 10, text: "仓库规则" },
     shell: { name: "shell-rules", order: 10, text: "Shell 规则" },
     audit: { name: "audit-note", order: 100, text: "审计说明" },
-    early: { name: "urgent-hint", order: -200, text: "高优先级提示（插队到 identity 之前）" },
+    early: { name: "urgent-hint", order: -200, text: "高优先级提示（identity 之后、常规 persona 之前）" },
   };
   const mounted = new Set<string>();
   let personaRewritten = false;
@@ -133,7 +133,7 @@ function initPromptAssembly(): void {
   const render = () => {
     const sections: Sec[] = [identity, personaText(personaRewritten)];
     mounted.forEach((key) => { const sec = optional[key]; if (sec) sections.push(sec); });
-    sections.sort((a, b) => a.order - b.order || a.name.localeCompare(b.name));
+    sections.sort((a, b) => a.order - b.order || (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
     const signature = sections.map((section) => `${section.name}:${section.text}`).join("|");
     const before = previous ? previous.split("|") : [];
     const now = signature.split("|");
@@ -156,7 +156,7 @@ function initPromptAssembly(): void {
       return `<span class="ev"><span class="t">sys${String(i + 1).padStart(2, "0")}</span> <span class="k-sys">order ${section.order} · ${section.name}</span> ${tag}</span>`;
     });
     lines.push(`<span class="ev"><span class="k-tool">tool schemas · 按 Agent scope 排序追加</span> <span class="t">request/header 记录顺序，可重建</span></span>`);
-    if (snapshot) lines.push(`<span class="ev"><span class="k-user">user snapshot · runtime context（cwd / branch）</span> <span class="t">pre-step 注入，不碰 system 前缀</span></span>`);
+    if (snapshot) lines.push(`<span class="ev"><span class="k-user">user snapshot · runtime policy state</span> <span class="t">变化时追加，不碰 system 前缀</span></span>`);
     else lines.push(`<span class="ev"><span class="t">runtime context：未注入。注入时以 user-role 加入，不进 system</span></span>`);
     if (log) log.innerHTML = lines.join("");
     const set = (selector: string, value: string) => { const el = qs<HTMLElement>(root, selector); if (el) el.textContent = value; };
@@ -194,7 +194,7 @@ function initContextProjection(): void {
   if (!root) return;
   type Evt = { label: string; tok: number; visible: boolean; pair?: "call" | "result" };
   const events: Evt[] = [
-    { label: "user/message · 检查 config/app.json 超时", tok: 40, visible: true },
+    { label: "user/message · 检查配置为何超时", tok: 40, visible: true },
     { label: "assistant/chunk ×12 · 流式证据", tok: 0, visible: false },
     { label: "assistant/message · 结论 + tool-call read_file", tok: 180, visible: true, pair: "call" },
     { label: "tool/result · read_file 文件内容", tok: 300, visible: true, pair: "result" },
@@ -299,27 +299,27 @@ function boot(): void {
   initContextProjection();
   initSafety();
   initChoiceDetail("#dsh-composition", {
-    model: { title: "ctx.llm · LlmAdapter", body: "注册或替换 Provider adapter；Loop 只通过 LLM service 发起流式调用。", status: "LLM PROVIDER" },
-    prompt: { title: "ctx.systemPrompt · section/context", body: "新增 Prompt plugin 或 scoped section；模型可见内容必须同时留下可重建事实。", status: "SYSTEM PROMPT" },
-    tool: { title: "ctx.tools · ToolRuntime", body: "注册 Definition 与 Consumer，并让 Provider seam 提供真实能力；不要把工具分支写进 Loop。", status: "TOOLS" },
-    history: { title: "ctx.sessions · persistence / repair", body: "先查 append-only log、flush、load repair 与 Surface projection，不从 UI 文本反推真相。", status: "SESSION" },
+    model: { title: "模型适配服务", body: "替换提供方实现；Loop 仍通过同一模型服务发起流式调用。验证点是有效组合中的当前 Provider。", status: "LLM PROVIDER" },
+    prompt: { title: "提示词注册与运行时快照", body: "静态规则进入有序片段，动态政策以历史快照追加；两者都必须能解释模型为何看见这段内容。", status: "SYSTEM PROMPT" },
+    tool: { title: "工具注册与能力 Provider", body: "先确认工具是否在当前 Agent 作用域可见，再检查真实能力由谁提供；不要把后端分支写进 Loop。", status: "TOOLS" },
+    history: { title: "会话持久化与崩溃修补", body: "先找日志最后一个持久事实，再检查 flush、尾部修补与 Surface 投影；不要从 UI 乐观状态反推真相。", status: "SESSION" },
   });
   initChoiceDetail("#dsh-tools", {
-    hidden: { title: "Prompt assembly / Agent scope", body: "检查当前 Preset 的 scoped ToolRuntime layer，以及最终写入 request/header 的工具顺序。" },
-    denied: { title: "tools/pre-execute → approval → guard", body: "body 没运行时先看 pre decision、answerer outcome 与 monotonic guard，不要查实现输出。" },
-    timeout: { title: "tools/execute waterfall", body: "timeout、retry 与 metrics 在 around-dispatch 层；同时核对进程取消是否由 Provider 正确处理。" },
-    distorted: { title: "tools/post-execute → finalizeContent", body: "比较 lossless result、post replacement 与最终 model-facing content，确认哪一层改写了证据。" },
+    hidden: { title: "组装结果与 Agent 作用域", body: "先检查当前作用域的可见工具集，再核对请求 Header 记录的工具顺序。未注册与模型不调用是两种问题。" },
+    denied: { title: "执行前政策链", body: "工具体没运行时，依次看 allow / deny / ask、审批四值结论和单调 guard；此时查实现输出没有意义。" },
+    timeout: { title: "执行与取消边界", body: "确认超时信号来自哪一层，并验证工具是否协作达到静默；同进程超时不会神奇地硬杀执行体。" },
+    distorted: { title: "执行后政策与结果收口", body: "比较规范化结果、post-execute 决策与最终模型文本；第一处发生变化的阶段就是责任层。" },
   });
   initChoiceDetail("#dsh-profiles", {
-    base: { title: "@deepseek-ai/dsh-base Bundle", body: "进程级基础插件层；改变它会影响使用该 Bundle 的 Profile 新启动实例。", status: "BUNDLE" },
-    surface: { title: "web-app / headless Bundle", body: "它们叠在 base 之上：一个加入 Web Host，一个只提交一次任务并等待 idle。", status: "SURFACE BUNDLE" },
-    profile: { title: "profile cordis.patch.yml", body: "用户层按 row id 替换整份 config，不是深合并；先 dump-config 再改。", status: "PROFILE PATCH" },
-    preset: { title: "AgentPresets standing scope", body: "只影响加入该 Preset 的 Agent；已有输出的 Agent 不允许随意 recompose。", status: "AGENT PRESET" },
+    base: { title: "共享基础 Bundle", body: "进程级基础插件层；改变它会影响所有使用该组合的新启动实例。", status: "BUNDLE" },
+    surface: { title: "运行表面 Bundle", body: "不同表面在共享基础上增加自己的宿主能力；差异属于组合，不属于 Loop 分支。", status: "SURFACE BUNDLE" },
+    profile: { title: "用户 Profile Patch", body: "用户层按行标识替换整份配置，不做字段级深合并；先导出最终组合再判断。", status: "PROFILE PATCH" },
+    preset: { title: "Agent 作用域组合", body: "只影响加入该组合的 Agent；人格遮蔽、工具限制与子代理继承都在这层收口。", status: "AGENT PRESET" },
   });
   initSurface("#dsh-capabilities", {
-    local: [["Definition", "ctx.fs + ctx.subprocess"], ["Provider", "fs-local + subprocess-local"], ["Consumers", "Bash、PTY、LSP、文件工具"], ["位置", "宿主工作区与进程树"]],
-    sandbox: [["Definition", "同一 ctx.fs / ctx.subprocess"], ["Provider", "fs-sandbox + sandbox-local"], ["Consumers", "上层工具无需分叉"], ["限制", "文件效果模式；runner 不可用时失败关闭"]],
-    e2b: [["Definition", "同一 provider-neutral interfaces"], ["Provider", "E2BFileSystem + E2BSubprocessRuntime"], ["Consumers", "Bash、PTY、LSP 复用"], ["边界", "实验性 POC；只搬执行世界，不搬 Agent/Session"]],
+    local: [["Definition", "文件与子进程的稳定能力接口"], ["Provider", "本地文件系统与本地进程"], ["Consumers", "Bash、PTY、LSP、文件工具"], ["判断", "执行发生在宿主工作区与进程树"]],
+    sandbox: [["Definition", "仍是同一组能力接口"], ["Provider", "平台沙箱 runner + 进程内写围栏"], ["Consumers", "上层工具无需分叉"], ["判断", "只承诺文件效果；runner 不可用时失败关闭"]],
+    e2b: [["Definition", "进程外仍遵守同一窄接口"], ["Provider", "远程或外部运行时"], ["Consumers", "工具只消费能力，不识别后端名"], ["判断", "先核对能力广告、凭据剥离与结算语义"]],
   });
   initSurface("#dsh-surfaces", {
     web: [["消费者", "人类开发者"], ["交互", "Web UI、审批、问题、命令"], ["组合", "base + web-app Bundle"], ["状态", "从 session/event 投影"]],

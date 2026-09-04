@@ -21,7 +21,7 @@ function initChoiceDetail(id: string, data: Record<string, Detail>): void {
   qsa<HTMLButtonElement>(root, "[data-key]").forEach((button) => button.addEventListener("click", () => {
     const item = data[button.dataset.key ?? ""]; if (!item || !detail) return;
     qsa<HTMLButtonElement>(root, "[data-key]").forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === button)));
-    detail.innerHTML = `<span class="label-mono">OWNING PATH</span><h3>${item.title}</h3><p>${item.body}</p>`;
+    detail.innerHTML = `<span class="label-mono">OWNING LAYER</span><h3>${item.title}</h3><p>${item.body}</p>`;
     if (status) status.textContent = item.status ?? button.textContent ?? "selected";
   }));
 }
@@ -117,7 +117,7 @@ function initCompaction(): void {
 
 function initTuiDiff(): void {
   const root = document.querySelector("#pi-tui-diff"); if (!root) return;
-  const base = ["$ pi \"审阅 src/config.ts\"", "user · 检查错误处理并给最小修复建议", "⏳ read src/config.ts", "assistant · 错误处理集中在 load() 的"];
+  const base = ["$ pi \"审阅配置并给最小修复\"", "user · 检查错误处理并给最小修复建议", "⏳ read 配置文件", "assistant · 错误处理集中在 load() 的"];
   let rows = base.slice(); let streamStep = 0; let toolDone = false;
   const screen = qs<HTMLElement>(root, "[data-screen]"); const log = qs<HTMLElement>(root, "[data-log]"); const status = qs<HTMLElement>(root, "[data-status]");
   const draw = (changed: number[]) => { if (screen) screen.innerHTML = rows.map((row, index) => `<span class="pi-row${changed.includes(index) ? " is-changed" : ""}"><span class="t">${index + 1}</span>${row.replace(/</g, "&lt;")}</span>`).join(""); };
@@ -131,7 +131,7 @@ function initTuiDiff(): void {
     const frame = button.dataset.f;
     if (frame === "reset") { rows = base.slice(); streamStep = 0; toolDone = false; if (log) log.innerHTML = ""; draw([]); if (status) status.textContent = "等待帧"; return; }
     if (frame === "stream") { streamStep += 1; if (streamStep === 1) { rows[3] = "assistant · 错误处理集中在 load() 的 catch 分支"; apply("文本 delta", [3], "差分"); return; } if (streamStep === 2) { rows.push("· 建议：补 timeout 与 retry 预算"); apply("换行追加", [rows.length - 1], "差分"); return; } apply("空闲帧", [], "差分"); return; }
-    if (frame === "tool") { if (!toolDone) { rows[2] = "✔ read src/config.ts · 327 行 · 1.2s"; toolDone = true; apply("工具行更新", [2], "差分"); return; } apply("工具行重复帧", [], "差分"); return; }
+    if (frame === "tool") { if (!toolDone) { rows[2] = "✔ read 配置文件 · 327 行 · 1.2s"; toolDone = true; apply("工具行更新", [2], "差分"); return; } apply("工具行重复帧", [], "差分"); return; }
     if (frame === "resize") { apply("宽度变化", rows.map((_, index) => index), "full redraw"); return; }
   }));
   draw([]);
@@ -157,7 +157,7 @@ function boot(): void {
   initSessionTree();
   initCompaction();
   initTuiDiff();
-  initChoiceDetail("#pi-layers", { provider: { title: "packages/ai · API adapter", body: "检查目标 model.api 的 payload conversion、auth、SSE mapping 与 in-band error event。", status: "PI AI" }, loop: { title: "packages/agent · runLoop", body: "查看 committed assistant、tool batch、steering/follow-up drain 与 stopReason。", status: "AGENT CORE" }, session: { title: "coding-agent · SessionManager", body: "检查 leaf、parentId、buildContextEntries 与 branch/compaction projection。", status: "SESSION TREE" }, render: { title: "packages/tui · differential renderer", body: "比较 previousLines/previousScreen、viewport width 与 full redraw 条件。", status: "TUI" } });
+  initChoiceDetail("#pi-layers", { provider: { title: "模型适配层", body: "先核对目标 API 的请求形状、认证解析、流事件映射与最终错误消息。", status: "PI AI" }, loop: { title: "Agent 循环层", body: "查看助手消息是否已提交、工具批次是否回填、双队列是否排空，以及最终 stopReason。", status: "AGENT CORE" }, session: { title: "会话投影层", body: "核对当前 leaf、父子关系与压缩边界，确认恢复出的活动路径是否正确。", status: "SESSION TREE" }, render: { title: "终端呈现层", body: "比较前后帧、可用宽度与完整重绘条件；画面异常不等于 Agent 状态异常。", status: "TUI" } });
   initSurface("#pi-providers", { anthropic: [["统一层", "Model + Context + AssistantMessageEventStream"], ["Adapter", "system block、thinking signature、tool_result"], ["Auth", "Provider auth resolution"], ["Wire", "Anthropic Messages SSE"]], openai: [["统一层", "同一 Agent / Pi AI contracts"], ["Adapter", "system/developer role、image URL、tool ids"], ["Compat", "endpoint-specific stop/toolUse mapping"], ["Wire", "OpenAI-compatible streaming"]], google: [["统一层", "同一 provider-neutral events"], ["Adapter", "Google content parts 与 reasoning options"], ["模型", "catalog 由 Provider 提供"], ["Wire", "Google API-specific payload"]], faux: [["用途", "确定性测试"], ["响应", "scripted tool call / text / error"], ["网络", "不访问真实 Provider"], ["证据", "验证标准事件与最终 Message"]] });
   initChoiceDetail("#pi-extensions", { tool: { title: "ExtensionAPI.registerTool", body: "注册 TypeBox schema、execute、progress 与 TUI renderers；异常才成为 isError。" }, skill: { title: "ResourceLoader + Skill", body: "System Prompt 先暴露 name/description，模型按需用 read 加载完整 SKILL.md。" }, hook: { title: "tool_call event", body: "执行前可改参数或 block；这是一项 Extension policy，不是 Pi 内建 Sandbox。" }, state: { title: "Session custom entry", body: "custom 持久扩展状态但不进 LLM；custom_message 才会进入 context。" } });
   initSurface("#pi-surfaces", { sdk: [["消费者", "Node / TypeScript 应用"], ["入口", "createAgentSession"], ["进程", "同进程"], ["状态", "AgentSession + SessionManager"]], json: [["消费者", "日志与轻量观察器"], ["入口", "--mode json"], ["协议", "逐行 Agent events"], ["控制", "没有 RPC command plane"]], rpc: [["消费者", "IDE / 跨语言子进程"], ["Framing", "LF-only JSONL"], ["响应", "accepted / queued"], ["结果", "后续 events / messages"]], protocol: [["消费者", "自建远程服务"], ["Framing", "uint32-be + definite CBOR"], ["状态", "Server / Session snapshots 权威"], ["边界", "experimental；Transport 负责认证"]], client: [["消费者", "远程 Pi session client"], ["连接", "Transport-neutral ByteTransport"], ["所有权", "shared / exclusive SessionLease"], ["恢复", "不自动 reconnect"]] });

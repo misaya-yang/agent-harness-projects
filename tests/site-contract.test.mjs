@@ -15,7 +15,9 @@ describe("published course contract", () => {
       const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
       assert.equal(new Set(ids).size, ids.length);
       const hashes = [...html.matchAll(/href="#([^"]+)"/g)].map((match) => match[1]);
+      const machineCount = (html.match(/class="machine" id=/g) ?? []).length;
       assert.deepEqual(hashes.filter((hash) => !ids.includes(hash)), []);
+      assert.match(html, new RegExp(`0?${machineCount} 个(?:交互)?实验`));
       assert.doesNotMatch(html, /<button(?![^>]*\btype="button")/);
     });
   }
@@ -29,11 +31,31 @@ describe("published course contract", () => {
     }
   });
 
-  it("labels authored walkthroughs as teaching skeletons", () => {
-    const html = pages.map(read).join("\n");
-    assert.doesNotMatch(html, /MINIMAL RUNNABLE|精简独立可运行/);
-    assert.match(html, /SOURCE-ALIGNED TEACHING SKELETON/);
-    assert.match(html, /不代表各上游项目的官方定位/);
+  it("teaches from incidents without turning source locations into the lesson", () => {
+    const snapshots = {
+      "index.html": "498d40b29f60",
+      "grok.html": "72a61251fcff",
+      "deepseek.html": "49a606bc5b59",
+      "pi.html": "4e69b0c28060",
+      "opencode.html": "b578b7261fc9",
+      "openclaw.html": "5e9875ab56a8",
+      "hermes.html": "97f3229dfdc0",
+    };
+    const entries = ["src/main.ts", "src/grok.ts", "src/deepseek.ts", "src/pi.ts", "src/opencode.ts", "src/openclaw.ts", "src/hermes.ts"];
+    const html = pages.map((page) => {
+      const source = read(page);
+      const hero = source.match(/<ul class="hero-outcomes"[\s\S]*?<\/ul>/)?.[0] ?? "";
+      assert.ok((hero.match(/<li>/g) ?? []).length >= 3, `${page} needs concrete learning outcomes`);
+      assert.ok((source.match(/lesson-result|CHAPTER CHECK|CHECKPOINT \d+|本章小结|小结 ·|本章过关|课程完成|毕业练习/g) ?? []).length >= 10, `${page} needs chapter checks`);
+      assert.match(source, new RegExp(snapshots[page]), `${page} needs its reviewed snapshot`);
+      assert.match(source, /https:\/\/harness\.lvy-u\.chatgpt\.site/, `${page} needs the current canonical host`);
+      return source.replace(/<script[\s\S]*?<\/script>/g, "");
+    }).join("\n");
+    const interactiveCopy = entries.map(read).join("\n");
+    const publishedCopy = `${html}\n${interactiveCopy}`;
+    assert.doesNotMatch(publishedCopy, /SOURCE ROUTE|源码路线|真实入口请查|MINIMAL RUNNABLE|SOURCE-ALIGNED TEACHING SKELETON/i);
+    assert.doesNotMatch(publishedCopy, /\b(?:codex-rs|packages|crates|src|tests|tools|agent|gateway)\/[\w./-]+\.(?:rs|ts|tsx|py|md|json|jsonl|toml)\b/i);
+    assert.doesNotMatch(publishedCopy, /\b[\w.-]+\.(?:rs|ts|tsx|py|md|json|jsonl):\d+\b/i);
   });
 
   it("uses native fullscreen without claiming a false modal", () => {

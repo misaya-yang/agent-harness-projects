@@ -3,7 +3,7 @@
   "private": true,
   "version": "1.0.0",
   "type": "module",
-  "description": "深入 Codex Agent 内核 —— 交互式教学站（理论 · 思考 · 实践 · 面试备战）",
+  "description": "七大开源 Agent Harness 的交互式工程课程",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build && node scripts/embed-worker.mjs",

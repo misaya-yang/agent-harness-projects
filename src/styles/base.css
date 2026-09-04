@@ -57,10 +57,13 @@ h3,
 h4 {
   font-family: var(--ff-display);
   font-weight: 900;
-  line-height: 1.28;
+  line-height: 1.34;
   letter-spacing: 0.015em; /* 汉字禁用负字距 */
   overflow-wrap: anywhere;
 }
+
+h1 { line-height: 1.17; }
+h2 { line-height: 1.24; }
 
 code,
 kbd {

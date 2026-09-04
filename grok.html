@@ -3,14 +3,14 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="从 Rust 分层到 Session、ACP、工具、Workspace、权限、压缩与扩展系统，交互式拆解 Grok Build Agent 内核。" />
+    <meta name="description" content="从真实事故出发，学习 Grok Build 的三层 Agent 循环、工具闸门、上下文压缩、安全边界与多代理编排。" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Grok Build 内核图谱 · 顶级 Agent 教学系列" />
-    <meta property="og:description" content="沿着 TUI、Shell、Agent、Tools 与 Workspace，读懂 Grok Build 的完整运行时。" />
-    <meta property="og:url" content="https://codex-kernel-atlas.lvy-u.chatgpt.site/grok" />
-    <link rel="canonical" href="https://codex-kernel-atlas.lvy-u.chatgpt.site/grok" />
+    <meta property="og:title" content="Grok Build 生产级 Agent 课程" />
+    <meta property="og:description" content="12 章，从现象、短 trace 到工程判断，建立可迁移的 Agent harness 设计能力。" />
+    <meta property="og:url" content="https://harness.lvy-u.chatgpt.site/grok" />
+    <link rel="canonical" href="https://harness.lvy-u.chatgpt.site/grok" />
     <meta name="twitter:card" content="summary" />
-    <title>Grok Build 内核图谱 · 顶级 Agent 教学系列</title>
+    <title>Grok Build 生产级 Agent 课程</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=Noto+Sans+SC:wght@400;500;700&amp;family=Noto+Serif+SC:wght@700;900&amp;display=swap" rel="stylesheet" />
@@ -25,436 +25,112 @@
     <a class="skip-link" href="#main">跳到正文</a>
     <div class="progress-line" aria-hidden="true"></div>
     <header class="topbar">
-      <a class="brand" href="#top">Grok Build 内核图谱 <span class="label-mono">FIELD GUIDE</span></a>
+      <a class="brand" href="#top">Grok Build 实战课 <span class="label-mono">INCIDENT LAB</span></a>
       <div class="topbar-actions"><div data-series-nav data-variant="top"><a class="series-fallback" href="/codex">Agent 系列</a></div><button class="theme-btn" type="button" data-theme-toggle aria-label="切换到深色模式"><span aria-hidden="true" data-theme-icon>◐</span><span data-theme-label>深色模式</span></button><button class="menu-btn" type="button" data-menu-btn aria-expanded="false" aria-controls="chapter-nav">章节</button></div>
     </header>
     <nav class="chapter-nav" id="chapter-nav" data-menu-panel hidden aria-label="课程章节">
-      <a href="#top" data-spy-link><span class="no">00</span>课程入口</a>
-      <a href="#architecture" data-spy-link><span class="no">01</span>Rust 分层</a>
-      <a href="#turn" data-spy-link><span class="no">02</span>回合运行时</a>
-      <a href="#protocol" data-spy-link><span class="no">03</span>ACP 协议</a>
-      <a href="#tools" data-spy-link><span class="no">04</span>工具注册</a>
-      <a href="#workspace" data-spy-link><span class="no">05</span>工作空间</a>
-      <a href="#safety" data-spy-link><span class="no">06</span>权限安全</a>
-      <a href="#sessions" data-spy-link><span class="no">07</span>会话状态</a>
-      <a href="#context" data-spy-link><span class="no">08</span>上下文压缩</a>
-      <a href="#extensions" data-spy-link><span class="no">09</span>扩展体系</a>
-      <a href="#agents" data-spy-link><span class="no">10</span>Agent 与子代理</a>
-      <a href="#surfaces" data-spy-link><span class="no">11</span>运行表面</a>
-      <a href="#practice" data-spy-link><span class="no">12</span>实践与面试</a>
+      <a href="#top" data-spy-link><span class="no">00</span>课程入口</a><a href="#architecture" data-spy-link><span class="no">01</span>先找拥有者</a><a href="#turn" data-spy-link><span class="no">02</span>三层循环</a><a href="#protocol" data-spy-link><span class="no">03</span>协议与事件</a><a href="#tools" data-spy-link><span class="no">04</span>工具闸门</a><a href="#workspace" data-spy-link><span class="no">05</span>副作用边界</a><a href="#safety" data-spy-link><span class="no">06</span>安全两道门</a><a href="#sessions" data-spy-link><span class="no">07</span>会话可恢复</a><a href="#context" data-spy-link><span class="no">08</span>上下文经济学</a><a href="#extensions" data-spy-link><span class="no">09</span>扩展与信任</a><a href="#agents" data-spy-link><span class="no">10</span>多代理编排</a><a href="#surfaces" data-spy-link><span class="no">11</span>四种承载</a><a href="#practice" data-spy-link><span class="no">12</span>故障演练</a>
     </nav>
     <aside class="rail" aria-label="课程章节">
-      <a class="brand" href="#top">Grok Build 图谱</a>
-      <a href="#top" data-spy-link><span class="no">00</span>课程入口</a>
-      <a href="#architecture" data-spy-link><span class="no">01</span>Rust 分层</a>
-      <a href="#turn" data-spy-link><span class="no">02</span>回合运行时</a>
-      <a href="#protocol" data-spy-link><span class="no">03</span>ACP 协议</a>
-      <a href="#tools" data-spy-link><span class="no">04</span>工具注册</a>
-      <a href="#workspace" data-spy-link><span class="no">05</span>工作空间</a>
-      <a href="#safety" data-spy-link><span class="no">06</span>权限安全</a>
-      <a href="#sessions" data-spy-link><span class="no">07</span>会话状态</a>
-      <a href="#context" data-spy-link><span class="no">08</span>上下文压缩</a>
-      <a href="#extensions" data-spy-link><span class="no">09</span>扩展体系</a>
-      <a href="#agents" data-spy-link><span class="no">10</span>Agent 与子代理</a>
-      <a href="#surfaces" data-spy-link><span class="no">11</span>运行表面</a>
-      <a href="#practice" data-spy-link><span class="no">12</span>实践与面试</a>
+      <a class="brand" href="#top">Grok Build 实战课</a><a href="#top" data-spy-link><span class="no">00</span>课程入口</a><a href="#architecture" data-spy-link><span class="no">01</span>先找拥有者</a><a href="#turn" data-spy-link><span class="no">02</span>三层循环</a><a href="#protocol" data-spy-link><span class="no">03</span>协议与事件</a><a href="#tools" data-spy-link><span class="no">04</span>工具闸门</a><a href="#workspace" data-spy-link><span class="no">05</span>副作用边界</a><a href="#safety" data-spy-link><span class="no">06</span>安全两道门</a><a href="#sessions" data-spy-link><span class="no">07</span>会话可恢复</a><a href="#context" data-spy-link><span class="no">08</span>上下文经济学</a><a href="#extensions" data-spy-link><span class="no">09</span>扩展与信任</a><a href="#agents" data-spy-link><span class="no">10</span>多代理编排</a><a href="#surfaces" data-spy-link><span class="no">11</span>四种承载</a><a href="#practice" data-spy-link><span class="no">12</span>故障演练</a>
       <button class="theme-btn rail-theme" type="button" data-theme-toggle aria-label="切换到深色模式"><span aria-hidden="true" data-theme-icon>◐</span><span data-theme-label>深色模式</span></button>
     </aside>
     <main id="main">
       <div data-series-nav data-variant="tabs"><nav class="course-tabs" aria-label="选择 Agent 课程"><a href="/codex">Codex</a><a href="/grok" aria-current="page">Grok Build</a><a href="/deepseek">DeepSeek Harness</a><a href="/pi">Pi Agent</a><a href="/opencode">OpenCode</a><a href="/openclaw">OpenClaw</a><a href="/hermes">Hermes Agent</a></nav></div>
       <section class="hero shell" id="top" data-spy>
         <div class="hero-grid">
-          <div data-reveal>
-            <p class="eyebrow label-mono">从一次真实修复任务，读懂 Rust Agent</p>
-            <h1>看懂 Grok Build 如何接住任务，再<span class="alt">安全地改动工作区。</span></h1>
-            <p class="sub">跟踪一个“修复失败测试”的任务：输入如何从 TUI / ACP 进入 Session，Actor 怎样保存状态，工具如何落到 Workspace，失败后又靠什么恢复。不是记 crate 名，而是学会找到真正拥有问题的那一层。</p>
-            <ul class="hero-outcomes" aria-label="学完本课程你将能够"><li>画出 Session、采样、工具与 Workspace 的调用链</li><li>按症状找到负责状态或副作用的 crate</li><li>用 ACP 更新、检查点与源码验证判断</li></ul>
-            <div class="hero-cta"><a class="btn-primary" href="#architecture">从真实任务开始 <span class="arrow" aria-hidden="true">→</span></a><a class="btn-secondary" href="#grok-source-route">先看源码路线</a></div>
-          </div>
-          <figure class="hero-loop" data-hero-loop data-reveal data-reveal-delay="120">
-            <svg viewBox="0 0 480 360" role="img" aria-labelledby="grok-hero-title grok-hero-desc">
-              <title id="grok-hero-title">Grok Build Actor 运行时循环</title>
-              <desc id="grok-hero-desc">ACP、SessionActor、Sampling、ToolBridge 与 Workspace 检查点构成的 Actor 运行闭环。</desc>
-              <circle class="ring" cx="240" cy="180" r="128" />
-              <g class="hnode"><circle cx="240" cy="48" r="38"/><text x="240" y="44" text-anchor="middle">入口</text><text class="hno" x="240" y="61" text-anchor="middle">ACP</text></g>
-              <g class="hnode"><circle cx="365" cy="140" r="38"/><text x="365" y="136" text-anchor="middle">会话</text><text class="hno" x="365" y="153" text-anchor="middle">HOST</text></g>
-              <g class="hnode"><circle cx="318" cy="288" r="38"/><text x="318" y="284" text-anchor="middle">采样</text><text class="hno" x="318" y="301" text-anchor="middle">LLM</text></g>
-              <g class="hnode"><circle cx="162" cy="288" r="38"/><text x="162" y="284" text-anchor="middle">能力</text><text class="hno" x="162" y="301" text-anchor="middle">TOOL</text></g>
-              <g class="hnode"><circle cx="115" cy="140" r="38"/><text x="115" y="136" text-anchor="middle">空间</text><text class="hno" x="115" y="153" text-anchor="middle">VCS</text></g>
-              <circle class="packet" cx="240" cy="52" r="5">
-                <animateTransform attributeName="transform" type="rotate" from="0 240 180" to="360 240 180" dur="7s" repeatCount="indefinite" />
-              </circle>
-            </svg>
-            <figcaption>
-              <span>grok_actor / runtime map</span>
-              <button class="pause-btn" type="button" data-loop-pause aria-pressed="false">⏸ 暂停</button>
-            </figcaption>
-          </figure>
+          <div data-reveal><p class="eyebrow label-mono">从事故出发 · 学会生产级 Agent Harness</p><h1>模型只是会失败的采样流。<span class="alt">可靠性，必须由 Harness 接住。</span></h1><p class="sub">这不是组件名词表。你会跟着“任务不结束、工具乱跑、压缩后失忆、子代理完成却没人知道”四类事故，逐步建立一套能定位、能解释、能迁移的设计方法。</p><ul class="hero-outcomes" aria-label="学完本课程你将能够"><li>画出 turn、round、采样步三层循环，并判断结束权在哪一层</li><li>用短 trace 区分工具错误、权限拒绝、容量溢出与传输故障</li><li>设计压缩后的状态重建、长期记忆和缓存稳定策略</li><li>解释子代理的准入、回传、取消、恢复与自动唤醒</li></ul><div class="hero-cta"><a class="btn-primary" href="#architecture">从第一个事故开始 <span class="arrow" aria-hidden="true">→</span></a><a class="btn-secondary" href="#practice">先看结课演练</a></div></div>
+          <figure class="hero-loop" data-hero-loop data-reveal data-reveal-delay="120"><svg viewBox="0 0 480 360" role="img" aria-labelledby="grok-hero-title grok-hero-desc"><title id="grok-hero-title">Grok Build 可靠性闭环</title><desc id="grok-hero-desc">输入排队、会话裁决、模型采样、工具执行与状态回填组成闭环。</desc><circle class="ring" cx="240" cy="180" r="128" /><g class="hnode"><circle cx="240" cy="48" r="38"/><text x="240" y="44" text-anchor="middle">输入</text><text class="hno" x="240" y="61" text-anchor="middle">QUEUE</text></g><g class="hnode"><circle cx="365" cy="140" r="38"/><text x="365" y="136" text-anchor="middle">裁决</text><text class="hno" x="365" y="153" text-anchor="middle">TURN</text></g><g class="hnode"><circle cx="318" cy="288" r="38"/><text x="318" y="284" text-anchor="middle">采样</text><text class="hno" x="318" y="301" text-anchor="middle">MODEL</text></g><g class="hnode"><circle cx="162" cy="288" r="38"/><text x="162" y="284" text-anchor="middle">执行</text><text class="hno" x="162" y="301" text-anchor="middle">TOOL</text></g><g class="hnode"><circle cx="115" cy="140" r="38"/><text x="115" y="136" text-anchor="middle">回填</text><text class="hno" x="115" y="153" text-anchor="middle">STATE</text></g><circle class="packet" cx="240" cy="52" r="5"><animateTransform attributeName="transform" type="rotate" from="0 240 180" to="360 240 180" dur="7s" repeatCount="indefinite" /></circle></svg><figcaption><span>proposal → gate → evidence → next step</span><button class="pause-btn" type="button" data-loop-pause aria-pressed="false">⏸ 暂停</button></figcaption></figure>
         </div>
-        <div class="hero-meta label-mono" aria-label="课程范围"><span>SOURCE SNAPSHOT · 07b2f71</span><span>12 章 · 10 个实验</span><span>找拥有层 → 看事件 → 做最小验证</span></div>
-
-        <section class="lesson-brief" id="kernel-atlas" data-reveal>
-          <span class="label-mono">KERNEL ATLAS · 7-COURSE PANORAMIC SYNTHESIS</span>
-          <h3>七门课程全景：开源 Agent 架构对比与技术选型指南</h3>
-          <p>横向打通 Codex (`codex-rs`)、Grok Build (`xai-org/grok-build`)、DeepSeek Harness (`deepseek-harness`)、Pi Agent (`pi-mono`)，以及新增的 OpenCode (`anomalyco/opencode`)、OpenClaw (`openclaw/openclaw`) 与 Hermes Agent (`NousResearch/hermes-agent`) 六大核心维度。选型结论是基于本地源码快照的教学归纳，不代表各上游项目的官方定位。</p>
-
-          <div class="environment-matrix">
-            <div class="matrix-head"><strong>对比维度</strong><span>七门课程：各 Agent 架构实现与技术取舍</span><code>核心特征</code></div>
-            <div>
-              <strong>1. 会话与状态模型</strong>
-              <span><strong>Codex</strong>: Thread / Turn / Item 三层层级容器，状态由内存 Actor + 外部存储双重建模。<br>
-              <strong>Grok Build</strong>: Tokio LocalSet 独立线程 Actor（`SessionActor` + `ChatStateActor`），追加持久化到 `updates.jsonl`。<br>
-              <strong>DeepSeek</strong>: 纯追加型不可变 Session Log，由 `SurfaceManager` 实时投影出当前模型可见历史。<br>
-              <strong>Pi Agent</strong>: 追加型 JSONL Session 树（`id` / `parentId`），通过移动叶节点指针实现非破坏性分支与回退。<br>
-              <strong>OpenCode</strong>: 事件流投影进单文件 `opencode.db`，消息历史由最近一条摘要条目之后重建（`filterCompacted`），压缩对主循环完全透明。<br>
-              <strong>OpenClaw</strong>: 双 SQLite 文件（全局 `state/openclaw.sqlite` + 每 agent `openclaw-agent.sqlite`），会话、transcript、standing intents 与记忆索引全落库；恢复靠状态已落库 + 事件重放。<br>
-              <strong>Hermes</strong>: `~/.hermes/state.db` 以 `parent_session_id` 串起会话血统，外加压缩标记、压缩锁与 gateway 路由表；cron 任务单独持久化到 `jobs.json`。</span>
-              <code>State vs Tree</code>
-            </div>
-            <div>
-              <strong>2. 通信协议与交互</strong>
-              <span><strong>Codex</strong>: App Server 双向 JSON-RPC 协议，规范化 Request 与 started / delta / completed 通知。<br>
-              <strong>Grok Build</strong>: 采用 Agent Client Protocol (ACP) 标准协议，扩展 XAI 专有事件（`rewind`, `compaction`）。<br>
-              <strong>DeepSeek</strong>: 面向自动化与工具管线的 JSON-RPC stdio / NDJSON 协议，流式提交 committed assistant 消息。<br>
-              <strong>Pi Agent</strong>: LF-only JSONL Coding-Agent RPC 与 4 字节大端前缀 + 定长 CBOR 独立 Server Protocol 双协议面。<br>
-              <strong>OpenCode</strong>: 单一本地 HTTP 服务器承载内核：`POST /session/:id/message` 是唯一喂脑入口，`GET /event`（SSE）是唯一广播出口；TUI、IDE、GitHub、CI 全是同构客户端。<br>
-              <strong>OpenClaw</strong>: Gateway 统一接入模型、工具、消息通道与 macOS/iOS/Android/Wear 伴生应用；Telegram/Discord 等通道经 `src/channels/*` 抽象路由。<br>
-              <strong>Hermes</strong>: 单个 Python 内核同时驱动 CLI、23+ 平台消息网关、TUI、Zed ACP、MCP server 与 Electron 桌面六面；`acp_adapter` 负责协议翻译。</span>
-              <code>JSON-RPC / ACP / SSE / CBOR</code>
-            </div>
-            <div>
-              <strong>3. 沙箱与权限控制</strong>
-              <span><strong>Codex</strong>: `SandboxPolicy` (`ro`/`ww`/`dfa`) × `ApprovalPolicy` (`untrusted`/`on-request`/`never`) 正交二维决策矩阵。<br>
-              <strong>Grok Build</strong>: `PermissionManager` (4种模式) × `SandboxProfile` (`workspace`/`read-only`/`strict`/`devbox`)，分层合并。<br>
-              <strong>DeepSeek</strong>: 3 种文件效果模式 (`ro`/`ww`/`dfa`) × 独立审批通道，不可用时强制 fail-closed。<br>
-              <strong>Pi Agent</strong>: 默认采用宿主进程全量权限；`Project Trust` 控制配置加载，真正安全隔离依托外部 Docker/VM。<br>
-              <strong>OpenCode</strong>: 无 OS 级沙箱；按工具 × pattern 匹配 allow / ask / deny 规则，待审批以 `deferred` 终止原因表达——审批是循环的输入而非旁路。<br>
-              <strong>OpenClaw</strong>: `beforeToolCall` / `afterToolCall` 钩子 + 网关审批（exec-approval-manager）；审批不通过时工具调用被替换为失败结果，模型只见结果不见例外。<br>
-              <strong>Hermes</strong>: `tools/approval.py` 分级：hardline 直接拒绝、危险操作询问、cron/gateway 非交互场景各自降级；记忆写入另有 `write_approval` 闸门。</span>
-              <code>Sandbox × Approval</code>
-            </div>
-            <div>
-              <strong>4. 上下文工程与压缩</strong>
-              <span><strong>Codex</strong>: 达到预算阈值触发 CompactionSummary 折叠，保留关键目标与 Diff 事实。<br>
-              <strong>Grok Build</strong>: 85% 上下文压力触发全量替换压缩，专用 Sampler 生成摘要并记录 `CompactionCheckpoint`。<br>
-              <strong>DeepSeek</strong>: `compaction/start` 耐久锁机制，在稳定日志区间生成摘要并通过 Surface Replacement 原子替换。<br>
-              <strong>Pi Agent</strong>: `firstKeptEntryId` 动态截断点选择，后向搜索绝不切断 toolResult，单回合支持超长前缀摘要。<br>
-              <strong>OpenCode</strong>: `isOverflow` 触发后把 compaction 摘要作为普通输入自喂进下一轮循环（compact then continue），`finish` 语义防御 provider 谎报。<br>
-              <strong>OpenClaw</strong>: 溢出路径与阈值路径双路触发 `runAutoCompaction`；context-engine 以能力面（bootstrap / assemble-before-prompt / compact）可插拔。<br>
-              <strong>Hermes</strong>: “Prompt 缓存神圣”宪法——缓存标记边界只有压缩可合法击穿；micro-compaction 与 `trajectory_compressor` 分别服务在线回合与离线轨迹。</span>
-              <code>Compaction & Summary</code>
-            </div>
-            <div>
-              <strong>5. 执行世界抽象</strong>
-              <span><strong>Codex</strong>: Local / Git Worktree / Cloud 容器 / 远程宿主多环境适配。<br>
-              <strong>Grok Build</strong>: `WorkspaceSession` 统一封装 FS、PTY、ProcessManager、VCS 与检查点，解耦上层调用。<br>
-              <strong>DeepSeek</strong>: 严格三元解耦（Service Definition / Provider / Consumer），支持 Local、Sandbox 与 E2B 云沙箱热插拔。<br>
-              <strong>Pi Agent</strong>: 原生 Node.js 宿主接口，支持 Gondolin 微虚拟机路由与 OpenShell 容器化封装。<br>
-              <strong>OpenCode</strong>: 工具清单按模型 / agent / 权限三层过滤后交给 LLM；执行发生在 server 宿主侧，子代理以子 session 形式派生。<br>
-              <strong>OpenClaw</strong>: 内核与宿主通过 `packages/agent-core` 能力接口解耦；run 落在 gateway 所在设备，伴生应用只是表面而非第二执行世界。<br>
-              <strong>Hermes</strong>: 七个执行后端（local、Docker、Termux、Daytona、Modal 等）共享同一窄腰工具层，文件同步有独立通道，后端切换不动 loop。</span>
-              <code>Workspace Seam</code>
-            </div>
-            <div>
-              <strong>6. 扩展体系与生态</strong>
-              <span><strong>Codex</strong>: 定制六边形（AGENTS.md、Memories、Skills、MCP、Hooks、Subagents）。<br>
-              <strong>Grok Build</strong>: 规则文件、Skills、MCP 服务、Plugins 分发包、生命周期 Hooks 与跨会话 Memory。<br>
-              <strong>DeepSeek</strong>: Cordis 插件树、Profile 继承、Agent Presets 作用域与 Dynamic Cordis 内存自修改运行时。<br>
-              <strong>Pi Agent</strong>: Jiti 动态加载 TypeScript 模块（`ExtensionAPI`）、ResourceLoader 与统一 Provider 适配器。<br>
-              <strong>OpenCode</strong>: 插件 hooks、自定义 commands、Skills、agents（子代理定义）与 MCP 统一汇入 tool registry 与权限管线。<br>
-              <strong>OpenClaw</strong>: 约 150 个 `extensions/` 目录、SKILL.md 技能、SOUL.md 人格与 automations 工具，都以网关插件身份组合进单一 Gateway 进程。<br>
-              <strong>Hermes</strong>: 学习闭环让 Agent 自创自改 SKILL.md、写回 MEMORY.md；与 OpenClaw 共享 SOUL.md / MEMORY.md / SKILL.md 文件族谱系并有双向迁移器（§ 条目是 Hermes 侧约定，OpenClaw 搬运不解析）。</span>
-              <code>Extension Hexagon</code>
-            </div>
-          </div>
-
-          <div class="custom-stack">
-            <div>
-              <span class="custom-key">DEEPSEEK 适用</span>
-              <strong>极致插件化与执行环境热插拔</strong>
-              <p>追求“Everything is a Plugin”架构，需通过 Cordis IoC 容器无缝切换本地执行、E2B 云沙箱与自修改运行时的场景。</p>
-            </div>
-            <div>
-              <span class="custom-key">CODEX 适用</span>
-              <strong>企业级多端与富客户端集成</strong>
-              <p>需要严密 App Server 双向协议、细粒度正交权限矩阵与 Thread/Turn/Item 完整生命周期的生产级开发平台。</p>
-            </div>
-            <div>
-              <span class="custom-key">GROK 适用</span>
-              <strong>高性能 Rust 终端与深度版本控制</strong>
-              <p>追求极致终端响应速度、全屏 TUI 交互、ACP 标准支持以及原子级 Git Workspace Checkpoint / Rewind 恢复能力。</p>
-            </div>
-            <div>
-              <span class="custom-key">PI AGENT 适用</span>
-              <strong>轻量嵌入式与非线性分支探索</strong>
-              <p>需要极简轻量 TypeScript 内核、非破坏性 JSONL 树形分支探索（`/tree`）与 CSI 2026 同步差分渲染的应用。</p>
-            </div>
-            <div>
-              <span class="custom-key">OPENCODE 适用</span>
-              <strong>服务器即内核的多客户端平台嵌入</strong>
-              <p>需要一个本地 HTTP 服务器承载 Agent 内核，让 TUI、IDE、CI、GitHub 成为同构客户端；事件投影进单文件 SQLite，会话历史与计费统计最容易被平台接管。</p>
-            </div>
-            <div>
-              <span class="custom-key">OPENCLAW 适用</span>
-              <strong>跨天存活的通用个人助理</strong>
-              <p>“活着”不靠无限循环：有界 run 预算 + 双 SQLite 持久状态 + automations / standing intents 唤醒 + 凌晨记忆固化，多通道贯通你的设备。</p>
-            </div>
-            <div>
-              <span class="custom-key">HERMES 适用</span>
-              <strong>单机 Python 的自演化内核</strong>
-              <p>学习闭环接入 agent loop 一等公民（回合 nudge → 后台自省 → 技能/记忆写回），同一内核从 Termux 手机到 GPU 集群六面部署，并与 OpenClaw 共享两代格式谱系。</p>
-            </div>
-          </div>
-        </section>
+        <div class="hero-meta label-mono" aria-label="课程范围"><span>VERIFIED SNAPSHOT · 72a61251fcff</span><span>12 章 · 10 个交互实验</span><span>事故 → TRACE → 判断 → 迁移</span></div>
       </section>
 
       <section class="chapter shell" id="architecture" data-spy>
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 01 · RUST ARCHITECTURE</span><h2>用一个“测试失败”，找出每层真正负责什么。</h2><p class="lede">假设模型已经给出工具调用，但测试迟迟没有结果。本章沿输入、会话状态、可观察事件与工作区副作用逐层追踪，建立第一条可用于调试的源码路线。</p></header>
-        <article class="lesson-brief" id="grok-source-route" data-reveal>
-          <span class="label-mono">SOURCE ROUTE · GROK BUILD 07b2f71</span>
-          <h3>先读四个入口，再用架构责任探针做定位。</h3>
-          <p>这四处源码把“收到任务、保存状态、呈现进度、执行副作用”分给不同拥有者。</p>
-          <ol class="source-route">
-            <li><span><code>crates/codegen/xai-grok-shell/src/session/acp_session.rs</code><strong>SessionActor</strong> 接收请求并编排一次会话工作。</span></li>
-            <li><span><code>crates/codegen/xai-chat-state/src/actor/mod.rs</code><strong>ChatStateActor</strong> 持有 conversation、token 与 prompt index。</span></li>
-            <li><span><code>crates/codegen/xai-grok-pager/src/acp/tracker.rs</code><strong>AcpUpdateTracker</strong> 把 SessionUpdate 变成用户看到的进度。</span></li>
-            <li><span><code>crates/codegen/xai-grok-workspace/src/session/mod.rs</code><strong>WorkspaceSession</strong> 拥有文件、进程与可回退检查点。</span></li>
-          </ol>
-          <p class="lesson-result"><strong>学完本章你能：</strong>面对“模型结束但测试没返回”，先判断状态、事件还是副作用链路断了，而不是笼统归因于模型。</p>
-        </article>
-        <div class="spread"><article class="prose" data-reveal><h3>五个责任层</h3><p><strong>Pager</strong> 负责全屏终端与交互；<strong>Shell</strong> 承载 Session、采样和持久化；<strong>Agent</strong> 组装模型、工具与系统提示；<strong>Tools</strong> 管注册、schema、通知和实现；<strong>Workspace</strong> 拥有文件系统、VCS、进程、权限与检查点。</p><div class="decision"><span class="label-mono">ROOT-CAUSE LENS</span><p>显示错位查 Pager；回合卡住查 Shell；工具不存在查 Agent/Registry；命令状态错查 Workspace。分层的价值，是让故障有唯一首要归属。</p></div></article><ol class="kp-list" data-reveal><li data-no="UI"><span><strong>xai-grok-pager</strong>：scrollback、prompt、modal 与渲染。</span></li><li data-no="RUN"><span><strong>xai-grok-shell</strong>：Session host、sampling、compaction、events。</span></li><li data-no="CAP"><span><strong>xai-grok-agent/tools</strong>：提示词、工具能力与调用桥。</span></li><li data-no="ENV"><span><strong>xai-grok-workspace</strong>：真实世界副作用与恢复点。</span></li></ol></div>
-        <div class="machine" id="grok-architecture" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>架构责任探针</strong></span><span class="label-mono" data-status>选择一个故障</span></div><div class="machine-body atlas-layout"><div class="atlas-choices" data-choices><button class="layer-row" type="button" data-key="render">终端内容错位</button><button class="layer-row" type="button" data-key="stall">模型结束但回合未收敛</button><button class="layer-row" type="button" data-key="missing">工具没有暴露给模型</button><button class="layer-row" type="button" data-key="dirty">命令后工作区状态异常</button></div><div class="atlas-detail" data-detail><span class="label-mono">OWNING LAYER</span><h3>点击故障开始定位</h3><p>系统会给出首查 crate、边界和下一份证据。</p></div></div></div>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 01 · OWNERSHIP BEFORE DEBUGGING</span><h2>事故：界面显示“完成”，测试进程却还在跑。先查哪里？</h2><p class="lede">先别怪模型。一个生产级 Agent 把承载、会话、工具和执行世界分开，症状出现在哪一层，不等于根因属于哪一层。</p></header>
+        <div class="spread"><article class="prose" data-reveal><h3>为什么先找“拥有者”</h3><p>同一个会话内核可以被终端、stdio、leader 和 headless 承载。展示只消费事件；会话 actor 决定控制流；工具运行时把结构化提议变成调用；workspace 才拥有文件、进程与 VCS 副作用。</p><div class="decision"><span class="label-mono">MINI TRACE</span><p><code>界面完成</code> → 会话是否收到终态？→ 工具是否发出 terminal 结果？→ 子进程是否真的退出？最后一个可靠事实在哪，责任边界就从哪继续向下查。</p></div></article><ol class="kp-list" data-reveal><li data-no="UI"><span><strong>承载层</strong>：输入、展示与连接生命周期。</span></li><li data-no="ACT"><span><strong>会话层</strong>：单写者状态、队列与 turn 裁决。</span></li><li data-no="CAP"><span><strong>工具层</strong>：schema、权限、派发与结果。</span></li><li data-no="ENV"><span><strong>执行层</strong>：文件、进程、VCS 与远端代理。</span></li></ol></div>
+        <div class="machine" id="grok-architecture" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>架构责任探针</strong></span><span class="label-mono" data-status>选择一个故障</span></div><div class="machine-body atlas-layout"><div class="atlas-choices" data-choices><button class="layer-row" type="button" data-key="render">终端内容错位</button><button class="layer-row" type="button" data-key="stall">模型结束但回合未收敛</button><button class="layer-row" type="button" data-key="missing">工具没有暴露给模型</button><button class="layer-row" type="button" data-key="dirty">命令后工作区状态异常</button></div><div class="atlas-detail" data-detail><span class="label-mono">OWNING LAYER</span><h3>点击故障开始定位</h3><p>系统会给出首查责任层、边界和下一份证据。</p></div></div></div>
+        <div class="fact-boundary" data-reveal><span class="label-mono">CHECKPOINT 01</span><strong>学完能做什么</strong><span>能用“最后可靠事实”锁定首查层。练习：工具显示成功但文件没变，首查会话还是执行层？答案：执行层及其结果证据。</span></div>
       </section>
 
       <section class="chapter band-deep" id="turn" data-spy><div class="shell">
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 02 · TURN RUNTIME</span><h2>一次回合，是 Actor、采样与工具执行反复咬合。</h2><p class="lede">每个 Session 运行在独立线程的 Tokio LocalSet 上：SessionActor 负责编排，ChatStateActor 持有 conversation、token 与 prompt index，Persistence actor 异步落盘。模型若返回 tool call，循环执行并回注，直到 stop reason 收敛。</p></header>
-        <div class="spread"><article class="prose" data-reveal><h3>循环中的控制点</h3><p>每次采样前，系统可能注入项目规则、Skills、Memory 与系统提醒；采样过程中发出消息 chunk、thinking 与 tool call；工具完成后结果进入下一次采样。取消、steer、compact 都在安全间隙改变循环，而不是任意撕开状态。</p></article><ol class="kp-list" data-reveal><li data-no="01"><span>接收 prompt，写入 Session history。</span></li><li data-no="02"><span>构造 Agent 能力与采样请求。</span></li><li data-no="03"><span>流式接收消息、思考与工具调用。</span></li><li data-no="04"><span>执行工具并回注，判断继续或结束。</span></li></ol></div>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 02 · THREE NESTED LOOPS</span><h2>事故：模型已经不再调用工具，为什么任务仍没结束？</h2><p class="lede">“没工具调用”只是模型的停工提议。Session 事件循环、prompt 级 round 和采样步各有自己的续跑与终止责任。</p></header>
+        <div class="spread"><article class="prose" data-reveal><h3>把一次工作拆成三种尺度</h3><p><strong>Session actor</strong> 串行接纳输入；<strong>round</strong> 决定 goal 或 Stop hook 是否让同一 prompt 再跑一轮；<strong>采样步</strong> 完成一次模型流与一批工具。自然结束、取消、步数耗尽和 stationarity 硬停必须是不同终态。</p><div class="decision"><span class="label-mono">DECISION TRACE</span><p><code>Response</code> → 有工具：执行并回填 → 无工具：查 todo-gate → 排空插话 → 返回 TurnOutcome → round 再决定是否继续。</p></div></article><ol class="kp-list" data-reveal><li data-no="01"><span>输入只经权威 FIFO 进入会话。</span></li><li data-no="02"><span>采样前先查重复动作与容量。</span></li><li data-no="03"><span>工具完成后结果必须回到历史。</span></li><li data-no="04"><span>终态类型决定外层能否续跑。</span></li></ol></div>
         <div class="machine" id="grok-turn" data-reveal><div class="machine-bar"><span class="title"><span class="led" data-led></span><strong>Grok 回合步进机</strong></span><span class="label-mono" data-phase>idle</span></div><div class="machine-body loop-layout"><ol class="m-steps" data-steps><li data-no="01">prompt 入会话</li><li data-no="02">装配 Agent</li><li data-no="03">构造 sampling request</li><li data-no="04">流式模型事件</li><li data-no="05">解析 tool call</li><li data-no="06">权限与执行</li><li data-no="07">结果回注</li><li data-no="08">停止或继续</li></ol><div><div class="m-controls"><button class="cbtn primary" type="button" data-run>▶ 连续</button><button class="cbtn" type="button" data-step>单步 →</button><button class="cbtn" type="button" data-reset>重置</button></div><p class="stage-note" data-note>逐步观察控制权在模型与宿主之间如何交接。</p></div><div class="loop-logwrap stream-log elog" data-log aria-live="polite"></div></div></div>
+        <div class="fact-boundary" data-reveal><span class="label-mono">CHECKPOINT 02</span><strong>判断题：stationarity 硬停后还能让 Stop hook 自动续跑吗？</strong><span>不能；否则守卫本身会制造循环。</span></div>
       </div></section>
 
       <section class="chapter shell" id="protocol" data-spy>
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 03 · ACP & EVENTS</span><h2>ACP 是客户端边界，SessionUpdate 是可观察事实。</h2><p class="lede">编辑器通过 Agent Client Protocol 启动或加载 Session、发送 Prompt、接收 AgentMessageChunk 与 ToolCallUpdate；Grok 自己的扩展通知再承载 rewind、compaction、pending interaction 等专有状态。</p></header>
-        <div class="primitive-grid" data-reveal><article><span class="primitive-no">01 / CLIENT</span><h3>PromptRequest</h3><p>客户端提交内容块、上下文和会话标识。</p></article><article><span class="primitive-no">02 / STREAM</span><h3>SessionUpdate</h3><p>消息增量、工具状态与会话信息持续推送。</p></article><article><span class="primitive-no">03 / XAI</span><h3>Extension Update</h3><p>在标准 ACP 旁表达压缩点、回退与交互状态。</p></article></div>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 03 · PROTOCOL AS EVIDENCE</span><h2>事故：用户按了取消，稍后却收到一条“成功完成”。哪条消息撒了谎？</h2><p class="lede">流式输出与可回卷状态并发时，“看见文本”不等于“响应已提交”。协议层要给每次请求一个可验证的结束边界。</p></header>
+        <div class="primitive-grid" data-reveal><article><span class="primitive-no">01 / ACCEPT</span><h3>请求进入谁的队列</h3><p>标准 ACP 负责会话动作；扩展方法把插话、回卷和压缩也做成协议能力。</p></article><article><span class="primitive-no">02 / STREAM</span><h3>事件是否被消费</h3><p>增量与工具状态先被消费，drain barrier 收到终端确认后才能提交响应。</p></article><article><span class="primitive-no">03 / REVOKE</span><h3>取消是否撤销所有权</h3><p>cancel 或 rewind 撤销在途响应的提交权，旧成功不能写回恢复后的 turn。</p></article></div>
         <div class="machine" id="grok-events" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>ACP 事件流</strong></span><span class="label-mono" data-phase>0/12</span></div><div class="machine-body"><div class="m-controls"><button class="cbtn primary" type="button" data-play>▶ 播放</button><button class="cbtn" type="button" data-restart>↻ 重播</button></div><div class="stream-log elog" data-log aria-live="polite"></div></div></div>
+        <div class="fact-boundary" data-reveal><span class="label-mono">CHECKPOINT 03</span><strong>学完能做什么</strong><span>能区分“事件已展示”“终端事件已处理”“turn 已提交”。重连后不重放旧加载请求，而是重新初始化，避免历史重复。</span></div>
       </section>
 
       <section class="chapter band-edge" id="tools" data-spy><div class="shell">
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 04 · TOOL REGISTRY</span><h2>工具不是函数集合，而是动态裁剪后的能力视图。</h2><p class="lede">AgentBuilder 选择工具，ToolRegistry 保存定义与实现，ToolBridge 把模型调用转换为受控执行；schema 校验、名称映射、通知、重试与输出归一化分属不同责任。</p></header>
-        <div class="spread"><article class="prose" data-reveal><h3>从定义到结果</h3><p>模型看见的是 schema 和模型侧名称；运行时保留 canonical identity。调用先验证参数和可见性，再经过 ToolCallContext、权限与实现，流式输出被归一化为可持久化、可展示、可回注的结果。</p><div class="decision"><span class="label-mono">FAILURE ORDER</span><p>未发现 → 查 allowlist/denylist；参数错 → 查 schema；执行错 → 查实现与 Workspace；UI 不更新 → 查 ToolNotification；模型误判 → 查归一化后的结果。</p></div></article><ol class="kp-list" data-reveal><li data-no="REG"><span><strong>Registry</strong>：工具身份、定义、实现与索引。</span></li><li data-no="BRG"><span><strong>Bridge</strong>：把采样返回的调用接入运行时。</span></li><li data-no="CTX"><span><strong>Context</strong>：call ID、session、取消与执行元数据。</span></li><li data-no="OUT"><span><strong>Output</strong>：流式片段、错误类型与截断策略。</span></li></ol></div>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 04 · TOOL GATES</span><h2>事故：模型同批调用三个工具，第二个被拒，第三个还能悄悄执行吗？</h2><p class="lede">不能。工具调用是串行准备、并行执行、逐个配对回填的受控管线。</p></header>
+        <div class="spread"><article class="prose" data-reveal><h3>先建立三段式管线</h3><p><strong>准备</strong>依次做 JSON/schema、hook、计划模式和权限判断；出现终局拒绝后，剩余调用都得到取消结果。批准项才进入<strong>并行执行</strong>，写同一路径的动作再用资源锁串行。结果按完成顺序<strong>回填</strong>，靠 call id 配对。</p><div class="decision"><span class="label-mono">NEW MECHANISMS</span><p><code>StructuredOutput</code> 被建模为合成工具，校验失败沿 tool_result 自纠；MCP 工具通过 <code>search_tool → use_tool</code> 延迟发现，避免工具数组变化破坏缓存。</p></div></article><ol class="kp-list" data-reveal><li data-no="PAR"><span>解析、hook、权限：有序准备。</span></li><li data-no="RUN"><span>批准调用：并行执行。</span></li><li data-no="LOCK"><span>同资源写操作：局部串行。</span></li><li data-no="PAIR"><span>每个 tool_use：必有 tool_result。</span></li></ol></div>
         <div class="machine" id="grok-tools" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>工具管线检查器</strong></span><span class="label-mono" data-status>选择症状</span></div><div class="machine-body surface-layout"><div class="surface-choices" data-choices><button class="cbtn" type="button" data-key="hidden">工具消失</button><button class="cbtn" type="button" data-key="schema">参数拒绝</button><button class="cbtn" type="button" data-key="permission">等待授权</button><button class="cbtn" type="button" data-key="output">回答失真</button></div><dl class="surface-detail" data-detail><div><dt>首查</dt><dd>选择一个症状</dd></div><div><dt>证据</dt><dd>这里会显示拥有问题的管线阶段。</dd></div></dl></div></div>
+        <div class="fact-boundary" data-reveal><span class="label-mono">CHECKPOINT 04</span><strong>判断题：权限准备也做并行，会更快吗？</strong><span>可能更快，但会破坏人类拒绝后的因果顺序；真正耗时的执行段已经并行。</span></div>
       </div></section>
 
       <section class="chapter shell" id="workspace" data-spy>
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 05 · WORKSPACE</span><h2>Workspace 才是副作用的拥有者。</h2><p class="lede">Shell 不直接假装自己执行了命令。Workspace 封装文件、终端、VCS、MCP、工作树、权限和会话上下文，使本地与远程执行共享工具契约。</p></header>
-        <div class="custom-stack" data-reveal><div><strong>Handle / Hub</strong><p>工具调用必须带已绑定的 Session，才进入该会话的 FinalizedToolset。</p></div><div><strong>Filesystem / VCS</strong><p>读取、编辑、状态、diff、worktree 与文件快照。</p></div><div><strong>Process Manager</strong><p>前台命令、长任务、日志、BackgroundHandle 与取消。</p></div><div><strong>Checkpoint</strong><p>按 prompt index 记录 FS 与可选 hunk/git 状态；rewind 按顺序恢复。</p></div></div>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 05 · SIDE-EFFECT BOUNDARY</span><h2>事故：工具结果写着“成功”，文件却没变。成功到底是谁的事实？</h2><p class="lede">工具结果是模型可见的叙述，workspace 才是副作用的拥有者。验证必须落到执行世界。</p></header>
+        <div class="custom-stack" data-reveal><div><strong>文件与 VCS</strong><p>读写、状态和差异必须来自实际工作区，而不是模型的完成宣告。</p></div><div><strong>进程与终端</strong><p>命令的退出、被杀原因和输出终帧，才构成进程完成证据。</p></div><div><strong>本地与代理</strong><p>同一窄接口可在本机执行，也可通过类型化 RPC 交给远端 workspace。</p></div><div><strong>调用方超时</strong><p>代理客户端不替所有场景强加 deadline；等待预算由知道任务语义的一层拥有。</p></div></div>
         <div class="machine" id="grok-workspace" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>副作用路由台</strong></span><span class="label-mono">LOCAL / REMOTE READY</span></div><div class="machine-body pmap-layout"><div class="layer-stack" data-layers><button class="layer-row" type="button" data-key="file"><span>编辑文件</span><span class="label-mono">FS</span></button><button class="layer-row" type="button" data-key="command"><span>运行测试</span><span class="label-mono">PTY</span></button><button class="layer-row" type="button" data-key="background"><span>后台服务</span><span class="label-mono">TASK</span></button><button class="layer-row" type="button" data-key="rewind"><span>回退修改</span><span class="label-mono">CHECKPOINT</span></button></div><div class="pmap-detail" data-detail><span class="label-mono">ROUTE</span><h4>选择一种副作用</h4><p>观察它经过的 Workspace 组件与可恢复证据。</p></div></div></div>
-
-        <article class="lesson-brief" id="grok-vcs-code" data-reveal>
-          <span class="label-mono">SOURCE-ALIGNED TEACHING SKELETON · RUST WORKSPACE VCS</span>
-          <h3>VCS Checkpoint 检查点捕获与原子回滚算法 (`WorkspaceSession`)</h3>
-          <p>下面是根据 `xai-grok-workspace`、hunk tracker 与 rewind checkpoint 数据结构整理的教学骨架，不是上游源码复制，也不承诺可独立编译；真实恢复还包含持久化、路径校验、hunk/git 状态与失败处理。</p>
-
-          <div class="stream-log elog" style="max-height: 480px; overflow-y: auto; padding: 16px; border-radius: var(--r-control); background: var(--surface-console); border: 1px solid var(--line-on-console);">
-<span class="k-sys">// crates/codegen/xai-grok-workspace/src/session/mod.rs</span>
-<span class="k-user">use</span> std::collections::HashMap;
-<span class="k-user">use</span> std::path::{Path, PathBuf};
-
-<span class="k-sys">/// 文件修改前快照</span>
-#[derive(Clone, Debug)]
-<span class="k-user">pub struct</span> <span class="k-model">FileSnapshot</span> {
-    <span class="k-user">pub</span> path: PathBuf,
-    <span class="k-user">pub</span> original_content: Option&lt;String&gt;,
-    <span class="k-user">pub</span> git_head_sha: Option&lt;String&gt;,
-}
-
-<span class="k-sys">/// 绑定到特定 Prompt 索引的压缩/回滚检查点</span>
-#[derive(Clone, Debug)]
-<span class="k-user">pub struct</span> <span class="k-model">CompactionCheckpoint</span> {
-    <span class="k-user">pub</span> prompt_index: usize,
-    <span class="k-user">pub</span> update_seq: u64,
-    <span class="k-user">pub</span> snapshots: HashMap&lt;PathBuf, FileSnapshot&gt;,
-}
-
-<span class="k-user">pub struct</span> <span class="k-model">WorkspaceSession</span> {
-    <span class="k-user">pub</span> root_dir: PathBuf,
-    <span class="k-user">pub</span> checkpoints: Vec&lt;CompactionCheckpoint&gt;,
-}
-
-<span class="k-user">impl</span> <span class="k-model">WorkspaceSession</span> {
-    <span class="k-user">pub fn</span> <span class="k-tool">new</span>(root_dir: PathBuf) -&gt; Self {
-        Self { root_dir, checkpoints: Vec::new() }
-    }
-
-    <span class="k-sys">/// 步骤 1: 在执行可能产生破坏性文件修改的工具前捕获 Checkpoint</span>
-    <span class="k-user">pub fn</span> <span class="k-tool">create_checkpoint</span>(
-        &amp;<span class="k-user">mut</span> self,
-        prompt_index: usize,
-        update_seq: u64,
-        touched_paths: &amp;[PathBuf],
-    ) -&gt; std::io::Result&lt;()&gt; {
-        <span class="k-user">let mut</span> snapshots = HashMap::new();
-        <span class="k-user">for</span> path <span class="k-user">in</span> touched_paths {
-            <span class="k-user">let</span> full_path = self.root_dir.join(path);
-            <span class="k-user">let</span> content = <span class="k-user">if</span> full_path.exists() {
-                Some(std::fs::read_to_string(&amp;full_path)?)
-            } <span class="k-user">else</span> {
-                None <span class="k-sys">// 新建文件在回滚时对应删除操作</span>
-            };
-            snapshots.insert(path.clone(), FileSnapshot {
-                path: path.clone(),
-                original_content: content,
-                git_head_sha: None,
-            });
-        }
-        self.checkpoints.push(CompactionCheckpoint { prompt_index, update_seq, snapshots });
-        Ok(())
-    }
-
-    <span class="k-sys">/// 步骤 2: 将工作区文件系统原子回退到指定的 Prompt Checkpoint</span>
-    <span class="k-user">pub fn</span> <span class="k-tool">rewind_to_checkpoint</span>(
-        &amp;<span class="k-user">mut</span> self,
-        target_prompt_index: usize,
-    ) -&gt; std::io::Result&lt;Vec&lt;PathBuf&gt;&gt; {
-        <span class="k-user">let</span> cp_idx = self.checkpoints.iter().position(|cp| cp.prompt_index == target_prompt_index)
-            .ok_or_else(|| std::io::Error::new(std::io::ErrorKind::NotFound, "Checkpoint not found"))?;
-
-        <span class="k-user">let</span> checkpoint = &amp;self.checkpoints[cp_idx];
-        <span class="k-user">let mut</span> restored_files = Vec::new();
-
-        <span class="k-user">for</span> (rel_path, snapshot) <span class="k-user">in</span> &amp;checkpoint.snapshots {
-            <span class="k-user">let</span> full_path = self.root_dir.join(rel_path);
-            <span class="k-user">match</span> &amp;snapshot.original_content {
-                Some(content) =&gt; {
-                    std::fs::write(&amp;full_path, content)?;
-                }
-                None =&gt; {
-                    <span class="k-user">if</span> full_path.exists() {
-                        std::fs::remove_file(&amp;full_path)?;
-                    }
-                }
-            }
-            restored_files.push(rel_path.clone());
-        }
-
-        <span class="k-sys">// 截断目标检查点之后的所有历史检查点</span>
-        self.checkpoints.truncate(cp_idx + 1);
-        Ok(restored_files)
-    }
-}
-          </div>
-          <p class="lesson-result"><strong>架构精要：</strong>Grok 的 `rewind` 绝非简单的丢弃聊天气泡，而是由 `WorkspaceSession` 将文件内容、删除状态与 Git Hunk 实施物理还原，再由 `SessionActor` 向客户端广播 `RewindMarker` 同步刷新视图。</p>
-        </article>
+        <article class="lesson-brief" data-reveal><span class="label-mono">ALGORITHM · 概念伪代码</span><h3>副作用完成判定，不依赖模型自述</h3><p><code>提议动作 → 权限裁决 → 执行 → 收集终端结果 → 读取实际状态 → 回填证据</code>。若执行状态不确定，返回“不确定”而不是压成失败后盲重试。</p><p class="lesson-result"><strong>练习：</strong>命令流出现 stdout，但没有 terminal 帧。能记为成功吗？不能；输出片段不是完成边界。</p></article>
       </section>
 
       <section class="chapter band-deep" id="safety" data-spy><div class="shell">
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 06 · PERMISSIONS & SANDBOX</span><h2>审批决定信任，沙箱限制能力。</h2><p class="lede">Grok 的 permission manager 处理 allow once、记住特定动作、全局允许与拒绝；sandbox 再从操作系统层约束命令。配置按 managed → user → GROK_CONFIG overlay → requirements/MDM 合并，最上层可以钳制更低层，overlay 只允许软设置且不能越权。</p></header>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 06 · PERMISSION × SANDBOX</span><h2>事故：用户点了“允许”，为什么命令仍被系统拒绝？</h2><p class="lede">审批回答“这次是否允许”，OS 沙箱回答“这个进程最多能做什么”。两者处理不同失效边界。</p></header>
         <div class="machine" id="grok-safety" data-reveal><div class="machine-bar"><span class="title"><span class="led"></span><strong>权限 × 沙箱实验台</strong></span><span class="label-mono">policy trace</span></div><div class="machine-body sim-layout"><div><div class="sim-group"><span class="label-mono">01 · 操作</span><div class="seg-row" data-op><button class="cbtn" type="button" data-v="read">读文件</button><button class="cbtn" type="button" data-v="edit">改代码</button><button class="cbtn" type="button" data-v="network">联网命令</button></div></div><div class="sim-group"><span class="label-mono">02 · 模式</span><div class="seg-row" data-mode><button class="cbtn" type="button" data-v="default">default</button><button class="cbtn" type="button" data-v="acceptEdits">acceptEdits</button><button class="cbtn" type="button" data-v="plan">plan</button><button class="cbtn" type="button" data-v="dontAsk">dontAsk</button></div></div></div><div><div class="verdict-badge" data-verdict="ask"><span data-verdict-label>等待选择</span></div><ol class="trace-list" data-trace><li>先选择操作和 permission mode。</li></ol></div></div></div>
-        <div class="fact-boundary" data-reveal><span class="label-mono">SAFETY BOUNDARY</span><strong>always approve 不是 sandbox off。</strong><span>一个改变询问策略，一个改变操作系统能做什么；`--yolo` 会显著扩大风险，但两层概念仍要分开调试。</span></div>
-        <div class="environment-matrix" data-reveal><div class="matrix-head"><strong>Capability</strong><span>允许能力</span><span>不包含</span></div><div><strong>ReadOnly</strong><span>读取</span><code>编辑 / shell / task</code></div><div><strong>ReadWrite</strong><span>读取 + 编辑</span><code>shell / task</code></div><div><strong>Execute</strong><span>读取 + shell + task</span><code>编辑</code></div><div><strong>All</strong><span>全部</span><code>仍受 permission / sandbox</code></div></div>
-        <div class="environment-matrix" data-reveal><div class="matrix-head"><strong>Sandbox profile</strong><span>文件边界</span><span>子进程网络</span></div><div><strong>workspace</strong><span>全局读，工作区写</span><code>不限制</code></div><div><strong>read-only</strong><span>默认读，极少写</span><code>限制</code></div><div><strong>strict</strong><span>默认不读，显式放行</span><code>限制</code></div><div><strong>devbox</strong><span>大部分顶层可写</span><code>不限制</code></div></div>
+        <div class="spread"><article class="prose" data-reveal><h3>两道门，三个失败方向</h3><p>应用权限门先把 bash 拆成可判断动作；无法分解就转人工。OS 沙箱在启动时施加；配置明确要求保护却无法生效时拒绝启动。Linux 子进程网络再用 per-spawn 过滤器收紧，因为 Agent 本身要联网、shell 子进程未必应该联网。</p><div class="decision"><span class="label-mono">SECURITY TRACE</span><p><code>hook → plan gate → permission → OS boundary → child network</code>。低信任配置覆盖层也不能放宽安全门。</p></div></article><ol class="kp-list" data-reveal><li data-no="ASK"><span>可解释的风险：询问用户。</span></li><li data-no="DENY"><span>策略命中：明确拒绝。</span></li><li data-no="FAIL"><span>保护无法施加：拒绝启动。</span></li><li data-no="OS"><span>获批后仍受内核能力上限约束。</span></li></ol></div>
+        <div class="fact-boundary" data-reveal><span class="label-mono">CHECKPOINT 06</span><strong>判断题：自动批准等于关闭沙箱吗？</strong><span>不等于。前者改变交互裁决，后者改变不可绕过的能力边界。</span></div>
       </div></section>
 
       <section class="chapter shell" id="sessions" data-spy>
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 07 · SESSION STATE</span><h2>Session 是可持久化、可派生、可回退的工作记录。</h2><p class="lede">会话不仅保存聊天文本，也包含工具调用、文件编辑、任务状态与扩展通知。resume 从 updates.jsonl 复放历史；fork 可按 prompt index 复制并截断 chat、updates、summary 与压缩点；rewind 支持只回对话、只回文件或两者同时。</p></header>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 07 · RECOVERABLE SESSION</span><h2>事故：崩溃发生在“写入成功”和“收到确认”之间，能安全重放吗？</h2><p class="lede">只有把“不确定”建成一等状态，调用方才能做对。会话由单写者 actor 串行演进，关键追加用 generation 幂等和三态提交描述崩溃边界。</p></header>
+        <div class="spread"><article class="prose" data-reveal><h3>三态比 success / failure 更诚实</h3><p><strong>NotCommitted</strong> 可安全重放；<strong>Committed</strong> 表示内容已落盘但确认链失败；<strong>Indeterminate</strong> 表示结果未知。普通历史以 append-only JSONL 保存，加载时隔离坏行并修复悬空、重复的工具结果。</p><div class="decision"><span class="label-mono">RECOVERY TRACE</span><p><code>锁 → generation 查重 → 追加 → 同步内容与目录项 → 返回三态</code>。恢复时先修复对话不变量，再允许下一次请求。</p></div></article><ol class="kp-list" data-reveal><li data-no="N"><span>未提交：可以重放。</span></li><li data-no="C"><span>已提交：不可重复执行。</span></li><li data-no="?"><span>不确定：先对账，再决定。</span></li><li data-no="FIX"><span>坏行隔离，成对性修复。</span></li></ol></div>
         <div class="machine" id="grok-session" data-reveal><div class="machine-bar"><span class="title"><span class="led" data-led></span><strong>Session 演化实验台</strong></span><span class="label-mono" data-status>ready</span></div><div class="machine-body state-layout"><div><div class="state-counters"><div><span class="label-mono">SESSION</span><strong data-session>1</strong></div><div><span class="label-mono">UPDATES</span><strong data-updates>0</strong></div><div><span class="label-mono">CHECKPOINT</span><strong data-checkpoint>—</strong></div></div><div class="state-actions"><button class="cbtn primary" type="button" data-action="prompt">+ Prompt</button><button class="cbtn" type="button" data-action="checkpoint">Checkpoint</button><button class="cbtn" type="button" data-action="rewind">Rewind</button><button class="cbtn" type="button" data-action="fork">Fork</button><button class="cbtn" type="button" data-action="resume">Resume</button><button class="cbtn" type="button" data-action="reset">Reset</button></div></div><div class="stream-log elog" data-log aria-live="polite"></div></div></div>
+        <div class="fact-boundary" data-reveal><span class="label-mono">CHECKPOINT 07</span><strong>学完能做什么</strong><span>能为关键写操作设计可重放边界，并解释为什么“请求超时”不自动等于“没有提交”。</span></div>
       </section>
 
       <section class="chapter band-edge" id="context" data-spy><div class="shell">
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 08 · CONTEXT & COMPACTION</span><h2>压缩不是删聊天，而是 full-replace 一份可继续工作的状态。</h2><p class="lede">Grok 估算上下文占用，当前默认配置在 85% 附近触发自动 compact；专用 sampler 生成摘要，系统写入 segment 与 checkpoint，再整体替换 conversation。恢复时同时复放 ACP 和 Grok 扩展事件；两阶段预压缩是可选特性。</p></header>
-        <div class="machine" id="grok-context" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>上下文压力表</strong></span><span class="label-mono" data-status>42%</span></div><div class="machine-body"><div class="ctx-bar" aria-label="上下文占用"><span class="cseg seg-system" data-fill></span><span class="cseg seg-free"></span></div><div class="ctx-meta"><span>估算占用 <strong data-percent>42%</strong></span><span>策略 <strong data-policy>继续采样</strong></span></div><div class="m-controls"><button class="cbtn" type="button" data-add="12">+ 文件上下文</button><button class="cbtn" type="button" data-add="18">+ 工具输出</button><button class="cbtn primary" type="button" data-compact>执行 compact</button><button class="cbtn" type="button" data-reset>重置</button></div><p class="stage-note" data-note>85% 是当前文档中的默认配置值，真实触发还受模型窗口、估算与版本影响。</p></div></div>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 08 · CONTEXT ECONOMICS</span><h2>事故：压缩成功了，Agent 却忘了约束、重复做事。摘要哪里不够？</h2><p class="lede">Compaction 是替换历史后重建一个仍能工作的现场。真正困难的是：什么必须逐字保留、什么可以总结、什么运行态要重新注入。</p></header>
+        <div class="spread"><article class="prose" data-reveal><h3>完整链条：估算、压缩、重建、记忆</h3><p>上下文以精确 usage 重新锚定，其间用 bytes/4 粗估增量，并把 provider 侧差额跨压缩结转。达到默认 85% 触发线或发生溢出时，摘要输入走 Verbatim → Fitted → Lossy 降梯；重建再放回 system、环境前缀、项目规则、最新真实请求与 todo/后台任务等状态提醒。</p><div class="decision"><span class="label-mono">LATENCY & MEMORY</span><p>触发线前 10 个百分点可投机摘要约 95% 前缀，指纹命中时只压尾巴。长期记忆由压缩前 flush 与跨会话 dream 自动写回；markdown 是真相，索引只是派生物。</p></div></article><ol class="kp-list" data-reveal><li data-no="KEEP"><span>约束与最新意图：逐字重插。</span></li><li data-no="SUM"><span>较早语义历史：模型摘要。</span></li><li data-no="LIVE"><span>TODO、任务、子代理：状态重建。</span></li><li data-no="OLD"><span>旧知识：记忆检索后仍需现场验证。</span></li></ol></div>
+        <div class="machine" id="grok-context" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>上下文压力表</strong></span><span class="label-mono" data-status>42%</span></div><div class="machine-body"><div class="ctx-bar" aria-label="上下文占用"><span class="cseg seg-system" data-fill></span><span class="cseg seg-free"></span></div><div class="ctx-meta"><span>估算占用 <strong data-percent>42%</strong></span><span>策略 <strong data-policy>继续采样</strong></span></div><div class="m-controls"><button class="cbtn" type="button" data-add="12">+ 文件上下文</button><button class="cbtn" type="button" data-add="18">+ 工具输出</button><button class="cbtn primary" type="button" data-compact>执行 compact</button><button class="cbtn" type="button" data-reset>重置</button></div><p class="stage-note" data-note>85% 是该快照的默认触发值，实际值可被配置覆盖。</p></div></div>
+        <div class="fact-boundary" data-reveal><span class="label-mono">CHECKPOINT 08</span><strong>判断题：压缩后固定保留整个 assistant / tool 尾巴吗？</strong><span>不保证。正常 full-replace 依赖摘要与显式状态重建。</span></div>
       </div></section>
 
       <section class="chapter shell" id="extensions" data-spy>
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 09 · EXTENSION SYSTEM</span><h2>Rules 定方向，Skills 教流程，MCP 给能力，Plugins 打包分发，Hooks 做确定性拦截。</h2><p class="lede">五者都能改变 Agent，但作用层不同。Skills 按 local cwd → repo → user → configured → server → bundled 覆盖；Plugins 默认禁用且项目来源受 folder trust；Hook 只有显式 deny 才阻断，执行失败默认 fail-open。</p></header>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 09 · EXTENSION TRUST</span><h2>事故：项目新加一个扩展，为什么 Agent 看见了能力却不执行？</h2><p class="lede">“被发现”“对模型可见”“可被派发”“被目录信任”是四件事。扩展类型决定它做什么，来源决定它是否可信。</p></header>
+        <div class="spread"><article class="prose" data-reveal><h3>六类扩展，各改一层</h3><p><strong>Rules</strong> 给约束；<strong>Skills</strong> 给工作流；<strong>MCP</strong> 给外部工具；<strong>Plugins</strong> 打包多种能力；<strong>Hooks</strong> 做确定性裁决；<strong>Memory</strong> 提供跨会话证据。项目来源统一经过 folder trust，托管策略来源不可被用户静默禁用。</p><div class="decision"><span class="label-mono">DISCOVERY TRACE</span><p><code>发现来源 → 目录信任 → 优先级去重 → 模型可见性 → 注册/延迟检索 → 权限执行</code>。任一步失败都不应统称为“插件坏了”。</p></div></article><ol class="kp-list" data-reveal><li data-no="WHY"><span>Rules / Skills：改变判断与流程。</span></li><li data-no="CAN"><span>MCP：增加可调用能力。</span></li><li data-no="PACK"><span>Plugins：组合与分发。</span></li><li data-no="WHEN"><span>Hooks：在明确时点拦截。</span></li></ol></div>
         <div class="machine" id="grok-extensions" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>扩展边界图谱</strong></span><span class="label-mono" data-status>选择能力</span></div><div class="machine-body atlas-layout"><div class="atlas-choices" data-choices><button class="layer-row" type="button" data-key="rules">AGENTS.md</button><button class="layer-row" type="button" data-key="skills">Skills</button><button class="layer-row" type="button" data-key="mcp">MCP</button><button class="layer-row" type="button" data-key="plugins">Plugins</button><button class="layer-row" type="button" data-key="hooks">Hooks</button><button class="layer-row" type="button" data-key="memory">Memory</button></div><div class="atlas-detail" data-detail><span class="label-mono">CAPABILITY</span><h3>选择一类扩展</h3><p>查看它改变哪一层、如何发现，以及最常见的误用。</p></div></div></div>
+        <div class="fact-boundary" data-reveal><span class="label-mono">CHECKPOINT 09</span><strong>练习：MCP 工具已注册但不在模型工具数组里，是 bug 吗？</strong><span>不一定。该快照刻意用 search/use 延迟发现；注册负责可派发与索引。</span></div>
       </section>
 
       <section class="chapter band-deep" id="agents" data-spy><div class="shell">
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 10 · AGENT BUILDER & SUBAGENTS</span><h2>Agent 是可移植的能力包，子代理是派生 Session。</h2><p class="lede">AgentBuilder 发现 Skills、裁剪工具、注入 Memory/Plan/Task 能力并渲染 prompt。`task` 默认后台运行，状态由单写者 coordinator 管理；当前默认最大嵌套深度为 1，隔离可选 shared workspace 或 worktree。</p></header>
-        <div class="spread"><article class="prose" data-reveal><h3>定义的四个旋钮</h3><p><strong>promptMode</strong> 决定扩展基础模板还是完全接管；<strong>tools/disallowedTools</strong> 决定能力面；<strong>permissionMode</strong> 决定授权交互；<strong>completionRequirement</strong> 让编排 worker 必须显式提交完成。</p><div class="decision"><span class="label-mono">DISCOVERY</span><p>项目 `.grok/agents/` 可覆盖 built-in，用户或 bundled 同名定义不能覆盖 built-in；最终可见集合还受 `[subagents.toggle]` 过滤。规则发现兼容 AGENTS.md、CLAUDE.md 等多种文件名。</p></div></article><ol class="kp-list" data-reveal><li data-no="DEF"><span>解析 frontmatter 与系统提示正文。</span></li><li data-no="ASM"><span>组装基础模板、项目规则与 Skills。</span></li><li data-no="CAP"><span>裁剪工具、模型和 permission mode。</span></li><li data-no="SUB"><span>派生隔离 Session，返回结果给父代理。</span></li></ol></div>
-        <div class="environment-matrix" data-reveal><div class="matrix-head"><strong>定义来源</strong><span>优先级</span><span>典型用途</span></div><div><strong>.grok/agents/*.md</strong><span>项目最高</span><code>团队专属 Agent</code></div><div><strong>~/.grok/agents/*.md</strong><span>用户级</span><code>个人复用</code></div><div><strong>兼容目录</strong><span>较低</span><code>跨工具迁移</code></div><div><strong>Built-in</strong><span>最低</span><code>默认与 browser-use</code></div></div>
-        <div class="fact-boundary" data-reveal><span class="label-mono">ISOLATION BOUNDARY</span><strong>worktree 是隔离请求，不是绝对保证。</strong><span>源码在创建、panic 或恢复失败时允许回落到 shared workspace；生产编排若要求强隔离，必须检查实际返回的工作区与证据。</span></div>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 10 · MULTI-AGENT GOVERNANCE</span><h2>事故：子代理已经完成，父代理为什么既没收到结果，也没被叫醒？</h2><p class="lede">后台完成不是一个返回值，而是带取消、已消费、可见性与父会话状态的事件。单写者协调 actor 管理整棵子任务树。</p></header>
+        <div class="spread"><article class="prose" data-reveal><h3>子代理是完整子会话</h3><p>孩子复用同一会话引擎，拥有独立循环、历史和可选 worktree。父默认只收最终报告与 turns、tool calls、duration、tokens 等元数据。深度达到限制后直接剥掉 task 工具；并发默认每 session 32，超限排队或明确拒绝。</p><div class="decision"><span class="label-mono">WAKE TRACE</span><p><code>child complete → coordinator → 是否后台？是否取消？是否已等待消费？goal 是否占用？父通道是否开放？→ 合成 prompt 唤醒 / 留待下个边界</code>。</p></div></article><ol class="kp-list" data-reveal><li data-no="NEW"><span>New：干净子上下文，强隔离。</span></li><li data-no="RES"><span>Resume：复制已完成 transcript 续做。</span></li><li data-no="EVT"><span>完成：轮询面 + 事件面双通道。</span></li><li data-no="OWN"><span>血统：统一取消、计费与可见性。</span></li></ol></div>
+        <div class="environment-matrix" data-reveal><div class="matrix-head"><strong>编排拓扑</strong><span>谁决定下一步</span><code>恢复方式</code></div><div><strong>task supervisor</strong><span>父模型现场派工</span><code>重新派生 / resume</code></div><div><strong>workflow</strong><span>确定性脚本预承诺</span><code>journal 哈希重放</code></div><div><strong>/goal</strong><span>状态机 + 验证角色</span><code>暂停状态 / 恢复</code></div></div>
+        <div class="fact-boundary" data-reveal><span class="label-mono">CHECKPOINT 10</span><strong>判断题：恢复子代理时复用活动会话句柄更省吗？</strong><span>风险更大。实现复制数据到新 session，避免双写者；worktree 缺失再尝试快照恢复。</span></div>
       </div></section>
 
       <section class="chapter shell" id="surfaces" data-spy>
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 11 · EXECUTION SURFACES</span><h2>同一运行时，服务五种不同控制面。</h2><p class="lede">全屏 TUI 面向人类协作；headless 输出 plain、JSON 或 NDJSON；`agent stdio` 通过 ACP 嵌入编辑器；serve 提供本地 WebSocket；leader 模式复用常驻进程。入口不同，但内核边界应保持一致。</p></header>
-        <div class="machine" id="grok-surfaces" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>运行表面交换台</strong></span><span class="label-mono" data-status>TUI</span></div><div class="machine-body surface-layout"><div class="surface-choices" data-choices><button class="cbtn" type="button" data-key="tui">TUI</button><button class="cbtn" type="button" data-key="headless">Headless</button><button class="cbtn" type="button" data-key="acp">ACP / stdio</button><button class="cbtn" type="button" data-key="serve">Serve</button><button class="cbtn" type="button" data-key="leader">Leader</button></div><dl class="surface-detail" data-detail><div><dt>消费者</dt><dd>开发者</dd></div><div><dt>输入</dt><dd>交互式 Prompt</dd></div><div><dt>输出</dt><dd>全屏 Scrollback</dd></div><div><dt>共享内核</dt><dd>Session + Agent + Workspace</dd></div></dl></div></div>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 11 · ONE CORE, FOUR CARRIERS</span><h2>事故：升级 CLI 后，旧后台进程仍在服务。谁应该退出？</h2><p class="lede">同一 ACP 内核可以进程内嵌、走 stdio、共享 leader，或通过 headless relay 连接远端。共享守护进程还必须解决锁、就绪、身份和单向版本收敛。</p></header>
+        <div class="spread"><article class="prose" data-reveal><h3>承载不同，状态机不能分叉</h3><p>内嵌适合强沙箱边界；stdio 跟随父进程死亡；leader 让多个客户端共享后台内核；headless relay 用 ping 和 liveness 超时治理半开连接。只有“客户端严格更新”才驱逐旧 leader，避免版本抖动。另有 Computer Hub 反向把本地工具供给可信远端。</p><div class="decision"><span class="label-mono">DAEMON TRACE</span><p><code>锁 → pid/socket 核验 → 有界登录 → ready → client_id|request_id 路由 → keepalive → 新版本单向驱逐</code>。每个跨进程等待都必须有上限。</p></div></article><ol class="kp-list" data-reveal><li data-no="IN"><span>In-process：边界随当前进程。</span></li><li data-no="IO"><span>stdio：IDE 子进程承载。</span></li><li data-no="LDR"><span>Leader：本机多客户端复用。</span></li><li data-no="RLY"><span>Headless relay：远端连接与重连。</span></li></ol></div>
+        <div class="machine" id="grok-surfaces" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>运行表面交换台</strong></span><span class="label-mono" data-status>TUI</span></div><div class="machine-body surface-layout"><div class="surface-choices" data-choices><button class="cbtn" type="button" data-key="tui">In-process TUI</button><button class="cbtn" type="button" data-key="headless">Headless relay</button><button class="cbtn" type="button" data-key="acp">ACP / stdio</button><button class="cbtn" type="button" data-key="serve">Computer Hub</button><button class="cbtn" type="button" data-key="leader">Leader</button></div><dl class="surface-detail" data-detail><div><dt>消费者</dt><dd>开发者</dd></div><div><dt>输入</dt><dd>交互式 Prompt</dd></div><div><dt>输出</dt><dd>全屏 Scrollback</dd></div><div><dt>共享内核</dt><dd>Session + Agent + Workspace</dd></div></dl></div></div>
+        <div class="fact-boundary" data-reveal><span class="label-mono">CHECKPOINT 11</span><strong>练习：为什么强 confinement 时要回退进程内嵌？</strong><span>沙箱在启动时一次性施加，共享 leader 无法按后来客户端逐会话改写边界。</span></div>
       </section>
 
       <section class="chapter band-edge" id="practice" data-spy><div class="shell">
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 12 · PRACTICE & INTERVIEW</span><h2>用“边界、事件、证据”回答系统设计题。</h2><p class="lede">真正掌握 Grok Build，不是记住 crate 名，而是能从症状定位拥有层、从事件重建状态、从安全边界解释为什么某次行动被允许或拒绝。</p></header>
-        <div class="spread"><article class="prose" data-reveal><h3>五步诊断法</h3><p>先复现并标记 Session/turn 边界；再判断是入口、Shell、Agent、Tool 还是 Workspace；沿 ACP/XAI update 与 ToolNotification 找最后一个可靠事实；核对权限、沙箱与取消状态；最后用最小测试锁住 owning layer。</p><div class="decision"><span class="label-mono">SOURCE BOUNDARY · 2026-08-23</span><p>本课基于本地 `grok-build` 开源快照及其随仓用户指南。协议、模型目录、默认配置和实验性模块会变化；具体部署应以当前 `SOURCE_REV`、源码与官方文档为准。</p></div></article><ol class="kp-list" data-reveal><li data-no="01"><span>谁拥有状态？Session 还是 UI？</span></li><li data-no="02"><span>谁拥有副作用？Tool 还是 Workspace？</span></li><li data-no="03"><span>哪个事件证明动作已经发生？</span></li><li data-no="04"><span>恢复靠 replay、checkpoint 还是重新推理？</span></li><li data-no="05"><span>安全由 permission、sandbox 还是 org policy 控制？</span></li></ol></div>
-
-        <div class="interview" data-reveal>
-          <span class="label-mono">PROBLEM SET 01 · 架构设计题</span>
-          <h4>“如何设计支持全屏 TUI、IDE 插件与自动化 CI 共享的 Grok Rust Agent 运行时？”</h4>
-          <div class="qa">
-            <details>
-              <summary>展开答题骨架与深度推演</summary>
-              <div class="ans">
-                <p><strong>【场景定义】</strong> 构建一套高性能企业级 Agent 运行时，要求既能在终端提供 60fps 全屏交互式 TUI，又能作为子进程服务于 VSCode/Cursor 等现代编辑器（通过 ACP 协议），还能在 CI 环境下执行无人值守的 headless 批处理重构脚本。</p>
-                <p><strong>【归属层/故障机理分析】</strong> 属于 Rust 架构分层（`Chapter 01: Rust Architecture`）与运行表面解耦层（`Chapter 11: Execution Surfaces`）。核心机理在于将会话状态、事件驱动与交互呈现彻底解耦：`SessionActor` 运行于独立的 Tokio LocalSet 线程维持纯粹状态机，`WorkspaceSession` 封装全部真实世界副作用，上层各 Surface 仅作为输入适配器与 `SessionUpdate` 事件消费者。</p>
-                <p><strong>【关键证据链/判定条件】</strong>
-                  <br>1. <em>TUI 模式</em>：`xai-grok-pager` 订阅 `SessionUpdate` 流并驱动局部差分终端重绘，UI 崩溃不影响会话。
-                  <br>2. <em>IDE 模式</em>：`xai-grok-shell` 暴露标准 ACP stdio 传输层，双向收发 `PromptRequest` 与 `SessionUpdate`。
-                  <br>3. <em>CI 模式</em>：`grok -p` 以 Headless 模式运行，配置非交互式授权（如 `acceptEdits` 或受限 `dontAsk`），完成时直接输出结构化 NDJSON。
-                </p>
-                <p><strong>【解决方案与系统级防线】</strong>
-                  <br>• 严格遵循单一事实源原则：UI 呈现层严禁维护任何会话业务状态，所有变更均通过规范化事件总线广播。
-                  <br>• `WorkspaceSession` 封装底层文件读写、PTY 命令与 VCS 快照，保证无论从哪个表面触发，底层副作用与恢复语义严格一致。
-                </p>
-              </div>
-            </details>
-          </div>
-        </div>
-
-        <div class="interview" data-reveal>
-          <span class="label-mono">PROBLEM SET 02 · 故障排查题</span>
-          <h4>“自动上下文压缩（Auto-Compaction）后，Agent 为什么丢失了先前的代码修改记忆并出现重复修改？”</h4>
-          <div class="qa">
-            <details>
-              <summary>展开答题骨架与排查路径</summary>
-              <div class="ans">
-                <p><strong>【场景定义】</strong> 在长时间的多轮代码重构任务中，会话达到 85% 上下文阈值触发自动压缩，随后 Agent 开始重复修改已经修复过的文件，甚至否定之前的架构设计决策。</p>
-                <p><strong>【归属层/故障机理分析】</strong> 属于上下文压缩机制（`Chapter 08: Context & Compaction`）与会话持久化层（`Chapter 07: Session State`）。故障机理为：专用 Sampler 在生成摘要 Prompt 时未强制提取 `Workspace.diff_summary` 与已修改文件清单，且 `ChatStateActor` 在全量替换历史时将包含关键事实的 `ToolResult` 彻底丢弃，导致代码不变量事实断裂。</p>
-                <p><strong>【关键证据链/判定条件】</strong>
-                  <br>1. 查阅 `updates.jsonl`：定位 `CompactionCheckpoint` 事件及其包含的摘要文本。
-                  <br>2. 检查摘要生成 Prompt：确认是否遗漏了 `Workspace.diff_summary` 与已修改文件列表。
-                  <br>3. 检查后续采样的 `conversation` 消息：确认是否仅包含模糊的语义泛化描述而丢失了精确的文件路径与修改哈希。
-                </p>
-                <p><strong>【解决方案与系统级防线】</strong>
-                  <br>• 压缩摘要生成器必须强制包含 `Modified Files & Invariants` 结构化必填段落，将文件状态固化为显式上下文。
-                  <br>• 引入两阶段增量压缩机制，在替换会话前与 `WorkspaceSession` 当前文件真实状态进行对齐校验。
-                </p>
-              </div>
-            </details>
-          </div>
-        </div>
-
-        <div class="interview" data-reveal>
-          <span class="label-mono">PROBLEM SET 03 · 安全攻防题</span>
-          <h4>“在 `--yolo`（全自动审批）模式下，如何防止恶意或越权脚本破坏开发宿主机？”</h4>
-          <div class="qa">
-            <details>
-              <summary>展开答题骨架与防御体系</summary>
-              <div class="ans">
-                <p><strong>【场景定义】</strong> 开发者在本地开启全自动批准模式执行批量任务，模型生成的构建脚本中意外包含了恶意命令（如 `rm -rf /` 或覆写系统 `.bashrc` / `.ssh` 目录）。</p>
-                <p><strong>【归属层/故障机理分析】</strong> 属于权限与沙箱边界层（`Chapter 06: Permissions & Sandbox`）。核心认知：<strong>`--yolo` / `dontAsk` 仅改变 `PermissionManager` 的交互询问策略，绝不等于关闭底层操作系统 Sandbox</strong>。</p>
-                <p><strong>【关键证据链/判定条件】</strong>
-                  <br>1. 权限流转：`PermissionManager` 在 `dontAsk` 或自动放行模式下跳过交互弹窗。
-                  <br>2. 底层沙箱拦截：观察 `SandboxProfile`（如 `workspace` 或 `strict`）。底层沙箱依然拦截跨根目录的 `unlinkat` / `rename` 系统调用并返回 `EPERM`。
-                  <br>3. 恢复点验证：检查在破坏性命令执行前是否触发了 `WorkspaceSession.create_checkpoint`。
-                </p>
-                <p><strong>【解决方案与系统级防线】</strong>
-                  <br>• 在 `WorkspaceSession` 建立双重断路器：上层策略放行后，底层依然执行基于 OS 命名空间/特权级的路径约束。
-                  <br>• 关键文件修改前自动捕获 VCS Checkpoint，支持通过 `RewindMarker` 一键无损回滚工作区文件与会话状态。
-                </p>
-              </div>
-            </details>
-          </div>
-        </div>
-        <dl class="gloss" data-reveal><div><dt>ACP</dt><dd>Agent Client Protocol，编辑器与 Agent 之间的会话协议。</dd></div><div><dt>SessionUpdate</dt><dd>消息、工具与会话信息的流式事实。</dd></div><div><dt>ToolBridge</dt><dd>把模型侧调用接到注册表与执行层的桥。</dd></div><div><dt>Checkpoint</dt><dd>可恢复的工作区与会话边界。</dd></div><div><dt>Compaction</dt><dd>把长历史重写成可继续工作的紧凑状态。</dd></div><div><dt>AgentBuilder</dt><dd>把定义、提示词、工具和策略组装成 Agent。</dd></div></dl>
-        <section class="source-notes" aria-labelledby="grok-sources" data-reveal><span class="label-mono">PRIMARY SOURCES</span><h3 id="grok-sources">继续查证</h3><p>课程事实来自 Grok Build 开源仓库中的 README、用户指南与 Rust 源码。</p><div><a href="https://docs.x.ai/build/overview">Grok Build 官方文档</a><a href="https://github.com/xai-org/grok-build">开源仓库</a><a href="https://agentclientprotocol.com/">Agent Client Protocol</a></div></section>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 12 · FAILURE BUDGETS & ENGINEERING</span><h2>结课事故：同样是“请求太大”，为什么有时剥图，有时必须压缩？</h2><p class="lede">恢复动作会改写请求，也可能损失信息。可靠系统先按“谁能修、要改什么”分类，再让每层消耗自己的预算。</p></header>
+        <div class="spread"><article class="prose" data-reveal><h3>五步故障判断法</h3><p>① 找最后可靠事实；② 判断是模型可修、harness 可修还是必须交给用户；③ 区分瞬态与确定性；④ 选择不扩大损失的恢复动作；⑤ 用线级真实测试锁住协议、事件和用户所见。</p><div class="decision"><span class="label-mono">ERROR TRACE</span><p><code>字节级超限 → 剥图一次</code>；<code>token 超窗 → compaction</code>；<code>429 + Retry-After → 按服务器节奏退避</code>；<code>已有流式输出 → 禁止透明重放</code>；<code>未知状态 → 不做破坏性恢复</code>。</p></div></article><ol class="kp-list" data-reveal><li data-no="TX"><span>传输重试：独立预算。</span></li><li data-no="DOOM"><span>生成循环重采样：独立预算。</span></li><li data-no="LEN"><span>截断续写：独立预算。</span></li><li data-no="429"><span>子代理等待限流：独立预算。</span></li></ol></div>
+        <div class="environment-matrix" data-reveal><div class="matrix-head"><strong>观察</strong><span>先判断</span><code>动作</code></div><div><strong>413 / payload too large</strong><span>请求体字节过大</span><code>剥图一次；无图则终止</code></div><div><strong>context window exceeded</strong><span>token 容量不足</span><code>压缩并重建</code></div><div><strong>broken pipe while upload</strong><span>网关疑似掐包</span><code>重试前先减小请求体</code></div><div><strong>未知 4xx</strong><span>证据不足</span><code>不做有损自动恢复</code></div></div>
+        <div class="interview" data-reveal><span class="label-mono">LAB 01 · 循环诊断</span><h4>模型连续 8 次读取同一份内容，应该在哪一层止损？</h4><div class="qa"><details><summary>展开判断骨架</summary><div class="ans"><p><strong>先看动作签名：</strong>将工具名与规范化、排序后的参数组成签名。只读重复先提醒，达到阈值后返回不可被外层续跑的 stationarity 终态。</p><p><strong>验证：</strong>相同调用乱序后仍应被识别；硬停后 goal 与 Stop hook 不应重新点火。</p></div></details></div></div>
+        <div class="interview" data-reveal><span class="label-mono">LAB 02 · 压缩诊断</span><h4>压缩后规则还在，但 Agent 忘了后台子任务。缺了哪条链？</h4><div class="qa"><details><summary>展开判断骨架</summary><div class="ans"><p>项目规则应逐字重插；后台任务属于运行态，应由 compaction 后的状态 reminder 重建。摘要负责较早语义历史，不承担全部现场恢复。</p></div></details></div></div>
+        <div class="interview" data-reveal><span class="label-mono">LAB 03 · 多代理诊断</span><h4>用户刚取消父任务，后台孩子完成了。要自动唤醒父会话吗？</h4><div class="qa"><details><summary>展开判断骨架</summary><div class="ans"><p><strong>不要唤醒：</strong>取消或显式 kill 是唤醒闸门的否决条件。结果仍可持久化和查询，但不能在用户刚停止后重新启动模型。</p></div></details></div></div>
+        <dl class="gloss" data-reveal><div><dt>TurnOutcome</dt><dd>把自然结束、取消、预算耗尽与防循环硬停分开的终态词汇。</dd></div><div><dt>Stationarity</dt><dd>按规范化工具签名检测“动作没有进展”。</dd></div><div><dt>Full-replace</dt><dd>摘要旧历史，再显式重建约束、意图与运行态。</dd></div><div><dt>Wake gate</dt><dd>决定后台完成是否应重新启动父模型的纯函数闸门。</dd></div><div><dt>Three-state commit</dt><dd>把未提交、已提交和结果不确定分开表达。</dd></div><div><dt>Fail-closed</dt><dd>无法证明安全时拒绝放行，而不是静默降级。</dd></div></dl>
+        <section class="source-notes" aria-labelledby="grok-sources" data-reveal><span class="label-mono">EVIDENCE BOUNDARY</span><h3 id="grok-sources">课程事实边界</h3><p>本课按 2026-09-01 的快照整理。带“默认”的数字可能受远程配置、环境变量或 feature flag 覆盖；服务端 doom-loop 检测器与部分远端闭环不在本快照内，因此只讲已验证的客户端消费与恢复语义。</p></section>
       </div></section>
     </main>
     <footer class="site"><div class="shell"><span>顶级 Agent 内核图谱 · Grok Build</span><div><a href="/codex">Codex</a> · <a href="/deepseek">DeepSeek Harness</a> · <a href="/pi">Pi Agent</a> · <a href="/opencode">OpenCode</a> · <a href="/openclaw">OpenClaw</a> · <a href="/hermes">Hermes Agent</a> · <a href="#top">返回顶部 ↑</a></div></div></footer>

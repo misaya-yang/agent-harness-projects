@@ -1,471 +1,53 @@
 <!doctype html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="从 Agent state 到模型流、工具批次、JSONL Session Tree、扩展和运行表面，交互式拆解 Pi Agent。" />
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content="Pi Agent 内核图谱 · 顶级 Agent 教学系列" />
-    <meta property="og:description" content="沿着 Pi AI、Agent Loop、Tool Batch 与 Session Tree，读懂一个小而可编程的 Agent Harness。" />
-    <meta property="og:url" content="https://codex-kernel-atlas.lvy-u.chatgpt.site/pi" />
-    <link rel="canonical" href="https://codex-kernel-atlas.lvy-u.chatgpt.site/pi" />
-    <meta name="twitter:card" content="summary" />
-    <title>Pi Agent 内核图谱 · 顶级 Agent 教学系列</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=Noto+Sans+SC:wght@400;500;700&amp;family=Noto+Serif+SC:wght@700;900&amp;display=swap" rel="stylesheet" />
-    <link href="/src/styles/tokens.css" rel="stylesheet" />
-    <script>
-      document.documentElement.classList.add("js");
-      try { const t = localStorage.getItem("codex-atlas-theme"); if (t === "light" || t === "dark") document.documentElement.dataset.theme = t; } catch {}
-      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) document.documentElement.classList.add("rm");
-    </script>
-  </head>
-  <body class="pi-page" data-agent="pi">
-    <a class="skip-link" href="#main">跳到正文</a>
-    <div class="progress-line" aria-hidden="true"></div>
-    <header class="topbar">
-      <a class="brand" href="#top">Pi Agent 图谱 <span class="label-mono">FIELD GUIDE</span></a>
-      <div class="topbar-actions"><div data-series-nav data-variant="top"><a class="series-fallback" href="/codex">Agent 系列</a></div><button class="theme-btn" type="button" data-theme-toggle aria-label="切换到深色模式"><span aria-hidden="true" data-theme-icon>◐</span><span data-theme-label>深色模式</span></button><button class="menu-btn" type="button" data-menu-btn aria-expanded="false" aria-controls="chapter-nav">章节</button></div>
-    </header>
-    <nav class="chapter-nav" id="chapter-nav" data-menu-panel hidden aria-label="课程章节">
-      <a href="#top" data-spy-link><span class="no">00</span>课程入口</a><a href="#layers" data-spy-link><span class="no">01</span>分层地图</a><a href="#state" data-spy-link><span class="no">02</span>Agent State</a><a href="#loop" data-spy-link><span class="no">03</span>事件循环</a><a href="#queues" data-spy-link><span class="no">04</span>队列控制</a><a href="#providers" data-spy-link><span class="no">05</span>统一模型</a><a href="#tools" data-spy-link><span class="no">06</span>工具批次</a><a href="#sessions" data-spy-link><span class="no">07</span>Session Tree</a><a href="#compaction" data-spy-link><span class="no">08</span>压缩与分支</a><a href="#extensions" data-spy-link><span class="no">09</span>扩展资源</a><a href="#tui" data-spy-link><span class="no">10</span>TUI 与模式</a><a href="#protocol" data-spy-link><span class="no">11</span>协议表面</a><a href="#practice" data-spy-link><span class="no">12</span>安全与实践</a>
-    </nav>
-    <aside class="rail" aria-label="课程章节">
-      <a class="brand" href="#top">Pi Agent 图谱</a>
-      <a href="#top" data-spy-link><span class="no">00</span>课程入口</a><a href="#layers" data-spy-link><span class="no">01</span>分层地图</a><a href="#state" data-spy-link><span class="no">02</span>Agent State</a><a href="#loop" data-spy-link><span class="no">03</span>事件循环</a><a href="#queues" data-spy-link><span class="no">04</span>队列控制</a><a href="#providers" data-spy-link><span class="no">05</span>统一模型</a><a href="#tools" data-spy-link><span class="no">06</span>工具批次</a><a href="#sessions" data-spy-link><span class="no">07</span>Session Tree</a><a href="#compaction" data-spy-link><span class="no">08</span>压缩与分支</a><a href="#extensions" data-spy-link><span class="no">09</span>扩展资源</a><a href="#tui" data-spy-link><span class="no">10</span>TUI 与模式</a><a href="#protocol" data-spy-link><span class="no">11</span>协议表面</a><a href="#practice" data-spy-link><span class="no">12</span>安全与实践</a>
-      <button class="theme-btn rail-theme" type="button" data-theme-toggle aria-label="切换到深色模式"><span aria-hidden="true" data-theme-icon>◐</span><span data-theme-label>深色模式</span></button>
-    </aside>
-    <main id="main">
-      <div data-series-nav data-variant="tabs"><nav class="course-tabs" aria-label="选择 Agent 课程"><a href="/codex">Codex</a><a href="/grok">Grok Build</a><a href="/deepseek">DeepSeek Harness</a><a href="/pi" aria-current="page">Pi Agent</a><a href="/opencode">OpenCode</a><a href="/openclaw">OpenClaw</a><a href="/hermes">Hermes Agent</a></nav></div>
-      <section class="hero shell" id="top" data-spy>
-        <div class="hero-grid">
-          <div data-reveal>
-            <p class="eyebrow label-mono">SMALL CORE · STREAMING EVENTS · SESSION TREE</p>
-            <h1>看懂 Pi Agent 如何把模型流、工具批次与<span class="alt">可分支 Session 接成一个可控循环。</span></h1>
-            <p class="sub">跟踪一个“审阅配置文件并给出最小修复”的任务：Agent 怎样拥有状态与队列，Pi AI 如何统一 Provider，工具完成顺序为何不等于 transcript 顺序，Coding Agent 又怎样把消息保存成可分支 JSONL 树。</p>
-            <ul class="hero-outcomes" aria-label="学完本课程你将能够"><li>从 Agent event 判断运行真正停在哪一层</li><li>解释 provider stream、工具结果与 public state 的先后关系</li><li>区分 Project Trust、工具暴露和真正的 OS 隔离</li></ul>
-            <div class="hero-cta"><a class="btn-primary" href="#layers">从分层地图开始 <span class="arrow" aria-hidden="true">→</span></a><a class="btn-secondary" href="#pi-source-route">先看源码路线</a></div>
-          </div>
-          <figure class="hero-loop" data-hero-loop data-reveal data-reveal-delay="120">
-            <svg viewBox="0 0 480 360" role="img" aria-labelledby="pi-hero-title pi-hero-desc">
-              <title id="pi-hero-title">Pi Agent 核心事件循环概览</title>
-              <desc id="pi-hero-desc">Prompt 输入、Agent Core 状态、Pi AI 流式推理、工具批次与 JSONL Session 树。</desc>
-              <circle class="ring" cx="240" cy="180" r="128" />
-              <g class="hnode"><circle cx="240" cy="48" r="38"/><text x="240" y="44" text-anchor="middle">队列</text><text class="hno" x="240" y="61" text-anchor="middle">Q</text></g>
-              <g class="hnode"><circle cx="365" cy="140" r="38"/><text x="365" y="136" text-anchor="middle">状态</text><text class="hno" x="365" y="153" text-anchor="middle">CORE</text></g>
-              <g class="hnode"><circle cx="318" cy="288" r="38"/><text x="318" y="284" text-anchor="middle">模型</text><text class="hno" x="318" y="301" text-anchor="middle">AI</text></g>
-              <g class="hnode"><circle cx="162" cy="288" r="38"/><text x="162" y="284" text-anchor="middle">批次</text><text class="hno" x="162" y="301" text-anchor="middle">BATCH</text></g>
-              <g class="hnode"><circle cx="115" cy="140" r="38"/><text x="115" y="136" text-anchor="middle">树谱</text><text class="hno" x="115" y="153" text-anchor="middle">TREE</text></g>
-              <circle class="packet" cx="240" cy="52" r="5">
-                <animateTransform attributeName="transform" type="rotate" from="0 240 180" to="360 240 180" dur="7s" repeatCount="indefinite" />
-              </circle>
-            </svg>
-            <figcaption>
-              <span>pi_agent / event map</span>
-              <button class="pause-btn" type="button" data-loop-pause aria-pressed="false">⏸ 暂停</button>
-            </figcaption>
-          </figure>
-        </div>
-        <div class="hero-meta label-mono" aria-label="课程范围"><span>SOURCE SNAPSHOT · a470b121b</span><span>12 章 · 11 个实验</span><span>读事件 → 看顺序 → 查边界</span></div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="从一次真实事故出发，循序学习 Pi Agent 的事件循环、工具批次、会话树、压缩、错误恢复与在建 Harness。" />
+  <meta property="og:type" content="website" /><meta property="og:title" content="Pi Agent：从一轮工具调用到耐久 Harness" /><meta property="og:description" content="12 章交互课程：先看当前可运行路径，再辨认尚未接线的新 Harness。" /><meta property="og:url" content="https://harness.lvy-u.chatgpt.site/pi" />
+  <link rel="canonical" href="https://harness.lvy-u.chatgpt.site/pi" /><meta name="twitter:card" content="summary" /><title>Pi Agent：从一轮工具调用到耐久 Harness</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" /><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin /><link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=Noto+Sans+SC:wght@400;500;700&amp;family=Noto+Serif+SC:wght@700;900&amp;display=swap" rel="stylesheet" /><link href="/src/styles/tokens.css" rel="stylesheet" />
+  <script>document.documentElement.classList.add("js");try{const t=localStorage.getItem("codex-atlas-theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t}catch{}if(window.matchMedia("(prefers-reduced-motion: reduce)").matches)document.documentElement.classList.add("rm");</script>
+</head>
+<body class="pi-page" data-agent="pi">
+  <a class="skip-link" href="#main">跳到正文</a><div class="progress-line" aria-hidden="true"></div>
+  <header class="topbar"><a class="brand" href="#top">Pi Agent 运行图谱 <span class="label-mono">FIELD GUIDE</span></a><div class="topbar-actions"><div data-series-nav data-variant="top"><a class="series-fallback" href="/codex">Agent 系列</a></div><button class="theme-btn" type="button" data-theme-toggle aria-label="切换到深色模式"><span aria-hidden="true" data-theme-icon>◐</span><span data-theme-label>深色模式</span></button><button class="menu-btn" type="button" data-menu-btn aria-expanded="false" aria-controls="chapter-nav">章节</button></div></header>
+  <nav class="chapter-nav" id="chapter-nav" data-menu-panel hidden aria-label="课程章节"><a href="#top" data-spy-link><span class="no">00</span>学习入口</a><a href="#layers" data-spy-link><span class="no">01</span>运行路径</a><a href="#state" data-spy-link><span class="no">02</span>状态与事件</a><a href="#loop" data-spy-link><span class="no">03</span>循环如何停</a><a href="#queues" data-spy-link><span class="no">04</span>插话与续跑</a><a href="#providers" data-spy-link><span class="no">05</span>模型适配</a><a href="#tools" data-spy-link><span class="no">06</span>工具批次</a><a href="#sessions" data-spy-link><span class="no">07</span>会话树</a><a href="#compaction" data-spy-link><span class="no">08</span>上下文压缩</a><a href="#extensions" data-spy-link><span class="no">09</span>扩展与委托</a><a href="#tui" data-spy-link><span class="no">10</span>终端呈现</a><a href="#protocol" data-spy-link><span class="no">11</span>协议与新地基</a><a href="#practice" data-spy-link><span class="no">12</span>故障判断</a></nav>
+  <aside class="rail" aria-label="课程章节"><a class="brand" href="#top">Pi Agent 图谱</a><a href="#top" data-spy-link><span class="no">00</span>学习入口</a><a href="#layers" data-spy-link><span class="no">01</span>运行路径</a><a href="#state" data-spy-link><span class="no">02</span>状态与事件</a><a href="#loop" data-spy-link><span class="no">03</span>循环如何停</a><a href="#queues" data-spy-link><span class="no">04</span>插话与续跑</a><a href="#providers" data-spy-link><span class="no">05</span>模型适配</a><a href="#tools" data-spy-link><span class="no">06</span>工具批次</a><a href="#sessions" data-spy-link><span class="no">07</span>会话树</a><a href="#compaction" data-spy-link><span class="no">08</span>上下文压缩</a><a href="#extensions" data-spy-link><span class="no">09</span>扩展与委托</a><a href="#tui" data-spy-link><span class="no">10</span>终端呈现</a><a href="#protocol" data-spy-link><span class="no">11</span>协议与新地基</a><a href="#practice" data-spy-link><span class="no">12</span>故障判断</a><button class="theme-btn rail-theme" type="button" data-theme-toggle aria-label="切换到深色模式"><span aria-hidden="true" data-theme-icon>◐</span><span data-theme-label>深色模式</span></button></aside>
+  <main id="main">
+    <div data-series-nav data-variant="tabs"><nav class="course-tabs" aria-label="选择 Agent 课程"><a href="/codex">Codex</a><a href="/grok">Grok Build</a><a href="/deepseek">DeepSeek Harness</a><a href="/pi" aria-current="page">Pi Agent</a><a href="/opencode">OpenCode</a><a href="/openclaw">OpenClaw</a><a href="/hermes">Hermes Agent</a></nav></div>
+    <section class="hero shell" id="top" data-spy>
+      <div class="hero-grid"><div data-reveal><p class="eyebrow label-mono">CURRENT LOOP / DETERMINISTIC HISTORY / HONEST STUBS</p><h1>追完一轮任务，读懂它<span class="alt">为何继续、为何停。</span></h1><p class="sub">跟随一次“读取配置并给出最小修复”的任务：先看今天真正运行的 <code>Agent + AgentSession</code>，再看已经铺好存储地基、却还不能驱动任务的新 <code>AgentHarness</code>。两者从第一屏起就不混讲。</p><ul class="hero-outcomes" aria-label="学完本课程你将能够"><li>用短事件 trace 还原一轮模型与工具调用</li><li>判断完成顺序和会话顺序为何不同</li><li>解释压缩为何不删除历史，以及何时只救一次</li><li>区分当前能力、示例能力、实验协议与未接线 Harness</li></ul><div class="hero-cta"><a class="btn-primary" href="#layers">开始第一起事故 <span class="arrow" aria-hidden="true">→</span></a><a class="btn-secondary" href="#practice">先看诊断清单</a></div></div>
+        <figure class="hero-loop" data-hero-loop data-reveal data-reveal-delay="120"><svg viewBox="0 0 480 360" role="img" aria-labelledby="pi-hero-title pi-hero-desc"><title id="pi-hero-title">Pi Agent 一轮任务的五个事实点</title><desc id="pi-hero-desc">用户队列、运行状态、模型请求、工具批次与会话树首尾相接。</desc><circle class="ring" cx="240" cy="180" r="128"/><g class="hnode"><circle cx="240" cy="48" r="38"/><text x="240" y="44" text-anchor="middle">队列</text><text class="hno" x="240" y="61" text-anchor="middle">Q</text></g><g class="hnode"><circle cx="365" cy="140" r="38"/><text x="365" y="136" text-anchor="middle">状态</text><text class="hno" x="365" y="153" text-anchor="middle">STATE</text></g><g class="hnode"><circle cx="318" cy="288" r="38"/><text x="318" y="284" text-anchor="middle">模型</text><text class="hno" x="318" y="301" text-anchor="middle">LLM</text></g><g class="hnode"><circle cx="162" cy="288" r="38"/><text x="162" y="284" text-anchor="middle">工具</text><text class="hno" x="162" y="301" text-anchor="middle">BATCH</text></g><g class="hnode"><circle cx="115" cy="140" r="38"/><text x="115" y="136" text-anchor="middle">历史</text><text class="hno" x="115" y="153" text-anchor="middle">TREE</text></g><circle class="packet" cx="240" cy="52" r="5"><animateTransform attributeName="transform" type="rotate" from="0 240 180" to="360 240 180" dur="7s" repeatCount="indefinite"/></circle></svg><figcaption><span>one task / two generations</span><button class="pause-btn" type="button" data-loop-pause aria-pressed="false">⏸ 暂停</button></figcaption></figure></div>
+      <div class="hero-meta label-mono" aria-label="课程范围"><span>FACT BOUNDARY · 4e69b0c28060</span><span>12 章 · 11 个交互实验</span><span>事故 → 白话 → TRACE → 判断</span></div>
+      <div class="fact-boundary" data-reveal><span class="label-mono">先钉死事实边界</span><strong>当前能跑：Agent → AgentSession → v3 会话树。</strong><span class="prose">新 Harness 的存储、状态折叠器、租约与部分纯函数已经实现；但任务驱动、恢复、lane 与事件钩子仍明确拒绝调用。后文所有“在建”标记都指这条断层。</span></div>
+    </section>
 
-        <section class="lesson-brief" id="kernel-atlas" data-reveal>
-          <span class="label-mono">KERNEL ATLAS · 7-COURSE PANORAMIC SYNTHESIS</span>
-          <h3>七门课程全景：开源 Agent 架构对比与技术选型指南</h3>
-          <p>横向打通 Codex (`codex-rs`)、Grok Build (`xai-org/grok-build`)、DeepSeek Harness (`deepseek-harness`)、Pi Agent (`pi-mono`)，以及新增的 OpenCode (`anomalyco/opencode`)、OpenClaw (`openclaw/openclaw`) 与 Hermes Agent (`NousResearch/hermes-agent`) 六大核心维度。选型结论是基于本地源码快照的教学归纳，不代表各上游项目的官方定位。</p>
+    <section class="chapter shell" id="layers" data-spy><header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 01 · FIND THE OWNER</span><h2>事故：终端显示“完成”，会话里却没有最终消息。先别怪模型。</h2><p class="lede"><strong>先解决：</strong>同一个任务横跨模型适配、循环、会话壳和呈现层。只有找到“谁持有这份事实”，你才知道该查哪一种证据。</p></header><div class="spread" data-reveal><article class="prose"><h3>白话：四层像接力，不是四份真相</h3><p><strong>Pi AI</strong> 翻译各家模型请求；<strong>Agent Core</strong> 运行 turn、工具与队列；<strong>AgentSession</strong> 持久化、压缩、重试并托管扩展；<strong>TUI / RPC</strong> 只呈现或传输。屏幕结束，只能证明最后一层画完了。</p></article><article class="lesson-brief"><span class="label-mono">SHORT TRACE</span><h3>user → stream → message_end → session entry → render</h3><p>若 <code>message_end</code> 已有而 entry 缺失，查会话壳；entry 已有而屏幕没更新，查呈现；stream 直接以 <code>error</code> 收口，问题更靠近模型适配。</p></article></div><div class="machine" id="pi-layers" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>责任归属练习</strong></span><span class="label-mono" data-status>选择症状</span></div><div class="machine-body atlas-layout"><div class="atlas-choices"><button class="layer-row" type="button" data-key="provider">请求格式被模型服务拒绝</button><button class="layer-row" type="button" data-key="loop">工具结束后没有下一轮</button><button class="layer-row" type="button" data-key="session">恢复后分支内容不对</button><button class="layer-row" type="button" data-key="render">终端流式输出闪烁</button></div><div class="atlas-detail" data-detail><span class="label-mono">OWNING LAYER</span><h3>点击一种症状</h3><p>先认 owner，再选择事件、会话条目或屏幕证据。</p></div></div></div><p class="lesson-result" data-reveal><strong>本章过关：</strong>给你“屏幕完成但记录缺失”，你会先查完成事件与会话条目，而不是笼统重跑。</p></section>
 
-          <div class="environment-matrix">
-            <div class="matrix-head"><strong>对比维度</strong><span>七门课程：各 Agent 架构实现与技术取舍</span><code>核心特征</code></div>
-            <div>
-              <strong>1. 会话与状态模型</strong>
-              <span><strong>Codex</strong>: Thread / Turn / Item 三层层级容器，状态由内存 Actor + 外部存储双重建模。<br>
-              <strong>Grok Build</strong>: Tokio LocalSet 独立线程 Actor（`SessionActor` + `ChatStateActor`），追加持久化到 `updates.jsonl`。<br>
-              <strong>DeepSeek</strong>: 纯追加型不可变 Session Log，由 `SurfaceManager` 实时投影出当前模型可见历史。<br>
-              <strong>Pi Agent</strong>: 追加型 JSONL Session 树（`id` / `parentId`），通过移动叶节点指针实现非破坏性分支与回退。<br>
-              <strong>OpenCode</strong>: 事件流投影进单文件 `opencode.db`，消息历史由最近一条摘要条目之后重建（`filterCompacted`），压缩对主循环完全透明。<br>
-              <strong>OpenClaw</strong>: 双 SQLite 文件（全局 `state/openclaw.sqlite` + 每 agent `openclaw-agent.sqlite`），会话、transcript、standing intents 与记忆索引全落库；恢复靠状态已落库 + 事件重放。<br>
-              <strong>Hermes</strong>: `~/.hermes/state.db` 以 `parent_session_id` 串起会话血统，外加压缩标记、压缩锁与 gateway 路由表；cron 任务单独持久化到 `jobs.json`。</span>
-              <code>State vs Tree</code>
-            </div>
-            <div>
-              <strong>2. 通信协议与交互</strong>
-              <span><strong>Codex</strong>: App Server 双向 JSON-RPC 协议，规范化 Request 与 started / delta / completed 通知。<br>
-              <strong>Grok Build</strong>: 采用 Agent Client Protocol (ACP) 标准协议，扩展 XAI 专有事件（`rewind`, `compaction`）。<br>
-              <strong>DeepSeek</strong>: 面向自动化与工具管线的 JSON-RPC stdio / NDJSON 协议，流式提交 committed assistant 消息。<br>
-              <strong>Pi Agent</strong>: LF-only JSONL Coding-Agent RPC 与 4 字节大端前缀 + 定长 CBOR 独立 Server Protocol 双协议面。<br>
-              <strong>OpenCode</strong>: 单一本地 HTTP 服务器承载内核：`POST /session/:id/message` 是唯一喂脑入口，`GET /event`（SSE）是唯一广播出口；TUI、IDE、GitHub、CI 全是同构客户端。<br>
-              <strong>OpenClaw</strong>: Gateway 统一接入模型、工具、消息通道与 macOS/iOS/Android/Wear 伴生应用；Telegram/Discord 等通道经 `src/channels/*` 抽象路由。<br>
-              <strong>Hermes</strong>: 单个 Python 内核同时驱动 CLI、23+ 平台消息网关、TUI、Zed ACP、MCP server 与 Electron 桌面六面；`acp_adapter` 负责协议翻译。</span>
-              <code>JSON-RPC / ACP / SSE / CBOR</code>
-            </div>
-            <div>
-              <strong>3. 沙箱与权限控制</strong>
-              <span><strong>Codex</strong>: `SandboxPolicy` (`ro`/`ww`/`dfa`) × `ApprovalPolicy` (`untrusted`/`on-request`/`never`) 正交二维决策矩阵。<br>
-              <strong>Grok Build</strong>: `PermissionManager` (4种模式) × `SandboxProfile` (`workspace`/`read-only`/`strict`/`devbox`)，分层合并。<br>
-              <strong>DeepSeek</strong>: 3 种文件效果模式 (`ro`/`ww`/`dfa`) × 独立审批通道，不可用时强制 fail-closed。<br>
-              <strong>Pi Agent</strong>: 默认采用宿主进程全量权限；`Project Trust` 控制配置加载，真正安全隔离依托外部 Docker/VM。<br>
-              <strong>OpenCode</strong>: 无 OS 级沙箱；按工具 × pattern 匹配 allow / ask / deny 规则，待审批以 `deferred` 终止原因表达——审批是循环的输入而非旁路。<br>
-              <strong>OpenClaw</strong>: `beforeToolCall` / `afterToolCall` 钩子 + 网关审批（exec-approval-manager）；审批不通过时工具调用被替换为失败结果，模型只见结果不见例外。<br>
-              <strong>Hermes</strong>: `tools/approval.py` 分级：hardline 直接拒绝、危险操作询问、cron/gateway 非交互场景各自降级；记忆写入另有 `write_approval` 闸门。</span>
-              <code>Sandbox × Approval</code>
-            </div>
-            <div>
-              <strong>4. 上下文工程与压缩</strong>
-              <span><strong>Codex</strong>: 达到预算阈值触发 CompactionSummary 折叠，保留关键目标与 Diff 事实。<br>
-              <strong>Grok Build</strong>: 85% 上下文压力触发全量替换压缩，专用 Sampler 生成摘要并记录 `CompactionCheckpoint`。<br>
-              <strong>DeepSeek</strong>: `compaction/start` 耐久锁机制，在稳定日志区间生成摘要并通过 Surface Replacement 原子替换。<br>
-              <strong>Pi Agent</strong>: `firstKeptEntryId` 动态截断点选择，后向搜索绝不切断 toolResult，单回合支持超长前缀摘要。<br>
-              <strong>OpenCode</strong>: `isOverflow` 触发后把 compaction 摘要作为普通输入自喂进下一轮循环（compact then continue），`finish` 语义防御 provider 谎报。<br>
-              <strong>OpenClaw</strong>: 溢出路径与阈值路径双路触发 `runAutoCompaction`；context-engine 以能力面（bootstrap / assemble-before-prompt / compact）可插拔。<br>
-              <strong>Hermes</strong>: “Prompt 缓存神圣”宪法——缓存标记边界只有压缩可合法击穿；micro-compaction 与 `trajectory_compressor` 分别服务在线回合与离线轨迹。</span>
-              <code>Compaction & Summary</code>
-            </div>
-            <div>
-              <strong>5. 执行世界抽象</strong>
-              <span><strong>Codex</strong>: Local / Git Worktree / Cloud 容器 / 远程宿主多环境适配。<br>
-              <strong>Grok Build</strong>: `WorkspaceSession` 统一封装 FS、PTY、ProcessManager、VCS 与检查点，解耦上层调用。<br>
-              <strong>DeepSeek</strong>: 严格三元解耦（Service Definition / Provider / Consumer），支持 Local、Sandbox 与 E2B 云沙箱热插拔。<br>
-              <strong>Pi Agent</strong>: 原生 Node.js 宿主接口，支持 Gondolin 微虚拟机路由与 OpenShell 容器化封装。<br>
-              <strong>OpenCode</strong>: 工具清单按模型 / agent / 权限三层过滤后交给 LLM；执行发生在 server 宿主侧，子代理以子 session 形式派生。<br>
-              <strong>OpenClaw</strong>: 内核与宿主通过 `packages/agent-core` 能力接口解耦；run 落在 gateway 所在设备，伴生应用只是表面而非第二执行世界。<br>
-              <strong>Hermes</strong>: 七个执行后端（local、Docker、Termux、Daytona、Modal 等）共享同一窄腰工具层，文件同步有独立通道，后端切换不动 loop。</span>
-              <code>Workspace Seam</code>
-            </div>
-            <div>
-              <strong>6. 扩展体系与生态</strong>
-              <span><strong>Codex</strong>: 定制六边形（AGENTS.md、Memories、Skills、MCP、Hooks、Subagents）。<br>
-              <strong>Grok Build</strong>: 规则文件、Skills、MCP 服务、Plugins 分发包、生命周期 Hooks 与跨会话 Memory。<br>
-              <strong>DeepSeek</strong>: Cordis 插件树、Profile 继承、Agent Presets 作用域与 Dynamic Cordis 内存自修改运行时。<br>
-              <strong>Pi Agent</strong>: Jiti 动态加载 TypeScript 模块（`ExtensionAPI`）、ResourceLoader 与统一 Provider 适配器。<br>
-              <strong>OpenCode</strong>: 插件 hooks、自定义 commands、Skills、agents（子代理定义）与 MCP 统一汇入 tool registry 与权限管线。<br>
-              <strong>OpenClaw</strong>: 约 150 个 `extensions/` 目录、SKILL.md 技能、SOUL.md 人格与 automations 工具，都以网关插件身份组合进单一 Gateway 进程。<br>
-              <strong>Hermes</strong>: 学习闭环让 Agent 自创自改 SKILL.md、写回 MEMORY.md；与 OpenClaw 共享 SOUL.md / MEMORY.md / SKILL.md 文件族谱系并有双向迁移器（§ 条目是 Hermes 侧约定，OpenClaw 搬运不解析）。</span>
-              <code>Extension Hexagon</code>
-            </div>
-          </div>
+    <section class="chapter band-deep" id="state" data-spy><div class="shell"><header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 02 · STATE IS A FOLD</span><h2>事故：流式文字已经出现，业务却把半句话当成最终答案保存。</h2><p class="lede"><strong>先解决：</strong>partial 是草稿，<code>message_end</code> 才是已提交消息；<code>agent_end</code> 发出后，等待型监听器还可能尚未结算。</p></header><div class="machine" id="pi-state" data-reveal><div class="machine-bar"><span class="title"><span class="led" data-led></span><strong>事件 × Public State 实验</strong></span><span class="label-mono" data-phase>idle</span></div><div class="machine-body state-layout"><div><div class="state-counters"><div><span class="label-mono">STREAMING</span><strong data-streaming>NO</strong></div><div><span class="label-mono">MESSAGES</span><strong data-messages>0</strong></div><div><span class="label-mono">PENDING TOOLS</span><strong data-tools>0</strong></div></div><div class="state-actions"><button class="cbtn primary" type="button" data-state-event="message_start">message_start</button><button class="cbtn" type="button" data-state-event="message_update">message_update</button><button class="cbtn" type="button" data-state-event="tool_start">tool_start</button><button class="cbtn" type="button" data-state-event="tool_end">tool_end</button><button class="cbtn" type="button" data-state-event="message_end">message_end</button><button class="cbtn" type="button" data-state-event="agent_end">agent_end</button><button class="cbtn" type="button" data-state-event="reset">重置</button></div></div><div class="stream-log elog" data-log aria-live="polite"></div></div></div><div class="spread" data-reveal><article class="prose"><h3>白话：事件是事实，状态是折叠结果</h3><p><code>message_start/update</code> 更新 <code>streamingMessage</code>，不会不断追加 transcript；<code>message_end</code> 才把完成消息推入公开状态。监听器按顺序等待，因此“结束事件发出”和“run 已闲置”不是同一时刻。</p></article><article class="lesson-brief"><span class="label-mono">判断法</span><h3>三种读点，三种承诺</h3><p>画字读 partial；取最终答案读完成消息；安全开启下一项工作等 idle。不要在应用层再造一份“当前助手消息”。</p></article></div><p class="lesson-result" data-reveal><strong>本章过关：</strong>连续点击更新与结束，能说出哪一步只改变草稿、哪一步才增加消息数。</p></div></section>
 
-          <div class="custom-stack">
-            <div>
-              <span class="custom-key">DEEPSEEK 适用</span>
-              <strong>极致插件化与执行环境热插拔</strong>
-              <p>追求“Everything is a Plugin”架构，需通过 Cordis IoC 容器无缝切换本地执行、E2B 云沙箱与自修改运行时的场景。</p>
-            </div>
-            <div>
-              <span class="custom-key">CODEX 适用</span>
-              <strong>企业级多端与富客户端集成</strong>
-              <p>需要严密 App Server 双向协议、细粒度正交权限矩阵与 Thread/Turn/Item 完整生命周期的生产级开发平台。</p>
-            </div>
-            <div>
-              <span class="custom-key">GROK 适用</span>
-              <strong>高性能 Rust 终端与深度版本控制</strong>
-              <p>追求极致终端响应速度、全屏 TUI 交互、ACP 标准支持以及原子级 Git Workspace Checkpoint / Rewind 恢复能力。</p>
-            </div>
-            <div>
-              <span class="custom-key">PI AGENT 适用</span>
-              <strong>轻量嵌入式与非线性分支探索</strong>
-              <p>需要极简轻量 TypeScript 内核、非破坏性 JSONL 树形分支探索（`/tree`）与 CSI 2026 同步差分渲染的应用。</p>
-            </div>
-            <div>
-              <span class="custom-key">OPENCODE 适用</span>
-              <strong>服务器即内核的多客户端平台嵌入</strong>
-              <p>需要一个本地 HTTP 服务器承载 Agent 内核，让 TUI、IDE、CI、GitHub 成为同构客户端；事件投影进单文件 SQLite，会话历史与计费统计最容易被平台接管。</p>
-            </div>
-            <div>
-              <span class="custom-key">OPENCLAW 适用</span>
-              <strong>跨天存活的通用个人助理</strong>
-              <p>“活着”不靠无限循环：有界 run 预算 + 双 SQLite 持久状态 + automations / standing intents 唤醒 + 凌晨记忆固化，多通道贯通你的设备。</p>
-            </div>
-            <div>
-              <span class="custom-key">HERMES 适用</span>
-              <strong>单机 Python 的自演化内核</strong>
-              <p>学习闭环接入 agent loop 一等公民（回合 nudge → 后台自省 → 技能/记忆写回），同一内核从 Termux 手机到 GPU 集群六面部署，并与 OpenClaw 共享两代格式谱系。</p>
-            </div>
-          </div>
-        </section>
-      </section>
+    <section class="chapter shell" id="loop" data-spy><header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 03 · ONE PROMPT, MANY TURNS</span><h2>事故：用户只问一次，日志却出现五次模型请求。它不一定失控。</h2><p class="lede"><strong>先解决：</strong>一次 prompt 可以包含多个 turn；每个 turn 是“一次助手响应 + 紧随其后的工具批次”。工具结果回填后，模型需要再开一轮才能继续推理。</p></header><div class="machine" id="pi-loop" data-reveal><div class="machine-bar"><span class="title"><span class="led" data-led></span><strong>一轮事件步进机</strong></span><span class="label-mono" data-phase>idle</span></div><div class="machine-body loop-layout"><ol class="m-steps" data-steps><li data-no="01">agent_start</li><li data-no="02">turn_start</li><li data-no="03">user message</li><li data-no="04">transform → convert</li><li data-no="05">provider stream</li><li data-no="06">assistant message_end</li><li data-no="07">tool execution</li><li data-no="08">toolResult messages</li><li data-no="09">next turn / stop</li><li data-no="10">agent_end</li></ol><div><div class="m-controls"><button class="cbtn primary" type="button" data-run>▶ 连续</button><button class="cbtn" type="button" data-step>单步 →</button><button class="cbtn" type="button" data-reset>重置</button></div><p class="stage-note" data-note>先看事件顺序，再谈“任务完成”。</p></div><div class="loop-logwrap stream-log elog" data-log aria-live="polite"></div></div></div><div class="spread" data-reveal><article class="prose"><h3>白话：循环有四道停机闸</h3><p>遇到 <code>error/aborted</code> 立即停；一批工具全部要求 terminate 才停；宿主的 <code>shouldStopAfterTurn</code> 可以停；工具、插话和续跑队列都空才自然停。低层循环没有内建轮数上限，预算必须由宿主接入。</p></article><article class="lesson-brief"><span class="label-mono">SHORT TRACE</span><h3>toolUse → result → toolUse → result → stop</h3><p>这是一条 prompt、三次 turn。看到 <code>agent_end</code> 只说明循环已停，不说明业务目标已达成。</p></article></div><p class="lesson-result" data-reveal><strong>本章过关：</strong>能把“模型请求次数”与“用户输入次数”分开，并指出缺少预算回调的失控风险。</p></section>
 
-      <section class="chapter shell" id="layers" data-spy>
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 01 · LAYER MAP</span><h2>先分清 Pi AI、Agent Core、Coding Agent 与 TUI。</h2><p class="lede">Pi 不是一个单体 CLI：统一模型 API 负责 Provider，Agent Core 负责状态与工具循环，Coding Agent 负责 Session、资源与入口，TUI 只负责终端呈现。</p></header>
-        <article class="lesson-brief" id="pi-source-route" data-reveal><span class="label-mono">SOURCE ROUTE · PI a470b121b</span><h3>先读四个入口，再用责任探针定位问题。</h3><p>它们分别回答“谁拥有活状态、谁驱动一次 run、谁组合产品能力、谁保存可分支历史”。</p><ol class="source-route"><li><span><code>packages/agent/src/agent.ts</code><strong>Agent</strong> 拥有 transcript、streaming state、queues、listeners 与 abort controller。</span></li><li><span><code>packages/agent/src/agent-loop.ts</code><strong>agentLoop / runLoop</strong> 产生 turn、message 与 tool lifecycle events。</span></li><li><span><code>packages/coding-agent/src/core/agent-session.ts</code><strong>AgentSession</strong> 组合模型、工具、SessionManager、资源和 Extensions。</span></li><li><span><code>packages/coding-agent/src/core/session-manager.ts</code><strong>SessionManager</strong> 把 entry 写入 append-only JSONL tree，并投影当前 branch。</span></li></ol><p class="lesson-result"><strong>学完本章你能：</strong>先找拥有状态的层，再决定读 Provider event、Agent event、Session entry 还是 UI snapshot。</p></article>
-        <div class="machine" id="pi-layers" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>分层责任探针</strong></span><span class="label-mono" data-status>选择症状</span></div><div class="machine-body atlas-layout"><div class="atlas-choices"><button class="layer-row" type="button" data-key="provider">Provider payload 失败</button><button class="layer-row" type="button" data-key="loop">工具回合没有继续</button><button class="layer-row" type="button" data-key="session">分支恢复不正确</button><button class="layer-row" type="button" data-key="render">终端内容闪烁</button></div><div class="atlas-detail" data-detail><span class="label-mono">OWNING LAYER</span><h3>点击一种症状</h3><p>查看首查源码与最强证据。</p></div></div></div>
-        <div class="spread" data-reveal><article class="prose"><h3>四层各持有一份可变事实</h3><p>分层不是为了目录整洁：Pi AI 拥有事件语义，Agent Core 拥有活状态（<code>packages/agent/src/agent.ts:173</code>），Coding Agent 拥有持久历史（<code>packages/coding-agent/src/core/session-manager.ts:855</code>），TUI 只拥有像素（<code>packages/tui/src/tui-main-screen.ts:180</code>）。换 Provider 不动 Loop，换 UI 不动状态；基础 Agent 刻意不碰磁盘，持久化整层留在 CLI 侧。</p><p>跨层 bug 都以“某层证据缺失”的形式出现：UI 显示完成但 <code>message_end</code> 从未发出，或 Session 里有 toolResult 而 Agent state 里没有。定位时先问哪层缺证据，再进那层的源码，比通读仓库快一个量级。</p></article></div>
-        <div class="decision" data-reveal><span class="label-mono">边界</span><p>判断症状归属看谁持有那份可变事实，不看代码在哪个包。活状态在 Agent，历史在 SessionManager，像素在 TUI；找错 owner 层，修的都是症状不是原因。</p></div>
-      </section>
+    <section class="chapter band-edge" id="queues" data-spy><div class="shell"><header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 04 · STEER / FOLLOW-UP / ABORT</span><h2>事故：工具正在写文件，用户说“停，改另一个方案”。消息该插在哪里？</h2><p class="lede"><strong>先解决：</strong>Steer 纠正当前任务，Follow-up 排下一件事；二者都不会插进 tool call 与 tool result 之间。Abort 只是协作式信号，不能撤销已发生的副作用。</p></header><div class="machine" id="pi-queues" data-reveal><div class="machine-bar"><span class="title"><span class="led" data-led></span><strong>双队列调度台</strong></span><span class="label-mono" data-phase>idle</span></div><div class="machine-body state-layout"><div><div class="state-counters"><div><span class="label-mono">TOOL</span><strong data-tool>idle</strong></div><div><span class="label-mono">STEER</span><strong data-steer>0</strong></div><div><span class="label-mono">FOLLOW-UP</span><strong data-follow>0</strong></div></div><div class="state-actions"><button class="cbtn primary" type="button" data-queue="start">开始工具</button><button class="cbtn" type="button" data-queue="steer">+ Steer</button><button class="cbtn" type="button" data-queue="follow">+ Follow-up</button><button class="cbtn" type="button" data-queue="turn">结束当前 Turn</button><button class="cbtn" type="button" data-queue="abort">Abort</button><button class="cbtn" type="button" data-queue="reset">重置</button></div></div><div class="stream-log elog" data-log aria-live="polite"></div></div></div><div class="spread" data-reveal><article class="prose"><h3>白话：先保持协议配对，再响应人</h3><p>Steer 默认一次取最早一条，在当前批次落定后、下次模型调用前进入；Follow-up 只有任务自然收口后才续跑。Abort 会传给模型流、钩子和工具，但是否及时停止取决于执行体是否响应信号。</p></article><article class="lesson-brief"><span class="label-mono">练习</span><h3>开始工具 → Steer → Follow-up → 结束 Turn</h3><p>预期先消耗 Steer，Follow-up 仍排队。若先 Abort，只能断言信号发出，不能断言副作用回滚。</p></article></div><p class="lesson-result" data-reveal><strong>本章过关：</strong>能区分 Steer、Follow-up、Abort，并为 Abort 写出“工具必须配合”的验收条件。</p></div></section>
 
-      <section class="chapter band-deep" id="state" data-spy><div class="shell">
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 02 · AGENT STATE</span><h2>Agent 是 transcript、partial message、pending tools 与队列的 owner。</h2><p class="lede">一次 run 使用启动时的 context snapshot；完成事件再把消息写回 public state。<code>agent_end</code> 发出后，等待型 listener 仍属于 settlement。</p></header>
-        <div class="machine" id="pi-state" data-reveal><div class="machine-bar"><span class="title"><span class="led" data-led></span><strong>事件 × Public State 对照台</strong></span><span class="label-mono" data-phase>idle</span></div><div class="machine-body state-layout"><div><div class="state-counters"><div><span class="label-mono">STREAMING</span><strong data-streaming>NO</strong></div><div><span class="label-mono">MESSAGES</span><strong data-messages>0</strong></div><div><span class="label-mono">PENDING TOOLS</span><strong data-tools>0</strong></div></div><div class="state-actions"><button class="cbtn primary" type="button" data-state-event="message_start">message_start</button><button class="cbtn" type="button" data-state-event="message_update">message_update</button><button class="cbtn" type="button" data-state-event="tool_start">tool_start</button><button class="cbtn" type="button" data-state-event="tool_end">tool_end</button><button class="cbtn" type="button" data-state-event="message_end">message_end</button><button class="cbtn" type="button" data-state-event="agent_end">agent_end</button><button class="cbtn" type="button" data-state-event="reset">重置</button></div></div><div class="stream-log elog" data-log aria-live="polite"></div></div></div>
-        <div class="decision" data-reveal><span class="label-mono">OWNERSHIP</span><p>Low-level <code>agentLoop()</code> 的 stream 是观察接口；需要 listener barrier、public state 与 idle settlement 时，使用 <code>Agent</code>。</p></div>
-        <div class="spread" data-reveal><article class="prose"><h3>为什么 run 拿的是启动快照</h3><p>每次 run 开始前，Agent 把 messages 与 tools 复制成一份 context 快照（<code>packages/agent/src/agent.ts:437</code>），请求期间不再看可变 state。不这样做的话：应用中途向 transcript 直接 push，正在飞的 provider 请求与落盘历史会分叉成两个版本。快照的代价是 run 中改 tools 要到下一轮才生效——这是设计要你看见的延迟，不是 bug。</p><p>写回 public state 的入口只有一个：<code>message_end</code> 之后由 <code>processEvents</code>（<code>packages/agent/src/agent.ts:544</code>）追加完成消息。streaming 期间外界能读到的 partial 只有 <code>streamingMessage</code>；在应用层另存一份“当前 assistant 消息”，就是给撕裂状态开门。</p></article></div>
-        <div class="interview" data-reveal>
-          <span class="label-mono">面试考点 · STATE OWNERSHIP</span>
-          <h4>“收到 agent_end 事件时，能立刻把 Agent state 当最终态读吗？”</h4>
-          <div class="qa">
-            <details>
-              <summary>展开 30 秒模范答案</summary>
-              <div class="ans">
-                <p><strong>不能无条件读。</strong>agent_end 是事件不是承诺：等待型 listener 仍属于 settlement 阶段，<code>subscribe</code> 按注册顺序 await listener（<code>packages/agent/src/agent.ts:250</code>），安全读点在 listener 链走完或 <code>waitForIdle()</code> resolve 之后。</p>
-                <p><strong>加分点：</strong>说清三条读法的时间差——partial 读 <code>streamingMessage</code>、最终消息读 <code>state.messages</code>、跨层证据读 Session entry。把三者混为一谈是这题最常见的挂点。</p>
-              </div>
-            </details>
-          </div>
-        </div>
-      </div></section>
+    <section class="chapter shell" id="providers" data-spy><header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 05 · PROVIDER EDGE</span><h2>事故：同一段历史在模型 A 正常，在模型 B 因 tool id 或 thinking 片段被拒绝。</h2><p class="lede"><strong>先解决：</strong>统一接口不等于伪装所有 Provider 都一样。Pi 统一模型、认证、输入上下文与流事件；角色、图片、thinking 签名、tool id 和 wire payload 仍由适配器负责。</p></header><div class="machine" id="pi-providers" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>Provider 适配交换台</strong></span><span class="label-mono" data-status>选择 Provider</span></div><div class="machine-body surface-layout"><div class="surface-choices"><button class="cbtn" type="button" data-key="anthropic">Anthropic</button><button class="cbtn" type="button" data-key="openai">OpenAI-compatible</button><button class="cbtn" type="button" data-key="google">Google</button><button class="cbtn" type="button" data-key="faux">Faux / Test</button></div><dl class="surface-detail" data-detail><div><dt>统一输入</dt><dd>Model + Context + Stream Options</dd></div><div><dt>统一输出</dt><dd>AssistantMessage Event Stream</dd></div></dl></div></div><div class="custom-stack" data-reveal><div><span class="custom-key">应用消息</span><strong>transformContext</strong><p>裁剪或注入 Agent 消息。</p></div><div><span class="custom-key">模型边界</span><strong>convertToLlm</strong><p>过滤仅供 UI 使用的角色。</p></div><div><span class="custom-key">网络边界</span><strong>adapter payload</strong><p>处理目标 API 的私有格式。</p></div></div><div class="spread" data-reveal><article class="prose"><h3>白话：失败也走同一条事件通道</h3><p>请求错误应收口成 <code>stopReason: error</code>，取消收口成 <code>aborted</code>。循环据字段判断；但回调或监听器自身抛错仍可能让 Promise reject。</p></article><article class="lesson-brief"><span class="label-mono">更新机制</span><h3>缓存与思考档位也要可诊断</h3><p>兼容模型会用稳定前缀、延迟工具与工具引用降低缓存重付；兼容的 Anthropic 模型还能记录实际 provider thinking level。它们是 Provider 能力，不是全局承诺。</p></article></div><p class="lesson-result" data-reveal><strong>本章过关：</strong>跨模型重放失败时，会先判断是通用消息投影还是目标 Provider 约束，而不是修改主循环。</p></section>
 
-      <section class="chapter shell" id="loop" data-spy>
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 03 · EVENT LOOP</span><h2>一次 prompt run 可以包含多个 Turn；这里的 Turn 是一次模型调用加工具批次。</h2><p class="lede">Provider stream 先形成 committed assistant message；如果其中有 tool calls，执行结果成为 toolResult messages，再开启下一个 Turn。</p></header>
-        <div class="machine" id="pi-loop" data-reveal><div class="machine-bar"><span class="title"><span class="led" data-led></span><strong>Prompt 事件步进机</strong></span><span class="label-mono" data-phase>idle</span></div><div class="machine-body loop-layout"><ol class="m-steps" data-steps><li data-no="01">agent_start</li><li data-no="02">turn_start</li><li data-no="03">user message</li><li data-no="04">transform → convert</li><li data-no="05">provider stream</li><li data-no="06">assistant message_end</li><li data-no="07">tool execution</li><li data-no="08">toolResult messages</li><li data-no="09">next turn / stop</li><li data-no="10">agent_end</li></ol><div><div class="m-controls"><button class="cbtn primary" type="button" data-run>▶ 连续</button><button class="cbtn" type="button" data-step>单步 →</button><button class="cbtn" type="button" data-reset>重置</button></div><p class="stage-note" data-note>观察 Provider event 怎样被提升为 Agent lifecycle。</p></div><div class="loop-logwrap stream-log elog" data-log aria-live="polite"></div></div></div>
-        <div class="spread" data-reveal><article class="prose"><h3>Turn 的数量由模型决定，不由用户决定</h3><p>Provider 无状态，所谓“记忆”全是 transcript 重放。Pi 把一次模型调用连同它引发的工具批次定义为一个 Turn（<code>packages/agent/src/agent-loop.ts:155</code>）；一次 prompt 的 turn 数从 1 到几十都有可能，取决于模型是否还在发 tool call。committed assistant message 是批次 preflight 的 barrier（<code>packages/agent/src/agent-loop.ts:281</code>）：参数没流完整，绝不执行。</p><p>两个失败推演：若 toolResult 按物理完成顺序即时回流，模型看到的结果与它声明调用的顺序对不上，配对假设断裂；若 stopReason 为 <code>length</code> 的截断消息照常执行 tool call，半个 JSON 参数就可能落盘。后者的处置是整批改判为 error result（<code>packages/agent/src/agent-loop.ts:381</code>）——宁可让模型重试一个干净回合。</p></article></div>
-        <div class="decision" data-reveal><span class="label-mono">边界</span><p>循环的终止权在 stopReason，不在事件计数。看到 <code>agent_end</code> 只能证明 loop 停了，证明不了任务做完了。</p></div>
-      </section>
+    <section class="chapter band-deep" id="tools" data-spy><div class="shell"><header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 06 · TOOL BATCH</span><h2>事故：快工具先完成，为什么不能先把它的结果塞回会话？</h2><p class="lede"><strong>先解决：</strong>执行可以并行，历史必须确定。Pi 把一批工具拆成“按源序预备 → 并发执行 → 按源序回填”。</p></header><div class="machine" id="pi-tools" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>工具批次排序实验</strong></span><span class="label-mono" data-status>parallel</span></div><div class="machine-body surface-layout"><div><div class="seg-row" data-mode><button class="cbtn" type="button" data-v="parallel">Parallel</button><button class="cbtn" type="button" data-v="sequential">Sequential</button></div><div class="m-controls"><button class="cbtn primary" type="button" data-run>运行 slow_read + fast_grep</button><button class="cbtn" type="button" data-reset>重置</button></div><p class="stage-note">只要一个工具要求 sequential，整批都串行。</p></div><div class="stream-log elog" data-log aria-live="polite"></div></div></div><div class="spread" data-reveal><article class="prose"><h3>白话：进度顺序和提交顺序都对</h3><p><code>tool_execution_end</code> 按真实完成先后发，UI 立即反馈；tool result 按模型原始调用顺序写入，确保重放、缓存与测试稳定。两者混用才会让结果对不上调用。</p></article><article class="lesson-brief"><span class="label-mono">两道安全题</span><h3>残缺参数与副作用冲突</h3><p>助手因 <code>length</code> 被截断时整批不执行，只回喂错误让模型重发。参数校验与调用前钩子先串行完成；同文件修改也应串行化。</p></article></div><div class="decision" data-reveal><span class="label-mono">动态工具</span><p>结果可声明 <code>addedToolNames</code>。兼容 Provider 随后以延迟定义或 <code>tool_reference</code> 按需出现新工具；不支持时退回立即声明。</p></div><p class="lesson-result" data-reveal><strong>本章过关：</strong>运行并行实验后，能解释为何 fast 先结束，而 transcript 仍先写 slow 的结果。</p></div></section>
 
-      <section class="chapter band-edge" id="queues" data-spy><div class="shell">
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 04 · STEER / FOLLOW-UP / ABORT</span><h2>Steer 早于 Follow-up，但不会撕开正在运行的工具批次。</h2><p class="lede">Steer 在当前 assistant turn 的工具完成后注入；只有没有 tool call 和 steering 时才检查 Follow-up。Abort 只触发 signal，Provider 与 Tool 必须主动尊重它。</p></header>
-        <div class="machine" id="pi-queues" data-reveal><div class="machine-bar"><span class="title"><span class="led" data-led></span><strong>消息队列调度台</strong></span><span class="label-mono" data-phase>idle</span></div><div class="machine-body state-layout"><div><div class="state-counters"><div><span class="label-mono">TOOL</span><strong data-tool>idle</strong></div><div><span class="label-mono">STEER</span><strong data-steer>0</strong></div><div><span class="label-mono">FOLLOW-UP</span><strong data-follow>0</strong></div></div><div class="state-actions"><button class="cbtn primary" type="button" data-queue="start">开始工具</button><button class="cbtn" type="button" data-queue="steer">+ Steer</button><button class="cbtn" type="button" data-queue="follow">+ Follow-up</button><button class="cbtn" type="button" data-queue="turn">结束当前 Turn</button><button class="cbtn" type="button" data-queue="abort">Abort</button><button class="cbtn" type="button" data-queue="reset">重置</button></div></div><div class="stream-log elog" data-log aria-live="polite"></div></div></div>
-        <div class="spread" data-reveal><article class="prose"><h3>为什么 steer 不撕开正在运行的工具批次</h3><p>工具是带副作用的原子操作：bash 跑了一半、edit 落了一半，比让用户多等三秒危险得多。所以 Pi 把注入点钉死在批次边界——入队的 steer（<code>packages/agent/src/agent.ts:283</code>）要等当前 turn 的工具全部处理完、到达 drain 点才被取出（<code>packages/agent/src/agent-loop.ts:259</code>）；follow-up 再低一级，只有没有 tool call 也没有 steering 时才检查。</p><p>Abort 是另一种诚实：<code>packages/agent/src/agent.ts:319</code> 只拉下 AbortController，不伪造一条“正常结束”的 assistant 消息。Provider 不检查 signal 就继续流 token 计费，工具不检查 signal 就把副作用跑完。对照 Codex 的审批模型：打断的同样是“下一条要执行的事”，不回收已发生的副作用。</p></article></div>
-        <div class="decision" data-reveal><span class="label-mono">边界</span><p>队列只保证注入时机，不保证中止时机。steer 是批次边界的确定性语义，abort 是协作式 signal——两者可靠性不在一个量级，验收 abort 要看 Provider 与工具是否真的响应 signal。</p></div>
-      </div></section>
+    <section class="chapter shell" id="sessions" data-spy><header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 07 · APPEND-ONLY SESSION TREE</span><h2>事故：回到旧消息试另一条路，原分支会不会被覆盖？文件改动会不会一起回滚？</h2><p class="lede"><strong>先解决：</strong>当前 Coding Agent 使用 v3 追加式条目树；移动 leaf 就能从历史点续写，旧分支仍在。但这是对话历史，不是工作区快照。</p></header><div class="machine" id="pi-session" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>Session Tree 实验台</strong></span><span class="label-mono">CURRENT · v3</span></div><div class="machine-body state-layout"><div><div class="state-counters"><div><span class="label-mono">ENTRIES</span><strong data-entries>0</strong></div><div><span class="label-mono">BRANCHES</span><strong data-branches>1</strong></div><div><span class="label-mono">CONTEXT</span><strong data-context>0</strong></div></div><div class="state-actions"><button class="cbtn primary" type="button" data-tree="message">+ Message</button><button class="cbtn" type="button" data-tree="tool">+ Tool Result</button><button class="cbtn" type="button" data-tree="branch">Branch earlier</button><button class="cbtn" type="button" data-tree="compact">Compact</button><button class="cbtn" type="button" data-tree="reset">重置</button></div></div><div class="stream-log elog" data-log aria-live="polite"></div></div></div><div class="spread" data-reveal><article class="prose"><h3>白话：写入只追加，读取负责重建</h3><p>每条 entry 带 <code>id</code> 与 <code>parentId</code>。当前 context 是“从 leaf 回到根的路径，再折叠压缩边界”，不是另存快照。消息、压缩、分支摘要、模型切换和扩展状态是不同条目。</p></article><article class="lesson-brief"><span class="label-mono">SHORT TRACE</span><h3>e1 ← e2 ← e3；回到 e1，再追加 e4</h3><p>e2/e3 没被删，e4 成为新分支。模型只看 e1→e4；文件系统不会随 leaf 移动，代码试验仍需 Git 或隔离工作区。</p></article></div><p class="lesson-result" data-reveal><strong>本章过关：</strong>点击两次 Message、一次 Branch，能解释“entries 增加、branch 增加、context 变短”。</p></section>
 
-      <section class="chapter shell" id="providers" data-spy>
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 05 · PI AI</span><h2>统一的是模型查找、Auth、Stream 与事件语义；Wire payload 仍归各 Provider。</h2><p class="lede"><code>createModels()</code> 管 Provider collection，<code>streamSimple()</code> 接受统一 reasoning/tool options；各 adapter 继续负责 system role、thinking、image、tool id 与 SSE 映射。</p></header>
-        <div class="machine" id="pi-providers" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>Provider 适配交换台</strong></span><span class="label-mono" data-status>选择 Provider</span></div><div class="machine-body surface-layout"><div class="surface-choices"><button class="cbtn" type="button" data-key="anthropic">Anthropic</button><button class="cbtn" type="button" data-key="openai">OpenAI-compatible</button><button class="cbtn" type="button" data-key="google">Google</button><button class="cbtn" type="button" data-key="faux">Faux / Test</button></div><dl class="surface-detail" data-detail><div><dt>统一输入</dt><dd>Model + Context + SimpleStreamOptions</dd></div><div><dt>统一输出</dt><dd>AssistantMessageEventStream</dd></div></dl></div></div>
-        <div class="custom-stack" data-reveal><div><span class="custom-key">AGENT</span><strong>transformContext</strong><p>仍处理 AgentMessage；适合裁剪或注入应用上下文。</p></div><div><span class="custom-key">LLM EDGE</span><strong>convertToLlm</strong><p>过滤 UI-only custom roles，得到 provider-neutral Message。</p></div><div><span class="custom-key">ADAPTER</span><strong>transformMessages / payload</strong><p>按目标 API 规范 image、thinking、tool call id 与 wire fields。</p></div></div>
-        <div class="spread" data-reveal><article class="prose"><h3>统一语义，故意不统一 wire</h3><p>Pi AI 统一的是三样：模型查找、auth 合并（<code>packages/ai/src/models.ts:636</code>）、事件收口语义——一切失败都落成 StopReason 的 <code>error</code> 或 <code>aborted</code>（<code>packages/ai/src/types.ts:405</code>）。故意不统一的是 wire payload：system 消息的位置、thinking 签名、tool-call id 规则是各家的私有事实，抹平它们只会得到谁都不像的最小公倍数。</p><p>最容易碎的场景是跨模型重放历史：thinking 签名不可重放、tool id 长度规则不同、孤立的 tool call 会被 provider 直接拒收。Pi 把这类修复集中在共享中间层 <code>transformMessages</code>（<code>packages/ai/src/api/transform-messages.ts:64</code>），为孤立调用补 synthetic result，adapter 只负责最后的 payload。把这两层合并成一个“大转换器”，是这类架构最常见的腐化点。</p></article></div>
-        <div class="decision" data-reveal><span class="label-mono">边界</span><p>错误不 reject 是合同不是风格：StreamFunction 必须把失败装进最终 AssistantMessage、以 error event 收口。调用方因此永远只有一条消费路径——在 Pi 里用 try/catch 捕 provider 错误是错的。</p></div>
-      </section>
+    <section class="chapter band-edge" id="compaction" data-spy><div class="shell"><header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 08 · CONTEXT COMPACTION</span><h2>事故：上下文快满了，直接删最老消息却把 tool call 与 result 拆开。</h2><p class="lede"><strong>先解决：</strong>当前压缩不删历史，只追加摘要与 <code>firstKeptEntryId</code>；下一次请求看到“摘要 + 近期路径”。切点必须让位于工具配对完整性。</p></header><div class="machine" id="pi-compaction" data-reveal><div class="machine-bar"><span class="title"><span class="led" data-led></span><strong>Context 压缩投影台</strong></span><span class="label-mono" data-status>阈值选择</span></div><div class="machine-body state-layout"><div><div class="state-counters"><div><span class="label-mono">ENTRIES</span><strong data-entries>0</strong></div><div><span class="label-mono">CONTEXT</span><strong data-tokens>0</strong></div><div><span class="label-mono">投影后</span><strong data-projected>0</strong></div></div><div class="seg-row" data-reserve><button class="cbtn" type="button" aria-pressed="false" data-r="16384">reserve 16k</button><button class="cbtn" type="button" aria-pressed="false" data-r="32768">reserve 32k</button></div><div class="m-controls"><button class="cbtn primary" type="button" data-cp="heavy">+ 长输出 Turn</button><button class="cbtn" type="button" data-cp="light">+ 轻量 Turn</button><button class="cbtn" type="button" data-cp="compact">执行压缩</button><button class="cbtn" type="button" data-cp="reset">重置</button></div><div class="pi-cut-strip" data-strip></div></div><div class="stream-log elog" data-log aria-live="polite"></div></div></div><ol class="kp-list" data-reveal><li data-no="01"><span><strong>判压力</strong>：provider usage 为权威，新增内容保守估算；超过 window − reserve 才自动触发。</span></li><li data-no="02"><span><strong>找切点</strong>：从后往前保留近期内容，不拆开工具配对。</span></li><li data-no="03"><span><strong>生成摘要</strong>：旧对话转纯文本，合并上一摘要；残缺摘要不落盘。</span></li><li data-no="04"><span><strong>追加边界</strong>：原条目仍在树中，只有模型投影改变。</span></li></ol><div class="spread" data-reveal><article class="prose"><h3>白话：压缩是有损视图，不是删除键</h3><p>旧事实仍可供人回读，但摘要会丢细节。溢出时先移除工作状态里的失败响应，压缩并只重试一次；时间戳、模型一致性与闩锁共同防止恢复风暴。</p></article><article class="lesson-brief"><span class="label-mono">两代协议别混</span><h3>当前 firstKeptEntryId；在建 retainedTail</h3><p>新 Harness 的纯压缩函数能产出 <code>retainedTail</code>，但驱动层尚未把它接入完整任务。交互台模拟当前 v3 路径。</p></article></div><p class="lesson-result" data-reveal><strong>本章过关：</strong>能回答“旧消息去哪了”：存储没动，模型视图换成摘要和近期路径。</p></div></section>
 
-      <section class="chapter band-deep" id="tools" data-spy><div class="shell">
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 06 · TOOL BATCH</span><h2>并行 body 可以乱序完成，Transcript 仍按模型声明顺序写入。</h2><p class="lede">Preflight 按 source order 校验并执行 beforeToolCall；parallel 模式并发真正的 execute，tool_execution_end 跟随完成顺序，最终 toolResult messages 则回到 source order。</p></header>
-        <div class="machine" id="pi-tools" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>工具批次排序实验</strong></span><span class="label-mono" data-status>parallel</span></div><div class="machine-body surface-layout"><div><div class="seg-row" data-mode><button class="cbtn" type="button" data-v="parallel">Parallel</button><button class="cbtn" type="button" data-v="sequential">Sequential</button></div><div class="m-controls"><button class="cbtn primary" type="button" data-run>运行 slow_read + fast_grep</button><button class="cbtn" type="button" data-reset>重置</button></div><p class="stage-note">任一目标 Tool 标记 sequential，整批都会退化为串行。</p></div><div class="stream-log elog" data-log aria-live="polite"></div></div></div>
-        <div class="decision" data-reveal><span class="label-mono">TRUNCATION SAFETY</span><p>如果 assistant stopReason 是 <code>length</code>，Pi 不执行其中任何 tool call，而是为每个调用生成解释性 error result。</p></div>
-        <div class="spread" data-reveal><article class="prose"><h3>两种顺序都对，错的是混用</h3><p><code>tool_execution_end</code> 跟物理完成顺序走（<code>packages/agent/src/agent-loop.ts:489</code>），TUI 进度靠它实时；toolResult 写 transcript 跟模型声明顺序走，重放一致性靠它。拿实时事件当提交顺序，上下文里会出现结果先于调用；反过来为保顺序憋住进度事件，人就以为卡死了。</p><p>真正的坑在副作用：两个并行 edit 改同一文件，各自读-改-写，后写覆盖前写。Pi 的解法不是禁用并行，而是给同文件变更挂串行队列 <code>withFileMutationQueue</code>（<code>packages/coding-agent/src/core/tools/file-mutation-queue.ts:32</code>）；兜底规则是任一目标工具声明 sequential，整批立即退化串行（<code>packages/agent/src/agent-loop.ts:422</code>）。</p></article></div>
-      </div></section>
+    <section class="chapter shell" id="extensions" data-spy><header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 09 · EXTENSIONS & DELEGATION</span><h2>事故：把项目设为 Trusted 后，扩展仍能读取宿主凭证。为什么？</h2><p class="lede"><strong>先解决：</strong>Project Trust 决定是否加载项目资源，不是加载后的 OS 权限。扩展在主进程内运行；子代理只是示例扩展启动的一次性进程，并非核心编排器。</p></header><div class="machine" id="pi-extensions" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>机制选择练习</strong></span><span class="label-mono" data-status>选择需求</span></div><div class="machine-body atlas-layout"><div class="atlas-choices"><button class="layer-row" type="button" data-key="tool">新增可执行能力</button><button class="layer-row" type="button" data-key="skill">注入按需流程</button><button class="layer-row" type="button" data-key="hook">调用前阻断参数</button><button class="layer-row" type="button" data-key="state">持久扩展状态</button></div><div class="atlas-detail" data-detail><span class="label-mono">RIGHT MECHANISM</span><h3>点击一种需求</h3><p>区分 Tool、Skill、Hook 与 Session Entry 的职责。</p></div></div></div><div class="spread" data-reveal><article class="prose"><h3>白话：加载门与执行沙箱是两件事</h3><p>启动先按不信任状态装载全局能力，再作信任判断，最后决定是否重新装入项目设置、规则与扩展。一旦加载，代码继承当前进程权限。</p></article><article class="lesson-brief"><span class="label-mono">子代理短 TRACE</span><h3>父模型 → subagent tool → 新进程 → 最终文本</h3><p>示例支持 single、parallel（最多 8 项、并发 4）与 chain；父模型只收最终文本，完整 transcript 与 usage 留在 details。没有中途追问、全局预算或可靠递归深度闸。</p></article></div><div class="decision" data-reveal><span class="label-mono">判断法</span><p>隔离不可信任务：把整个进程放进容器或 VM。一次性委托：示例子进程可用。共享历史长时并行：lane 是在建方向，当前不能当生产能力。</p></div><p class="lesson-result" data-reveal><strong>本章过关：</strong>能说出 Trust、Tool allowlist、Hook 与 OS 隔离分别能挡什么、挡不住什么。</p></section>
 
-      <section class="chapter shell" id="sessions" data-spy>
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 07 · JSONL SESSION TREE</span><h2>Session 文件是 append-only Entry Tree，不是线性聊天日志。</h2><p class="lede">Header 之外每个 entry 都有 id / parentId；Branch 只移动当前 leaf，旧路径仍在同一个文件。UI 与 LLM context 读取的是当前 branch 投影。</p></header>
-        <div class="machine" id="pi-session" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>Session Tree 实验台</strong></span><span class="label-mono">v3 teaching model</span></div><div class="machine-body state-layout"><div><div class="state-counters"><div><span class="label-mono">ENTRIES</span><strong data-entries>0</strong></div><div><span class="label-mono">BRANCHES</span><strong data-branches>1</strong></div><div><span class="label-mono">CONTEXT</span><strong data-context>0</strong></div></div><div class="state-actions"><button class="cbtn primary" type="button" data-tree="message">+ Message</button><button class="cbtn" type="button" data-tree="tool">+ Tool Result</button><button class="cbtn" type="button" data-tree="branch">Branch earlier</button><button class="cbtn" type="button" data-tree="compact">Compact</button><button class="cbtn" type="button" data-tree="reset">重置</button></div></div><div class="stream-log elog" data-log aria-live="polite"></div></div></div>
-        <div class="fact-boundary" data-reveal><span class="label-mono">NOT A FILE CHECKPOINT</span><strong>Branch 不会回滚工作区。</strong><span>JSONL tree 记录对话路径；文件回退必须由 Git、扩展或外部 Sandbox 单独负责。</span></div>
-        <div class="spread" data-reveal><article class="prose"><h3>树把回退成本降成移动指针</h3><p>线性日志加 undo 的每一次回退都在改历史；Pi 的 <code>branch()</code>（<code>packages/coding-agent/src/core/session-manager.ts:1360</code>）只移动 leaf，旧分支一行不动。探索性任务的本质是多条假设共存：树让 /tree 在任意历史点续写的成本是 O(1)，也让任意分支随时可以回放审计。</p><p>模型看到的不是文件，是投影：<code>buildContextEntries()</code>（<code>packages/coding-agent/src/core/session-manager.ts:418</code>）从当前 leaf 回溯路径，再把最近 compaction 之前的段替换为 summary。同一个 v3 JSONL（<code>CURRENT_SESSION_VERSION = 3</code>），UI 读全量、LLM 读精简，两个视图互不篡改。</p></article></div>
-        <div class="decision" data-reveal><span class="label-mono">边界</span><p>branch 改变的是“接下来从哪里续写”，不是“刚才发生过什么”：它不回滚文件，也不删除任何 entry。把分支当成时间机器用，是 Session Tree 的第一号误读。</p></div>
-      </section>
+    <section class="chapter band-deep" id="tui" data-spy><div class="shell"><header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 10 · TUI IS A PROJECTION</span><h2>事故：终端看起来卡住，实际只是没有变化的行无需重绘。</h2><p class="lede"><strong>先解决：</strong>TUI 比较前后行，只更新变化区间，并用同步输出降低流式闪烁。它展示状态，但不拥有 Agent 的运行事实。</p></header><div class="machine" id="pi-tui-diff" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>差分帧对比台</strong></span><span class="label-mono" data-status>等待帧</span></div><div class="machine-body surface-layout"><div class="surface-choices"><div class="seg-row" data-frame><button class="cbtn" type="button" aria-pressed="false" data-f="stream">流式 delta</button><button class="cbtn" type="button" aria-pressed="false" data-f="tool">工具行更新</button><button class="cbtn" type="button" aria-pressed="false" data-f="resize">宽度变化</button><button class="cbtn" type="button" aria-pressed="false" data-f="reset">重置</button></div><p class="stage-note">高亮行是本帧真正重写的内容；宽度变化会完整重绘。</p></div><div class="pi-tui-panels"><div class="pi-term" data-screen></div><div class="stream-log elog" data-log aria-live="polite"></div></div></div></div><div class="spread" data-reveal><article class="prose"><h3>白话：屏幕是一张可丢弃的投影</h3><p>流式文本只改一行就不重画整屏；窗口宽度变了，旧换行假设失效，必须完整重绘。组件产出超宽行时，差分路径宁可报错也不悄悄错位。</p></article><article class="lesson-brief"><span class="label-mono">判断法</span><h3>状态证据不要取自截图</h3><p>自动化应读完成事件、会话上下文或 RPC 状态。截图不能证明监听器已结算、消息已落盘或业务目标已满足。</p></article></div><p class="lesson-result" data-reveal><strong>本章过关：</strong>依次点击流式、工具和 resize，能解释差分与全量重绘的边界。</p></div></section>
 
-      <section class="chapter band-edge" id="compaction" data-spy><div class="shell">
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 08 · COMPACTION & BRANCH SUMMARY</span><h2>Compaction 改变 Context Projection，不擦除旧 Entry。</h2><p class="lede">当前 coding-agent 源码用 <code>firstKeptEntryId</code> 指向保留边界；cut point 不落在 toolResult 上，超大单 Turn 会拆出 prefix summary。Branch summary 则把离开的路径带到新分支。</p></header>
-        <div class="spread" data-reveal><article class="prose"><h3>三个必须记住的设计点</h3><p>触发是减法不是百分比：<code>contextTokens &gt; window − reserveTokens</code>（<code>packages/coding-agent/src/core/compaction/compaction.ts:237</code>），默认预留 16384。窗口越小、预留越多，压缩来得越早——长输出场景常调大 reserve 防溢出。</p><p>cut point 只落在 user 或 assistant 上，绝不切断 toolResult（<code>packages/coding-agent/src/core/compaction/compaction.ts:403</code>）：call 与 result 拆散，下一次请求会被 provider 直接拒收。所以“保留约 20000 token”是近似值，边界必须让位于配对完整性。</p><p>摘要请求自身也要防爆：进摘要的单个 tool result 先截到 2000 字符（<code>packages/coding-agent/src/core/compaction/utils.ts:89</code>），摘要调用走独立会话、禁 tool、禁 cache retention——压缩不能反过来把上下文炸掉。</p></article></div>
-        <div class="machine" id="pi-compaction" data-reveal><div class="machine-bar"><span class="title"><span class="led" data-led></span><strong>Context 压缩投影台</strong></span><span class="label-mono" data-status>阈值选择</span></div><div class="machine-body state-layout"><div><div class="state-counters"><div><span class="label-mono">ENTRIES</span><strong data-entries>0</strong></div><div><span class="label-mono">CONTEXT</span><strong data-tokens>0</strong></div><div><span class="label-mono">投影后</span><strong data-projected>0</strong></div></div><div class="seg-row" data-reserve><button class="cbtn" type="button" aria-pressed="false" data-r="16384">reserve 16k</button><button class="cbtn" type="button" aria-pressed="false" data-r="32768">reserve 32k</button></div><div class="m-controls"><button class="cbtn primary" type="button" data-cp="heavy">+ 长输出 Turn</button><button class="cbtn" type="button" data-cp="light">+ 轻量 Turn</button><button class="cbtn" type="button" data-cp="compact">执行压缩</button><button class="cbtn" type="button" data-cp="reset">重置</button></div><div class="pi-cut-strip" data-strip></div></div><div class="stream-log elog" data-log aria-live="polite"></div></div></div>
-        <ol class="kp-list" data-reveal><li data-no="01"><span><strong>判断压力</strong>：contextTokens 超过 window - reserveTokens。</span></li><li data-no="02"><span><strong>选择边界</strong>：从后向前保留近期内容，不切断 tool result。</span></li><li data-no="03"><span><strong>序列化</strong>：Tool result 在摘要请求中截断，原 JSONL 不变。</span></li><li data-no="04"><span><strong>生成摘要</strong>：独立 routing/session id，禁用 tools 与 cache retention。</span></li><li data-no="05"><span><strong>追加 Entry</strong>：summary、firstKeptEntryId、tokensBefore 与 file details。</span></li></ol>
-        <div class="fact-boundary" data-reveal><span class="label-mono">SOURCE WINS</span><strong>不要把另一套 Harness 格式混进来。</strong><span>仓内部分文档提到 retainedTail，但当前 coding-agent <code>CompactionEntry</code> 与 <code>buildContextEntries()</code> 以 firstKeptEntryId 为实现事实。</span></div>
-        <div class="interview" data-reveal>
-          <span class="label-mono">面试考点 · COMPACTION</span>
-          <h4>“压缩之后，旧消息去哪了？”</h4>
-          <div class="qa">
-            <details>
-              <summary>展开 30 秒模范答案</summary>
-              <div class="ans">
-                <p><strong>哪都没去。</strong>Compaction 只向 JSONL 追加一条 compaction entry，带 summary 与 <code>firstKeptEntryId</code>；被“丢弃”的只是 context 投影——<code>buildContextEntries()</code> 把保留段之前的路径换成 summary。能说出“投影变了、存储没动”这组词，这题就过关。</p>
-                <p><strong>追问预案：</strong>“那压缩丢信息吗？”——丢的是保真度不是事实：摘要替代原文、细节降级；原始 entry 仍可整段回读，这正是它敢做有损压缩的前提。</p>
-              </div>
-            </details>
-          </div>
-        </div>
-      </div></section>
+    <section class="chapter shell" id="protocol" data-spy><header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 11 · PROTOCOLS & HARNESS GROUNDWORK</span><h2>事故：看到 SQLite、lane 与 CBOR，就宣称“耐久多代理已上线”。证据不够。</h2><p class="lede"><strong>先解决：</strong>当前 stdio RPC 可程序化驾驶；独立 server/client 是实验栈；新 Harness 的存储与校验地基是真代码，但任务驱动未接线。</p></header><div class="machine" id="pi-surfaces" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>运行表面交换台</strong></span><span class="label-mono" data-status>选择表面</span></div><div class="machine-body surface-layout"><div class="surface-choices"><button class="cbtn" type="button" data-key="sdk">AgentSession SDK</button><button class="cbtn" type="button" data-key="json">JSON events</button><button class="cbtn" type="button" data-key="rpc">Coding Agent RPC</button><button class="cbtn" type="button" data-key="protocol">CBOR Protocol</button><button class="cbtn" type="button" data-key="client">PiClient Leases</button></div><dl class="surface-detail" data-detail><div><dt>消费者</dt><dd>选择一种集成方式</dd></div><div><dt>权威状态</dt><dd>由消息或完整会话快照定义</dd></div></dl></div></div><div class="environment-matrix" data-reveal><div class="matrix-head"><strong>证据层级</strong><span>快照中已经存在什么</span><code>能否驱动任务</code></div><div><strong>当前生产路径</strong><span>Agent、AgentSession、v3 会话树、print/json/RPC</span><code>能</code></div><div><strong>实验远程栈</strong><span>长度前缀 CBOR、快照 revision、多客户端 lease</span><code>实验，CLI 未接入口</code></div><div><strong>Harness 地基</strong><span>entry 树、operation records、内存/JSONL/SQLite、12 类损坏校验、写者租约与 fencing token、ExecutionEnv、Result 错误</span><code>部件可测</code></div><div><strong>Harness 驱动</strong><span>prompt、steer、compact、abort、resume、lane、hooks/events</span><code>明确未实现</code></div></div><div class="spread" data-reveal><article class="prose"><h3>白话：有地基，不等于房子能住</h3><p>新会话格式能表达共享树、多 lane、操作记录与可恢复状态；折叠器拒绝 12 类不可能日志，SQLite 租约以 fencing token 挡旧写者复活。但驱动遇到恢复或运行操作会显式拒绝。</p></article><article class="lesson-brief"><span class="label-mono">协议判断题</span><h3>progress 能不能当权威状态？</h3><p>不能。远程栈以带 revision 的完整 snapshot 为准，progress 只是提示；断线后必须以新快照覆盖本地推断。stdio JSONL 还必须独占 stdout，避免普通日志撕碎帧。</p></article></div><p class="lesson-result" data-reveal><strong>本章过关：</strong>看到“有类、有类型、有后端测试”，仍会追问哪个入口真正调用它、能否完成 prompt→tool→resume 闭环。</p></section>
 
-      <section class="chapter shell" id="extensions" data-spy>
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 09 · EXTENSIONS & RESOURCES</span><h2>Extensions 能改工具、事件和 UI；Skills 与 Prompts 主要改变模型输入。</h2><p class="lede">扩展是当前进程内的 TypeScript module，可注册 Tool、Command、Provider 与 lifecycle hook；Skills、Prompt Templates、Themes 和 Packages 由 ResourceLoader 发现并热加载。</p></header>
-        <div class="machine" id="pi-extensions" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>扩展责任探针</strong></span><span class="label-mono" data-status>选择机制</span></div><div class="machine-body atlas-layout"><div class="atlas-choices"><button class="layer-row" type="button" data-key="tool">新增可执行能力</button><button class="layer-row" type="button" data-key="skill">注入按需流程</button><button class="layer-row" type="button" data-key="hook">调用前阻断参数</button><button class="layer-row" type="button" data-key="state">持久扩展状态</button></div><div class="atlas-detail" data-detail><span class="label-mono">RIGHT MECHANISM</span><h3>选择一个需求</h3><p>查看应使用 Extension Tool、Skill、Hook 还是 Session Entry。</p></div></div></div>
-        <div class="decision" data-reveal><span class="label-mono">SUPPLY CHAIN</span><p>Project Trust 只控制是否加载项目级设置、Packages、Extensions 和资源；已加载的 Extension 与 Pi 进程权限相同。</p></div>
-        <div class="spread" data-reveal><article class="prose"><h3>进程内的能力，换来的是沙箱幻觉要自己拆穿</h3><p>扩展能改 tool_call 参数、替换 UI、注册 Provider——这些能力全都要求完整的宿主权限。做成子进程插件协议就换不到这套表达力，所以 Pi 的取舍是：能力放进程内，边界交给“加载谁”这一个开关。<code>resolveProjectTrusted</code>（<code>packages/coding-agent/src/core/project-trust.ts:46</code>）就是这条边界的全部——它只管加载不加载，不管加载后能干什么。</p><p>失败推演：有人把 tool_call hook 里 block <code>rm -rf</code> 当权限系统卖。它是策略覆盖层，拦不住一个被信任的恶意扩展自己 <code>import fs</code>；信任判定发生在加载时，执行时 Pi 不再区分善恶。真实边界只能来自 Container、VM 或 Gondolin 这类外部隔离。</p></article></div>
-      </section>
-
-      <section class="chapter band-deep" id="tui" data-spy><div class="shell">
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 10 · TUI & CLI MODES</span><h2>TUI 是差分渲染器，不是 Agent 状态机。</h2><p class="lede">Regular 模式使用主屏与 terminal scrollback；实验性 Fullscreen 使用 alternate screen 与自有 viewport。两者都比较前后行，只重画变化区域并用 synchronized output 降低闪烁。</p></header>
-        <div class="machine" id="pi-tui-diff" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>差分帧对比台</strong></span><span class="label-mono" data-status>等待帧</span></div><div class="machine-body surface-layout"><div class="surface-choices"><div class="seg-row" data-frame><button class="cbtn" type="button" aria-pressed="false" data-f="stream">流式 delta</button><button class="cbtn" type="button" aria-pressed="false" data-f="tool">工具行更新</button><button class="cbtn" type="button" aria-pressed="false" data-f="resize">宽度变化</button><button class="cbtn" type="button" aria-pressed="false" data-f="reset">重置</button></div><p class="stage-note">高亮行 = 本帧真正重写的行；其余行只活在 previousLines 的比较里。</p></div><div class="pi-tui-panels"><div class="pi-term" data-screen></div><div class="stream-log elog" data-log aria-live="polite" style="max-height: 150px"></div></div></div></div>
-        <div class="spread" data-reveal><article class="prose"><h3>差分的前提是一条宽度合同</h3><p>主屏模式下 scrollback 归用户，Pi 只能改自己视口内的行：<code>doRender</code>（<code>packages/tui/src/tui-main-screen.ts:180</code>）比较 previousLines，只重写 firstChanged 到 lastChanged，整段输出包在 CSI 2026 同步锁里（<code>packages/tui/src/tui-main-screen.ts:212</code>）——终端收到完整帧前不刷新显存，高频流式才不闪。</p><p>差分的隐藏合同是组件每行不得超宽：超宽在差分路径上直接抛错，而不是悄悄画歪，宁可崩也不错位。宽度变化则放弃比较、整屏重画——差分省的是重绘量，不省例外分支。</p></article></div>
-        <div class="primitive-grid" data-reveal><article><span class="primitive-no">TUI</span><h3>Interactive</h3><p>编辑器、消息、工具行、Slash Commands 与人在回路交互。</p></article><article><span class="primitive-no">TEXT / JSON</span><h3>Print</h3><p>单次输出或逐行事件；没有命令控制平面。</p></article><article><span class="primitive-no">RPC</span><h3>Process control</h3><p>严格 LF-only JSONL，Prompt 接受后继续异步发事件。</p></article></div>
-        <div class="decision" data-reveal><span class="label-mono">EVIDENCE</span><p>终端截图只能证明呈现状态。自动化应读取 message_end、Session context 或 RPC state，而不是把“屏幕看起来完成”当成运行完成。</p></div>
-
-        <article class="lesson-brief" id="pi-tui-diff-code" data-reveal>
-          <span class="label-mono">SOURCE-ALIGNED TEACHING SKELETON · ANSI CSI 2026 TUI</span>
-          <h3>ANSI CSI 2026 同步差分终端重绘算法 (`DifferentialTuiRenderer`)</h3>
-          <p>下面是根据 `packages/tui/src/tui-main-screen.ts` 整理的教学骨架，不是上游源码复制。真实实现还处理 viewport、Kitty image、cursor、scrollback、resize 与 full redraw 条件。</p>
-
-          <div class="stream-log elog" style="max-height: 440px; overflow-y: auto; padding: 16px; border-radius: var(--r-control); background: var(--surface-console); border: 1px solid var(--line-on-console);">
-<span class="k-sys">// packages/tui/src/differential-renderer.ts</span>
-<span class="k-user">export class</span> <span class="k-model">DifferentialTuiRenderer</span> {
-  <span class="k-user">private</span> previousLines: string[] = [];
-  <span class="k-user">private</span> outputStream: NodeJS.WriteStream;
-
-  <span class="k-user">constructor</span>(stream: NodeJS.WriteStream = process.stdout) {
-    <span class="k-user">this</span>.outputStream = stream;
-  }
-
-  <span class="k-sys">/// 差分渲染：仅输出发生变更的行，并使用 CSI ?2026h/l 消除屏幕撕裂</span>
-  <span class="k-user">public</span> <span class="k-tool">render</span>(nextLines: string[]): <span class="k-user">void</span> {
-    <span class="k-user">let</span> buffer = <span class="k-model">"\x1b[?2026h"</span>; <span class="k-sys">// 开启 ANSI CSI 2026 同步输出锁</span>
-
-    <span class="k-user">const</span> maxRows = Math.max(<span class="k-user">this</span>.previousLines.length, nextLines.length);
-    <span class="k-user">for</span> (<span class="k-user">let</span> row = 0; row &lt; maxRows; row++) {
-      <span class="k-user">const</span> prev = <span class="k-user">this</span>.previousLines[row] ?? <span class="k-model">""</span>;
-      <span class="k-user">const</span> next = nextLines[row] ?? <span class="k-model">""</span>;
-
-      <span class="k-user">if</span> (prev !== next) {
-        <span class="k-sys">// 光标跳转到特定行（1-indexed）并清空行内容后覆写</span>
-        buffer += `\x1b[${row + 1};1H\x1b[2K${next}`;
-      }
-    }
-
-    buffer += <span class="k-model">"\x1b[?2026l"</span>; <span class="k-sys">// 关闭 ANSI CSI 2026 同步输出锁，触发终端原子绘制</span>
-    <span class="k-user">this</span>.outputStream.write(buffer);
-    <span class="k-user">this</span>.previousLines = [...nextLines];
-  }
-}
-          </div>
-          <p class="lesson-result"><strong>架构精要：</strong>Pi TUI 坚持将“呈现”与“状态”彻底分离，`render()` 不修改任何 Agent 运行时模型；`\x1b[?2026h` 确保现代终端在接收完整差分帧前不刷新显存，杜绝高频流式输出下的终端闪烁。</p>
-        </article>
-      </div></section>
-
-      <section class="chapter shell" id="protocol" data-spy>
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 11 · RPC / PROTOCOL / CLIENT</span><h2>Pi 有两类不同协议：Coding Agent RPC 与实验性 Server Protocol。</h2><p class="lede">RPC 是 stdin/stdout JSONL 命令事件流；独立 Protocol 使用 4-byte length + CBOR，Server Snapshot 是权威状态，Progress 只是临时提示，认证由 Transport Listener 负责。</p></header>
-        <div class="machine" id="pi-surfaces" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>运行表面交换台</strong></span><span class="label-mono" data-status>选择表面</span></div><div class="machine-body surface-layout"><div class="surface-choices"><button class="cbtn" type="button" data-key="sdk">AgentSession SDK</button><button class="cbtn" type="button" data-key="json">JSON events</button><button class="cbtn" type="button" data-key="rpc">Coding Agent RPC</button><button class="cbtn" type="button" data-key="protocol">CBOR Protocol</button><button class="cbtn" type="button" data-key="client">PiClient Leases</button></div><dl class="surface-detail" data-detail><div><dt>消费者</dt><dd>选择一种集成方式</dd></div><div><dt>权威状态</dt><dd>由各自的 message/session snapshot 定义</dd></div></dl></div></div>
-        <div class="spread" data-reveal><article class="prose"><h3>两个协议面，两种失败模型</h3><p>Coding Agent RPC 给人调试、给 IDE 嵌子进程：LF-only JSONL，肉眼可读、jq 可切。它刻意不用 Node readline（<code>packages/coding-agent/src/modes/rpc/jsonl.ts:21</code>）——readline 把 U+2028/U+2029 也当换行，而它们在 JSON 字符串内合法，一条合法消息可能被切成两帧。Server Protocol 给远程多客户端：4 字节大端长度 + 定长 CBOR（<code>packages/protocol/src/framing.ts:28</code>），半包、粘包、超限帧都在解码层拦下。</p><p>语义层面两边同一条铁律：snapshot 是权威，progress 是提示。<code>PiClient</code> 的会话租约从 acquire 开始（<code>packages/client/src/client.ts:151</code>），最后一个 lease 释放才 detach，断线不自动重连。把 TranscriptProgress 当状态存下来的实现，会在重连后永久错位。</p></article></div>
-        <div class="decision" data-reveal><span class="label-mono">边界</span><p>协议包不欠你认证：transport 拿到字节之前完成 authn/authz 是 listener 的责任。把 CBOR 帧直接暴露到公网，不是“用了 Pi 协议”，是给没上锁的门换了更精致的门牌。</p></div>
-        <div class="interview" data-reveal>
-          <span class="label-mono">面试考点 · FRAMING</span>
-          <h4>“JSONL 分帧为什么坚持手工按 <code>\n</code> 切，不用 readline？”</h4>
-          <div class="qa">
-            <details>
-              <summary>展开 30 秒模范答案</summary>
-              <div class="ans">
-                <p><strong>因为 JSON 字符串内可以合法出现 U+2028/U+2029。</strong>Node readline 把它们当行分隔符，会把一条合法 JSONL 消息切成两行；协议层只能按 <code>\n</code> 分帧、容忍可选 <code>\r</code>，才能保证帧边界与 JSON 语法互不污染。</p>
-                <p><strong>延伸：</strong>再对比 CBOR 面的 4 字节长度前缀——定长头让半包判断是 O(1)。两种 framing 回答的是同一个问题：流的边界不能靠内容推断。这是所有流协议面试的通用底题。</p>
-              </div>
-            </details>
-          </div>
-        </div>
-
-        <article class="lesson-brief" id="pi-cbor-protocol-code" data-reveal>
-          <span class="label-mono">SOURCE-ALIGNED TEACHING SKELETON · CBOR PROTOCOL FRAMING</span>
-          <h3>4 字节大端定长 CBOR 协议帧打包与流式解码 (`PiProtocolFraming`)</h3>
-          <p>下面是协议两层组合后的教学骨架，不是上游源码复制：`packages/protocol/src/framing.ts` 只负责带 16 MiB 默认上限的 4-byte big-endian `Uint8Array` 分帧，CBOR 编解码属于 `packages/protocol/src/cbor/`。</p>
-
-          <div class="stream-log elog" style="max-height: 440px; overflow-y: auto; padding: 16px; border-radius: var(--r-control); background: var(--surface-console); border: 1px solid var(--line-on-console);">
-<span class="k-sys">// packages/protocol/src/framing.ts</span>
-<span class="k-user">import</span> * <span class="k-user">as</span> cbor <span class="k-user">from</span> <span class="k-model">"cbor-x"</span>;
-
-<span class="k-user">export class</span> <span class="k-model">PiProtocolFraming</span> {
-  <span class="k-sys">/// 编码：[4-Byte Big-Endian Length] + [CBOR Payload]</span>
-  <span class="k-user">public static</span> <span class="k-tool">encodeFrame</span>(message: unknown): Buffer {
-    <span class="k-user">const</span> payload = Buffer.from(cbor.encode(message));
-    <span class="k-user">const</span> header = Buffer.alloc(4);
-    header.writeUInt32BE(payload.length, 0);
-    <span class="k-user">return</span> Buffer.concat([header, payload]);
-  }
-
-  <span class="k-sys">/// 解码：处理 TCP / WebSocket 流式粘包与半包分片</span>
-  <span class="k-user">public static</span> <span class="k-tool">decodeFrames</span>(incomingBuffer: Buffer): { messages: unknown[]; remaining: Buffer } {
-    <span class="k-user">const</span> messages: unknown[] = [];
-    <span class="k-user">let</span> offset = 0;
-
-    <span class="k-user">while</span> (offset + 4 &lt;= incomingBuffer.length) {
-      <span class="k-user">const</span> frameLength = incomingBuffer.readUInt32BE(offset);
-      <span class="k-user">if</span> (offset + 4 + frameLength &gt; incomingBuffer.length) {
-        <span class="k-user">break</span>; <span class="k-sys">// 半包等待后续字节到达</span>
-      }
-
-      <span class="k-user">const</span> framePayload = incomingBuffer.subarray(offset + 4, offset + 4 + frameLength);
-      messages.push(cbor.decode(framePayload));
-      offset += 4 + frameLength;
-    }
-
-    <span class="k-user">return</span> {
-      messages,
-      remaining: incomingBuffer.subarray(offset),
-    };
-  }
-}
-          </div>
-          <p class="lesson-result"><strong>架构精要：</strong>Pi 独立 Server Protocol 采用基于大端长度头与定长 CBOR 的二进制打包方案，支持高吞吐远程会话租赁（Session Lease），与基于 stdin/stdout 的 LF-only JSONL RPC 形成清晰的双协议面。</p>
-        </article>
-      </section>
-
-      <section class="chapter band-edge" id="practice" data-spy><div class="shell">
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 12 · SECURITY & PRACTICE</span><h2>Pi 默认拥有启动用户的全部权限；Project Trust 不是 Sandbox。</h2><p class="lede">内建 Read、Write、Edit、Bash 和 Extensions 都运行在 Pi 进程权限内。处理不可信仓库或无人值守任务时，真正边界必须来自 Container、VM、Micro-VM 或 Policy-controlled Sandbox。</p></header>
-        <div class="environment-matrix" data-reveal><div class="matrix-head"><strong>机制</strong><span>实际控制什么</span><span>不保证什么</span></div><div><strong>Project Trust</strong><span>项目级设置、Packages、Extensions 与资源是否加载</span><code>不限制已加载工具</code></div><div><strong>--tools allowlist</strong><span>模型看见哪些 Built-in Tools</span><code>不是进程权限</code></div><div><strong>Gondolin Extension</strong><span>把 Built-in Tools 与 ! commands 路由到 Micro-VM</span><code>其他 Extensions 仍可能在 Host</code></div><div><strong>Docker / OpenShell</strong><span>隔离整个 Pi 进程及其工具</span><code>Bind mount 仍可改 Host</code></div></div>
-        <div class="spread"><article class="prose" data-reveal><h3>五步诊断法</h3><p>先确定入口模式和当前 Session；再沿 agent/turn/message/tool events 找最后一个事实；区分 Agent conversion 与 Provider adaptation；核对 active tools 与 Extensions；最后确认需要的是 Project Trust、工具配置还是外部隔离。</p><div class="decision"><span class="label-mono">SOURCE BOUNDARY · a470b121b</span><p>本课基于本地源码快照。基础 Agent 只维护内存 state；JSONL 持久化属于 Coding Agent SessionManager。实验性 server/client 与 durable harness 规格不能当作默认 CLI 已上线能力。</p></div></article></div>
-
-        <div class="interview" data-reveal>
-          <span class="label-mono">PROBLEM SET 01 · 架构设计题</span>
-          <h4>“如何利用 Pi 的 JSONL Session Tree 实现低成本的探索性任务分支与多路径假设验证？”</h4>
-          <div class="qa">
-            <details>
-              <summary>展开答题骨架与树形推演</summary>
-              <div class="ans">
-                <p><strong>【场景定义】</strong> 开发者需要对一个复杂的重构任务探索方案 A（重写接口）与方案 B（向后兼容补丁），希望能够在不同思路间自由切换，既保留每条分支完整的上下文事实，又不在磁盘上复制巨大的对话历史。</p>
-                <p><strong>【归属层/故障机理分析】</strong> 属于会话树形持久化层（`Chapter 07: JSONL Session Tree`）。核心机理在于：Pi 抛弃了传统 Agent 线性数组或全局覆写的历史记录方式，将会话建模为 Append-Only 的有向无环图（DAG）。每个 Entry 均包含 `id` 与 `parentId`，分支切换仅需移动当前会话的 `leafId` 指针，即可通过反向遍历即时投影出目标分支的全部祖先消息。</p>
-                <p><strong>【关键证据链/判定条件】</strong>
-                  <br>1. <em>单文件多分支</em>：单个 `.jsonl` 文件同时记录多条互不干扰的演化路径，无惧并发写冲突。
-                  <br>2. <em>无损分支</em>：创建新分支不需要对已有历史做任何 `UPDATE` 或 `DELETE` 操作，杜绝数据损坏风险。
-                  <br>3. <em>上下文投影</em>：调用 `buildContextEntries()` 时仅提取从当前 `leafId` 向上回溯到根节点的活跃链路。
-                </p>
-                <p><strong>【解决方案与系统级防线】</strong>
-                  <br>• 使用 `SessionManager.branch(entryId)` 实施非破坏性回退，在分叉点开启新探索。
-                  <br>• 注意认知边界：<strong>Session Tree 只切换对话上下文，不负责文件系统状态回滚</strong>。文件级变更需配合 Git 提交或工作区分支进行隔离。
-                </p>
-              </div>
-            </details>
-          </div>
-        </div>
-
-        <div class="interview" data-reveal>
-          <span class="label-mono">PROBLEM SET 02 · 故障排查题</span>
-          <h4>“并行工具调用（Parallel Tool Batch）执行时，为什么工具完成日志乱序但最终 Transcript 顺序依然严格对齐？”</h4>
-          <div class="qa">
-            <details>
-              <summary>展开答题骨架与排序机制</summary>
-              <div class="ans">
-                <p><strong>【场景定义】</strong> 模型单次回合返回了 `[fetch_doc, grep_symbol, read_file]` 三个工具调用并开启并发执行，控制台日志显示耗时最短的 `grep_symbol` 最先完成，但最终发送给模型的上下文与 Transcript 顺序依然严格保持为原调用顺序。</p>
-                <p><strong>【归属层/故障机理分析】</strong> 属于工具批次调度与事件生命周期（`Chapter 06: Tool Batch`）。机理分析：Pi 区分了<strong>执行完成事件</strong>（`tool_execution_end`，按物理实际完成时序发出，供 TUI 实时更新进度）与<strong>会话提交顺序</strong>（`toolResult` 消息，必须严格按照模型在 `AssistantMessage` 中声明的 Source Order 插入）。</p>
-                <p><strong>【关键证据链/判定条件】</strong>
-                  <br>1. 调度执行：`runToolCalls()` 使用 `Promise.all` 并发触发，各 Promise 解决时立即广播局部进度事件。
-                  <br>2. 槽位预留：内部预先分配与声明顺序一致的 `resultsArray[index]` 槽位。
-                  <br>3. 消息生成：所有并发任务完成后，按索引顺序依次生成 `ToolResultMessage` 并追加到 Transcript。
-                </p>
-                <p><strong>【解决方案与系统级防线】</strong>
-                  <br>• 绝不可将实时的流式完成通知直接当作上下文提交顺序，避免破坏大模型关于多工具调用依赖的上下文假设。
-                  <br>• 若任一工具在定义中声明了 `sequential: true`，整批调用立即安全降级为严格串行流水线。
-                </p>
-              </div>
-            </details>
-          </div>
-        </div>
-
-        <div class="interview" data-reveal>
-          <span class="label-mono">PROBLEM SET 03 · 安全攻防题</span>
-          <h4>“Pi 默认以宿主全量权限运行，为什么说 Project Trust 不是 Sandbox？如何为企业构建真实防御边界？”</h4>
-          <div class="qa">
-            <details>
-              <summary>展开答题骨架与防御纵深</summary>
-              <div class="ans">
-                <p><strong>【场景定义】</strong> 用户克隆了一个公开的第三方开源项目并用 Pi 打开，项目目录内包含了恶意的 `.pi/extensions/auto-run.ts` 扩展脚本，试图在启动时窃取本地环境变量与 SSH 私钥。</p>
-                <p><strong>【归属层/故障机理分析】</strong> 属于供应链安全与执行隔离边界（`Chapter 09: Extensions` & `Chapter 12: Security`）。核心认知：<strong>`Project Trust` 只是一个资源加载的准入门禁（Gate），用于决定是否执行该目录下的配置文件与扩展，它绝不是操作系统级别的安全沙箱</strong>。一旦用户点击了“Trust”，所有已加载的代码均在宿主 Node 进程内以当前操作系统用户身份全权运行。</p>
-                <p><strong>【关键证据链/判定条件】</strong>
-                  <br>1. 未受信任状态（Untrusted）：Pi 拒绝加载 `.pi/` 下的项目级扩展与 prompt 模板，有效阻断恶意脚本初次加载。
-                  <br>2. 受信任状态（Trusted）：Jiti 将直接在主进程内求值 TypeScript 扩展，拥有完整的 `fs`, `child_process` 与 `net` 访问权限。
-                  <br>3. 权限继承：内建的 `bash`、`edit` 工具同样不具备任何内建特权降级或 chroot 隔离。
-                </p>
-                <p><strong>【解决方案与系统级防线】</strong>
-                  <br>• 生产与 CI 环境下必须将整个 Pi 进程置于容器（如 Docker、OpenShell）或 Micro-VM（如 Firecracker、Gondolin）中运行。
-                  <br>• 宿主与容器间仅允许受限挂载目标工作区，严禁挂载 `~/.ssh`、`~/.aws` 或根文件系统。
-                </p>
-              </div>
-            </details>
-          </div>
-        </div>
-        <dl class="gloss" data-reveal><div><dt>AgentMessage</dt><dd>Agent 内部可扩展消息；通过 convertToLlm 才进入 Provider context。</dd></div><div><dt>Turn</dt><dd>Pi Agent 中的一次模型调用及其工具批次。</dd></div><div><dt>Steer</dt><dd>当前工具批次结束后、下一次模型调用前注入的消息。</dd></div><div><dt>Follow-up</dt><dd>没有工具和 Steering 后才处理的后续消息。</dd></div><div><dt>Session Entry</dt><dd>JSONL tree 中带 id / parentId 的 append-only 节点。</dd></div><div><dt>Project Trust</dt><dd>控制项目资源加载的 Gate，不是 Sandbox。</dd></div></dl>
-        <section class="source-notes" aria-labelledby="pi-sources" data-reveal><span class="label-mono">PRIMARY SOURCES</span><h3 id="pi-sources">继续查证</h3><p>课程事实来自本地 Pi monorepo 快照的 package README、docs 与 TypeScript 源码。</p><div><a href="https://github.com/earendil-works/pi-mono">开源仓库</a><a href="https://pi.dev">Pi 项目站</a></div></section>
-      </div></section>
-    </main>
-    <footer class="site"><div class="shell"><span>顶级 Agent 内核图谱 · Pi Agent</span><div><a href="/codex">Codex</a> · <a href="/grok">Grok Build</a> · <a href="/deepseek">DeepSeek Harness</a> · <a href="/opencode">OpenCode</a> · <a href="/openclaw">OpenClaw</a> · <a href="/hermes">Hermes Agent</a> · <a href="#top">返回顶部 ↑</a></div></div></footer>
-    <script type="module" src="/src/pi.ts"></script>
-  </body>
+    <section class="chapter band-edge" id="practice" data-spy><div class="shell"><header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 12 · TRIAGE & BUILD YOUR OWN</span><h2>综合事故：模型重试、压缩重试和用户处理同时发生，成本开始失控。</h2><p class="lede"><strong>先解决：</strong>按“模型能否修复”和“证据是否仍新鲜”分诊。工具错误回喂模型，瞬态网络错误退避，配额与未知错误交给用户；溢出单独走一次性压缩恢复。</p></header><div class="environment-matrix" data-reveal><div class="matrix-head"><strong>看到什么</strong><span>正确出路</span><code>验收证据</code></div><div><strong>参数错 / 工具抛错</strong><span>写成 <code>isError</code> 结果，带现场与下一步动作</span><code>下一轮能自纠</code></div><div><strong>429 / 5xx / 断流</strong><span>只对白名单瞬态模式做可取消退避</span><code>重试事件 + 终态</code></div><div><strong>quota / billing / 未知</strong><span>不盲重试，交回用户</span><code>无恢复风暴</code></div><div><strong>context overflow</strong><span>排除普通重试；压缩后只救一次</span><code>新边界 + 闩锁</code></div><div><strong>用户 Abort</strong><span>终止不重试；检查执行体是否响应</span><code>副作用实际停止</code></div></div><div class="spread" data-reveal><article class="prose"><h3>五步判断法</h3><ol><li>标入口：SDK、交互、print/json、RPC 或实验远程栈。</li><li>找最后一个已提交事实：终态消息、工具结果、会话条目或 snapshot。</li><li>按 owner 分层：Provider、Loop、Session、Extension、UI。</li><li>检查恢复：类型匹配吗？证据晚于最近压缩吗？预算只允许几次？</li><li>验证目标，不把 HTTP 成功、进程退出或截图当成任务完成。</li></ol></article><article class="lesson-brief"><span class="label-mono">BUILD CHECK</span><h3>自己的 Agent 至少写下六条合同</h3><p>事件何时提交；工具如何排序；截断参数是否执行；队列在哪里注入；失败去往模型、重试还是用户；持久历史怎样重建上下文。每条都要有反例测试。</p></article></div><div class="interview" data-reveal><span class="label-mono">FINAL EXERCISE</span><h4>“两个并行工具完成顺序相反，随后上下文溢出。写出不破坏历史的 trace。”</h4><div class="qa"><details><summary>展开参考答案</summary><div class="ans"><p><strong>执行：</strong>按声明顺序预备，并发执行；进度按完成顺序发，结果按声明顺序回填。</p><p><strong>恢复：</strong>确认溢出来自当前模型且晚于最近压缩；移除工作上下文里的失败助手消息，追加压缩边界，再 continue 一次。原始条目不删除，第二次仍溢出就交用户。</p><p><strong>验收：</strong>工具调用与结果配对完整；历史保留事故，模型下一轮看不到失败残骸；恢复不超过一次。</p></div></details></div></div><div class="fact-boundary" data-reveal><span class="label-mono">毕业线</span><strong>会读事件，也会怀疑“已实现”。</strong><span class="prose">当前 AgentSession 可运行；示例子代理可用但非核心；远程栈实验；新 Harness 地基已实现、驱动未接线。越过这条边界，都要新的端到端证据。</span></div><p class="lesson-result" data-reveal><strong>课程完成：</strong>你现在可以从短 trace 判断 owner、顺序、恢复和证据等级，并把机制迁移成可测试合同。</p><dl class="gloss" data-reveal><div><dt>Turn</dt><dd>一次助手响应及紧随的工具批次。</dd></div><div><dt>Transcript</dt><dd>发生过什么的事实记录，不等于每次模型请求看到的消息。</dd></div><div><dt>Steer</dt><dd>当前工具批次结束后、下一次模型调用前注入的纠偏消息。</dd></div><div><dt>Follow-up</dt><dd>当前任务自然收口后再处理的后续消息。</dd></div><div><dt>Lane</dt><dd>新 Harness 的命名历史光标；地基已有，驱动未接线。</dd></div><div><dt>Project Trust</dt><dd>项目资源加载门，不是操作系统沙箱。</dd></div></dl></div></section>
+  </main>
+  <footer class="site"><div class="shell"><span>Agent 内核图谱 · Pi Agent</span><div><a href="/codex">Codex</a> · <a href="/grok">Grok Build</a> · <a href="/deepseek">DeepSeek Harness</a> · <a href="/opencode">OpenCode</a> · <a href="/openclaw">OpenClaw</a> · <a href="/hermes">Hermes Agent</a> · <a href="#top">返回顶部 ↑</a></div></div></footer>
+  <script type="module" src="/src/pi.ts"></script>
+</body>
 </html>

@@ -61,16 +61,16 @@ function initLoop(): void {
     "session.idle",
   ];
   const notes = [
-    "SessionPrompt.prompt 先清理 revert 残留，再把 user 消息与附件 parts 写入事件流（prompt.ts:1052-1070）。",
-    "ensureRunning 保证同 session 单飞，runLoop 进入 while(true)（run-state.ts:88 / prompt.ts:1088-1089）。",
-    "filterCompacted 从最近一条摘要消息之后重放 parts，压缩对循环透明（message-v2.ts:521-578）。",
-    "三条合取：finish 非 tool-calls/unknown ∧ 无待处理工具 ∧ parentID 匹配，即 break（prompt.ts:1111-1115）；孤儿中断工具不阻断退出，只先打告警（:1116-1127）。",
-    "SessionTools.resolve：注册表按模型/agent 过滤 ∪ MCP ∪ 自定义，每个 execute 内嵌权限纤（tools.ts:41-121）。",
-    "system 五段拼装完成后 handle.process 开流，AI SDK fullStream 适配成 LLMEvent（prompt.ts:1257-1286 / llm.ts:280-378）。",
-    "bash 命令被 tree-sitter 提取 pattern，ask 挂 Deferred——这一步循环纤真的停在半空（permission/index.ts:67-110）。",
-    "写 usage/cost 进 assistant 消息，顺手判定 isOverflow → needsCompaction（processor.ts:435-460,478-482）。",
-    "摘要消息落库后注入合成 \"Continue if you have next steps…\"，回到第 3 步（compaction.ts:340-355,519-547）。",
-    "break → 异步 prune → status idle → SSE /event 通知所有客户端回合结束（prompt.ts:1334-1339 / status.ts:42-43）。",
+    "先清理撤销后的残留，再把用户消息与附件写成可恢复的 parts。",
+    "同一会话只允许一条活动循环；新的调用等待当前执行，不另开一套状态。",
+    "从最近一次压缩边界之后重建有效历史，让循环只面对一条合法时间线。",
+    "三条合取：正常结束 ∧ 没有本地工具 part ∧ 回复属于最新用户；孤儿中断工具只告警，不阻断退出。",
+    "汇入内建、自定义、插件与 MCP 工具，再按模型、agent 与权限生成本轮视图。",
+    "稳定指令与动态上下文组装完成后开流，provider 事件被统一为可结算的 LLMEvent。",
+    "工具解析出真实资源后发起 ask；等待只挂起该工作单元，不冻结整个进程。",
+    "把 usage 与 cost 记入回复，同时判断上下文是否需要压缩。",
+    "摘要与近期原文形成新历史；当前 v1 可能注入一条合成“继续”消息再跑。",
+    "退出后异步修剪旧输出，状态转 idle，并通过事件流通知所有表面。",
   ];
   let index = -1;
   let timer = 0;
@@ -88,7 +88,7 @@ function initLoop(): void {
     led?.classList.toggle("is-run", index >= 0 && index < steps.length - 1);
     led?.classList.toggle("is-done", index === steps.length - 1);
   };
-  const reset = () => { clearInterval(timer); index = -1; if (log) log.innerHTML = ""; if (note) note.textContent = "逐步观察一个回合怎样被展开成事件流。"; draw(); };
+  const reset = () => { clearInterval(timer); index = -1; if (log) log.innerHTML = ""; if (note) note.textContent = "逐步观察一个请求如何展开为多个轮次。"; draw(); };
   const step = () => { if (index < steps.length - 1) { index += 1; draw(); } else clearInterval(timer); };
   qs<HTMLButtonElement>(root, "[data-step]")?.addEventListener("click", step);
   qs<HTMLButtonElement>(root, "[data-run]")?.addEventListener("click", () => { clearInterval(timer); if (index === steps.length - 1) reset(); step(); timer = window.setInterval(step, 560); });
@@ -112,13 +112,13 @@ function initProjection(): void {
   qsa<HTMLButtonElement>(root, "[data-event]").forEach((button) => button.addEventListener("click", () => {
     const type = button.dataset.event;
     if (type === "reset") { rows = 0; sse = 0; pending = 0; cost = 0; if (log) log.innerHTML = ""; render(); return; }
-    if (type === "created") { rows += 1; sse += 1; render("session.created", "投影器 insert SessionTable"); return; }
-    if (type === "user") { rows += 1; sse += 1; render("message.updated (user)", "parentID 链就绪"); return; }
-    if (type === "part") { sse += 1; render("part.updated (text delta)", "节流合并，终态才进 PartTable"); return; }
-    if (type === "stepfinish") { sse += 1; cost += 0.05; render("step-finish", "usage/cost UPDATE 既有 assistant 行，不新增行"); return; }
-    if (type === "asked") { pending += 1; sse += 1; render("permission.asked", "Deferred 挂起，投影器不动"); return; }
+    if (type === "created") { rows += 1; sse += 1; render("session.created", "建立可查询的会话状态"); return; }
+    if (type === "user") { rows += 1; sse += 1; render("message.updated (user)", "最新用户与父子关系就绪"); return; }
+    if (type === "part") { sse += 1; render("part.updated (text delta)", "增量服务实时 UI，终态才成为权威 part"); return; }
+    if (type === "stepfinish") { sse += 1; cost += 0.05; render("step-finish", "把 usage/cost 合并进本轮回复"); return; }
+    if (type === "asked") { pending += 1; sse += 1; render("permission.asked", "等待审批；工具尚未结算"); return; }
     if (type === "replied") { pending = 0; sse += 1; render("permission.replied (always)", "级联放行同 session pending"); return; }
-    if (type === "idle") { sse += 1; render("session.idle", "TUI 输入框解灰"); }
+    if (type === "idle") { sse += 1; render("session.idle", "所有表面都可恢复可输入状态"); }
   }));
 }
 
@@ -151,7 +151,7 @@ function initDecision(): void {
     const matched = [...chain].reverse().find((rule) => rule.permission === perm || rule.permission === "*");
     const action = matched?.action ?? "ask";
     const lines: string[] = [];
-    if (perm === "bash") lines.push("tree-sitter 提取命令 pattern，arity 决定 always 前缀粒度");
+    if (perm === "bash") lines.push("先把命令归一成可复用的资源 pattern，再决定 always 的授权粒度");
     lines.push(`规则链 findLast → ${matched ? `命中 ${matched.permission}:${matched.action}` : "无匹配 → 默认 ask"}`);
     let verdict = "ask";
     let outcome = "";
@@ -164,7 +164,7 @@ function initDecision(): void {
       if (reply === "reject") { verdict = "deny"; outcome = "拒绝 + 级联拒绝同 session 全部 pending，CorrectedError 带用户反馈回注"; }
     }
     lines.push(`裁决：${outcome}`);
-    if (verdict === "ok" && action === "ask" && reply === "always") lines.push("示例：下一条 rm -rf other 命中 bash:rm -rf * = allow，不再弹窗");
+    if (verdict === "ok" && action === "ask" && reply === "always") lines.push("下一条匹配同一授权模式的请求会直接放行；范围过宽会放大风险");
     if (badge) badge.dataset.verdict = verdict;
     if (label) label.textContent = verdict === "ok" ? "放行" : verdict === "deny" ? "拒绝" : "挂起等待";
     if (trace) trace.innerHTML = lines.map((line) => `<li>${line}</li>`).join("");
@@ -188,10 +188,10 @@ function initTools(): void {
   const label = qs<HTMLElement>(root, "[data-verdict-label]");
   const status = qs<HTMLElement>(root, "[data-status]");
   const views: Record<string, { verdict: string; label: string; lines: string[] }> = {
-    build: { verdict: "ok", label: "清单最宽", lines: ["agent 刀：build 无额外 deny——直接吃 defaults 规则集：*→allow，只有 doom_loop、external_directory、.env 读取会被 ask（agent.ts:119-134,141-154）。"] },
-    plan: { verdict: "deny", label: "edit 现场被拒", lines: ["agent 刀：plan 预置 edit:*→deny（agent.ts:171-173）。注意 deny 不改清单——edit 照样交给模型，只是调用时 DeniedError 直接回给模型，不弹审批。"] },
-    explore: { verdict: "deny", label: "白名单只读", lines: ["agent 刀：explore 预置 *:deny + read/grep/glob/bash/webfetch/websearch 白名单 allow（agent.ts:201-208）——名单外工具每次调用即拒。"] },
-    subagent: { verdict: "deny", label: "禁再派生", lines: ["agent 刀：subagent 派生只继承父 deny 与 external_directory，allow 不继承；再补 task:*→deny + todowrite:*→deny（agent/subagent-permissions.ts:14-27）。"] },
+    build: { verdict: "ok", label: "清单最宽", lines: ["build 没有额外的全局 deny；高风险循环、外部目录和敏感读取仍会进入 ask。"] },
+    plan: { verdict: "deny", label: "edit 现场被拒", lines: ["plan 预置 edit deny。deny 不一定改变广告清单；它也可以在调用现场直接拒绝。"] },
+    explore: { verdict: "deny", label: "白名单只读", lines: ["explore 先全拒绝，再对白名单工具放行；名单外调用直接失败。"] },
+    subagent: { verdict: "deny", label: "禁再派生", lines: ["子代理只继承父级 deny 与外部目录限制，allow 不继承，并默认补上 task 与 todowrite deny。"] },
   };
   const evaluate = () => {
     if (!model || !agent) {
@@ -199,15 +199,15 @@ function initTools(): void {
       return;
     }
     const view = views[agent];
-    const lines = ["入口：SessionTools.resolve 调 registry.tools()，内建 + 自定义 + 插件工具一起进过滤（tools.ts:41,92）。"];
+    const lines = ["入口：内建、自定义、插件与 MCP 工具汇入同一装配阶段。"];
     lines.push(model === "gpt5"
-      ? "模型刀：usePatch=true（id 含 gpt-、非 oss、非 gpt-4）→ apply_patch 进清单，edit/write 在这里就被过滤，模型根本没见过（registry.ts:297-300）。"
-      : "模型刀：usePatch=false → edit/write 保留，apply_patch 被过滤（registry.ts:297-300）。");
+      ? "模型视图：GPT 新模型拿到 apply_patch，edit/write 在广告前被过滤；模型从未见过它们。"
+      : "模型视图：Claude 系保留 edit/write，并过滤 apply_patch。");
     lines.push(...view.lines);
-    if (agent === "plan" && model === "gpt5") lines.push("叠加效应：清单里本就没有 edit——plan 的 edit:deny 落了空。deny 规则不能复活被模型刀过滤掉的工具，它管的是调用，不是可见性。");
-    if (agent === "plan") lines.push("同一身份还带 task:general→deny（agent.ts:165-166）——这条改的才是可见性：general 从 task 工具描述的可用子代理清单里消失（registry.ts:266-268）。");
-    lines.push("MCP 刀：MCP 工具全部进清单、不做预过滤，每次调用前 ctx.ask 强制闸门（tools.ts:390,409）。");
-    lines.push("装配终点：每个 execute 内嵌 ctx.ask，规则集 = agent.permission ∪ session.permission（tools.ts:87）——权限裁决发生在调用现场，不在清单装配时。");
+    if (agent === "plan" && model === "gpt5") lines.push("叠加效应：清单里本就没有 edit，因此 edit deny 没有目标；执行权限不能复活不可见工具。");
+    if (agent === "plan") lines.push("task 对特定子代理的 deny 会直接改变 task 描述中的可选名单；可见性与执行控制使用同一份规则。");
+    lines.push("MCP 工具当前通常在每次调用前强制 ask，不能把“出现在清单”理解为“已授权”。");
+    lines.push("装配终点：agent 规则与会话规则合并；工具在执行现场用真实资源再次裁决。");
     const eff = { verdict: view.verdict, label: view.label };
     if (agent === "plan" && model === "gpt5") { eff.verdict = "ask"; eff.label = "edit 不在清单 · deny 落空"; }
     if (trace) trace.innerHTML = lines.map((line) => `<li>${line}</li>`).join("");
@@ -230,17 +230,17 @@ function initSystem(): void {
   const status = qs<HTMLElement>(root, "[data-status]");
   const base = qs<HTMLElement>(root, "[data-base]");
   const tail: Array<[string, string]> = [
-    ["② ENV", "&lt;env&gt; 块每次 step 现生成：工作目录、平台、时间（prompt.ts:1258 sys.environment）"],
-    ["③ RULES", "AGENTS.md 指令链 instruction.system()（prompt.ts:1259）"],
-    ["④ MCP", "&lt;mcp_instructions&gt;：无挂起 server 时整段缺席（prompt.ts:1260）"],
-    ["⑤ SKILLS", "&lt;available_skills&gt;：只给目录清单，模型按需读全文（prompt.ts:1257 sys.skills）"],
-    ["段序", "[agent.prompt|BASE, ...env, ...instructions, mcp?, skills?] 在请求组装处定形（prompt.ts:1257-1269 → session/llm/request.ts:58-66）；experimental.chat.system.transform 还能在末端改段（:69-73）"],
-    ["池子", "14 个内嵌 .txt，system.ts 只 import 其中 9 个；plan/build-switch/plan-mode 走 reminders.ts 作回合提醒、不进 system（reminders.ts:11-13）；copilot-gpt-5 与 plan-reminder-anthropic 两个文件在当前 checkout 已无引用点"],
+    ["② ENV", "环境块每轮重新观察：目录、平台与日期等事实"],
+    ["③ RULES", "项目规则按发现链装入，读到子目录时还可按需追加更近的规则"],
+    ["④ MCP", "只有当前服务提供说明时才出现对应指令段"],
+    ["⑤ SKILLS", "只常驻名称与描述，正文由模型按需加载"],
+    ["段序", "基础指令在前，动态事实随后；插件钩子可在末端变换 system 数组"],
+    ["迁移提醒", "这是当前 v1 的重组模型；v2 把 agent 指令和 context epoch 基线明确分开"],
   ];
   const data: Record<string, { base: string; head: Array<[string, string]> }> = {
-    claude: { base: "anthropic.txt", head: [["① BASE", "provider() 命中 claude 分支 → anthropic.txt（system.ts:41）。agent.prompt 存在则整段替换基础段（request.ts:60）"]] },
-    gpt: { base: "gpt.txt", head: [["① BASE", "gpt 分支 → gpt.txt（system.ts:34-38）。老模型先被截走：gpt-4/o1/o3 在 :32-33 绕进 beast.txt"]] },
-    codex: { base: "codex.txt", head: [["① BASE", "gpt 分支内嵌 codex 子判定 → codex.txt（system.ts:35-37）。同一个 openai provider，换的只是文案段"]] },
+    claude: { base: "Anthropic 基础段", head: [["① BASE", "Claude 家族选择对应基础指令；agent 自定义指令存在时可整体替代它"]] },
+    gpt: { base: "GPT 基础段", head: [["① BASE", "GPT 家族选择自己的基础指令；较老模型可能进入另一套兼容指令"]] },
+    codex: { base: "Codex 基础段", head: [["① BASE", "Codex 在 OpenAI 家族内选择专用基础指令；环境和项目规则仍按同一顺序叠加"]] },
   };
   qsa<HTMLButtonElement>(root, "[data-key]").forEach((button) => button.addEventListener("click", () => {
     const item = data[button.dataset.key ?? ""];
@@ -259,22 +259,22 @@ function initModels(): void {
   const status = qs<HTMLElement>(root, "[data-status]");
   const data: SurfaceData = {
     claude: [
-      ["工具面", "usePatch=false：edit/write 在清单、apply_patch 被过滤（registry.ts:297-300）"],
-      ["system 段", "anthropic.txt（system.ts:41）；五段里只有 BASE 随家族换"],
-      ["reasoning 方言", "新 claude 走 adaptive thinking 档位 low..max，老模型不下发该参数（transform.ts:655-682）"],
-      ["排查提示", "换模型行为突变，先 diff 两家的 registry.tools() 输出"],
+      ["工具面", "Claude 系保留 edit/write，过滤 apply_patch"],
+      ["system 段", "选择 Anthropic 基础指令；动态上下文继续按固定顺序叠加"],
+      ["reasoning 方言", "新模型支持自适应思考档位，旧模型不会收到不兼容参数"],
+      ["判断提示", "行为突变时先比较实际工具视图，再讨论模型偏好"],
     ],
     gpt5: [
-      ["工具面", "usePatch=true：只给 apply_patch，edit/write 在 registry.tools() 就被过滤（registry.ts:297-300）——模型不是不想用 edit，是从没见过"],
-      ["system 段", "gpt.txt；gpt-4/o1/o3 先绕 beast.txt（system.ts:32-38）"],
-      ["reasoning 方言", "reasoning_effort 档位按发布日期裁剪，老模型对 none/xhigh 直接 400（transform.ts:584-644）"],
-      ["排查提示", "对照第 04 章流水线：先查清单，再怪模型"],
+      ["工具面", "GPT 新模型只拿 apply_patch；edit/write 在广告前已被过滤"],
+      ["system 段", "选择 GPT 基础指令；部分老模型进入兼容分支"],
+      ["reasoning 方言", "reasoning_effort 会按模型能力裁剪，避免发送不兼容档位"],
+      ["判断提示", "先查清单，再判断模型为何不用某工具"],
     ],
     codex: [
-      ["工具面", "同受 usePatch 刀口：id 含 gpt- → edit/write 出局，只剩 apply_patch（registry.ts:297-300）"],
-      ["system 段", "codex.txt：gpt 分支内嵌 codex 子判定（system.ts:35-37）"],
-      ["reasoning 方言", "同 openai 方言系；OAuth 来自内置 codex 插件（plugin/index.ts:12），插件钩子汇集于 provider/auth.ts:116-125"],
-      ["排查提示", "工具面与文案同时换——第 12 章症状定位器 model 行的完整链路"],
+      ["工具面", "Codex 同样使用 apply_patch 视图，edit/write 不进入本轮广告"],
+      ["system 段", "在 GPT 家族内选择 Codex 专用基础指令"],
+      ["reasoning 方言", "沿用 OpenAI 参数方言；认证能力由对应插件接入"],
+      ["判断提示", "工具视图和基础指令会同时变化，排障必须分开比较"],
     ],
   };
   qsa<HTMLButtonElement>(root, "[data-key]").forEach((button) => button.addEventListener("click", () => {
@@ -296,22 +296,22 @@ function initTaskLab(): void {
   const label = qs<HTMLElement>(root, "[data-verdict-label]");
   const status = qs<HTMLElement>(root, "[data-status]");
   const parents: Record<string, { lines: string[]; inherited: string[] }> = {
-    clean: { lines: ["父会话无覆盖：session.permission 为空，继承过滤器无 deny 可抄（subagent-permissions.ts:21-23）。"], inherited: [] },
-    deny: { lines: ["父含 edit:deny → 命中继承过滤器（只留 deny 与 external_directory），进子会话规则集（subagent-permissions.ts:21-23）——父的禁令跟着子代理走。"], inherited: ["edit:*→deny（继承父）"] },
-    allow: { lines: ["父含 edit:allow → 不满足过滤器条件：allow 不继承（subagent-permissions.ts:21-23）——子会话照样按自身规则弹审批，父会话的白名单帮不上忙。"], inherited: [] },
+    clean: { lines: ["父会话无覆盖：没有额外 deny 需要下传；子会话仍按自身规则求值。"], inherited: [] },
+    deny: { lines: ["父含 edit deny：限制会跟进子会话，防止通过派生绕过父级禁令。"], inherited: ["edit:*→deny（继承父）"] },
+    allow: { lines: ["父含 edit allow：能力不会自动下放；子会话仍需依据自身规则获批。"], inherited: [] },
   };
   const budgets: Record<string, { verdict: string; label: string; wall: string; lines: string[] }> = {
     d1sinf: {
       verdict: "deny", label: "递归封死", wall: "深度墙 depth=1",
-      lines: ["深度墙：subagent_depth 缺省 1。子会话再调 task 时沿 parentID 数到 depth=1 ≥ 1 → 入口直接 fail “Subagent depth limit reached”（task.ts:104-117）——就算规则集被放开，套娃也过不了计数。", "步数墙：agent.steps 未设 → maxSteps=Infinity，时间墙立不起来（prompt.ts:1178）。"],
+      lines: ["深度墙：默认 depth=1，子会话再派生会在入口失败；即使权限放开，也过不了结构限制。", "步数墙：steps 未设意味着没有有限轮次预算。"],
     },
     d2s5: {
       verdict: "ok", label: "孙会话可派生", wall: "深度墙 depth=2 · steps=5",
-      lines: ["深度墙：subagent_depth=2 → 子会话再派生一层合法，第三层调用才被拦（task.ts:111-117）。", "步数墙：steps=5 → 第 5 步 isLastStep，messages 尾部注入 MAX_STEPS_PROMPT：禁工具、要求文本总结（prompt.ts:1178-1179,1281）。"],
+      lines: ["深度墙：depth=2 允许再派生一层，第三层才被拦。", "步数墙：第 5 步进入收尾，要求停止工具并用文本交接。"],
     },
     d1s3: {
       verdict: "deny", label: "递归封死", wall: "深度墙 depth=1 · steps=3",
-      lines: ["深度墙：subagent_depth=1 → 子会话无派生权（task.ts:104-117）。", "步数墙：steps=3 → 预算更紧，第 3 步就注入 MAX_STEPS_PROMPT 逼模型收口（prompt.ts:1178-1179,1281）。"],
+      lines: ["深度墙：depth=1，子会话无再派生权。", "步数墙：第 3 步就进入文本收尾，预算更紧。"],
     },
   };
   const evaluate = () => {
@@ -321,13 +321,13 @@ function initTaskLab(): void {
     }
     const p = parents[parent];
     const view = budgets[budget];
-    const lines = ["入口：task 工具沿 parentID 链上溯计 depth（task.ts:104-110），再 sessions.create 出带 parentID 的子会话（:155-170）——子代理只是一个普通会话。"];
+    const lines = ["入口：task 沿 parent 链计算深度，再创建普通子会话；子代理不是第二套引擎。"];
     lines.push(...p.lines);
-    lines.push("派生追加：task:*→deny——general 自身没声明 task 规则（task.ts:144-150）。todowrite 已由 general 预置 deny（agent.ts:188），经合并后的规则集在调用现场生效（tools.ts:87）。");
+    lines.push("派生时默认补上 task 与 todowrite deny，避免子代理继续扩张任务树或改写父级计划。");
     const chain = [...p.inherited, "task:*→deny", "todowrite:*→deny（general 预置）"];
     lines.push(`子会话规则集 = [ ${chain.join(" ， ")} ]。`);
     lines.push(...view.lines);
-    lines.push("回合复用：子会话走 promptOps.prompt() 递归调用主链路（task.ts:202-213）；事件在共享总线以子 sessionID 发布，TUI 靠 parentSessionId 折叠渲染（:186）。");
+    lines.push("子会话递归复用主循环；事件带自己的 session 身份，父界面可折叠观察而不混写状态。");
     if (trace) trace.innerHTML = lines.map((line) => `<li>${line}</li>`).join("");
     if (badge) badge.dataset.verdict = view.verdict;
     if (label) label.textContent = view.label;
@@ -356,18 +356,18 @@ function boot(): void {
   initModels();
   initTaskLab();
   initSurface("#oc-surfaces", {
-    tui: [["进程形态", "主线程 Solid UI + Bun Worker server"], ["传输", "in-worker app.fetch + RPC 事件（零 TCP）"], ["证据", "cli/cmd/tui.ts:54-56,240 / cli/tui/worker.ts:31-49"], ["开关", "--port 才真 listen（worker.ts:56）"]],
-    serve: [["进程形态", "opencode serve 独立进程"], ["传输", "HTTP + SSE /event；WS 仅 PTY"], ["证据", "server.ts:73 / groups/event.ts:9-14"], ["鉴权", "OPENCODE_SERVER_PASSWORD，缺省裸奔警告（serve.ts）"]],
-    run: [["进程形态", "opencode run \"…\" 一次性"], ["传输", "stdout 文本或 --format json 事件行"], ["证据", "cli/cmd/run.ts:127,174-178,679"], ["审批", "--auto/--yolo 即时 reply once，否则自动 reject（run.ts:274,801-816）"]],
-    github: [["进程形态", "node 编排进程 spawn opencode serve 子进程"], ["传输", "SDK HTTP"], ["证据", "github/index.ts:235-236 / action.yml"], ["触发", "@opencode/@oc mention + prompt input"]],
-    acp: [["协议", "ACP（Agent Client Protocol）ndJSON"], ["角色", "opencode 是 agent 端"], ["证据", "acp/agent.ts:19（@agentclientprotocol/sdk）"], ["方法", "newSession/prompt/setSessionMode/forkSession…"]],
-    desktop: [["进程形态", "Electron / Vite SPA"], ["传输", "同一 SDK + SSE（baseUrl 指向 serve）"], ["证据", "electron.vite.config.ts / tui/context/sdk.tsx:23-29"], ["复用", "desktop 内嵌 TUI 组件（@opentui）"]],
+    tui: [["进程形态", "主线程 UI + Worker 内的 server"], ["传输", "进程内 fetch 与 RPC 事件，不占 TCP 端口"], ["共同内核", "仍经过同一套路由和会话契约"], ["判断提示", "界面卡住先分 Worker、事件桥与会话状态"]],
+    serve: [["进程形态", "独立 headless server"], ["传输", "HTTP + SSE；WebSocket 只服务交互终端"], ["共同内核", "与本地 TUI 使用同一业务路由"], ["安全提示", "局域网绑定与可选认证必须单独核对"]],
+    run: [["进程形态", "一次性 headless CLI"], ["传输", "文本输出或结构化事件行"], ["审批", "无人值守模式必须显式设计批准或拒绝策略"], ["判断提示", "静默退出先查权限、过滤与重试耗尽"]],
+    github: [["进程形态", "自动化进程启动 server 子进程"], ["传输", "生成 SDK 通过 HTTP 调用"], ["触发", "评论提及或工作流输入"], ["判断提示", "先证明事件与退出码契约，再谈自动化成功"]],
+    acp: [["协议", "Agent Client Protocol"], ["角色", "OpenCode 作为 Agent 端"], ["能力", "新建、提示、切换模式、派生会话"], ["判断提示", "编辑器只是协议表面，不拥有另一套循环"]],
+    desktop: [["进程形态", "桌面或 Web 应用"], ["传输", "同一 SDK + SSE"], ["复用", "共享终端 UI 组件与会话状态"], ["判断提示", "只换表面，不应改变持久状态语义"]],
   });
   initChoiceDetail("#oc-atlas", {
-    stuck: { title: "会话被上一轮占着，或 SSE 断了", body: "ensureRunning 对 busy 会话抛 BusyError，单飞是设计而非 bug。先查 session.status 事件流，再查 TUI 的 SSE 重连日志（retryDelay 1s→30s）。", status: "SESSION · run-state.ts:74-107" },
-    approve: { title: "默认动作就是 ask", body: "evaluate 无匹配规则时返回 {action:\"ask\"}，且 findLast 让后置规则覆盖前置——你的 allow 可能写在上面被压掉了。查 permission 配置顺序与 Reply: always 白名单。", status: "PERMISSION · index.ts:28-37,67-110" },
-    dumb: { title: "压缩边界吃掉了关键上下文", body: "每轮只重放“最后一条摘要之后”的消息，PRUNE 还会清空 40k token 之外的老工具输出。看 MessageTable 里 mode:\"compaction\" 行与 [Old tool result content cleared] 占位。", status: "COMPACTION · message-v2.ts:521 + compaction.ts:273-317" },
-    model: { title: "工具视图和 prompt 都随模型家族换了", body: "GPT-5 系只拿 apply_patch 没有 edit/write，system 段从 anthropic.txt 换成 gpt/codex.txt，reasoning 参数翻译成各家方言。对比 registry.tools() 与 SystemPrompt.provider() 的分支。", status: "MODEL · registry.ts:297-300 + system.ts:27-49" },
+    stuck: { title: "会话被上一轮占着，或事件流断了", body: "同一会话单飞是设计。先查 idle/busy/retry，再确认客户端是否仍收到心跳与事件；不要先重启模型。", status: "FIRST CHECK · SESSION STATUS" },
+    approve: { title: "默认 ask，后写规则又覆盖了 allow", body: "检查 asked 是否缺 replied，再按从后向前的命中顺序重算规则；always 只应保存必要范围。", status: "FIRST CHECK · PENDING APPROVAL" },
+    dumb: { title: "压缩或修剪丢了当前任务细节", body: "检查最新摘要是否包含目标、阻塞与下一步，再看近期尾部和被清理的旧工具输出；不要把 prune 当 compaction。", status: "FIRST CHECK · MEMORY BOUNDARY" },
+    model: { title: "工具视图、基础指令和参数方言一起变了", body: "先比较模型实际收到的工具清单，再比较基础指令与 reasoning 参数；模型不是不用一个从未看见的工具。", status: "FIRST CHECK · REQUEST SHAPE" },
   });
   initChapterReader();
 }

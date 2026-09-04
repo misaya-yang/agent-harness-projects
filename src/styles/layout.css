@@ -58,6 +58,7 @@
   align-items: center;
   justify-content: space-between;
   gap: var(--s-3);
+  min-height: 58px;
   padding: 10px clamp(16px, 4vw, 28px);
   border-block-end: 1px solid var(--line);
   background: color-mix(in oklch, var(--canvas) 82%, transparent);
@@ -417,6 +418,58 @@
   }
 }
 
+/* 笔记本宽度也保留课程横向选择；章节仍留在独立导航中。 */
+@media (min-width: 900px) and (max-width: 1119px) {
+  .topbar .series-nav { display: none; }
+
+  main:not(.reader-main) { padding-block-start: 58px; }
+
+  .series-nav-tabs {
+    display: block;
+    border-block-end: 1px solid var(--line);
+    background: var(--canvas);
+  }
+
+  .course-tabs {
+    display: grid;
+    grid-template-columns: repeat(7, minmax(0, 1fr));
+    min-height: 48px;
+    padding-inline: 18px;
+  }
+
+  .course-tabs > .label-mono { display: none; }
+
+  .course-tabs a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    min-width: 0;
+    padding-inline: 6px;
+    border-block-end: 2px solid transparent;
+    color: var(--text-3);
+    font-size: .72rem;
+    font-weight: 700;
+    line-height: 1.25;
+    text-align: center;
+    text-decoration: none;
+    white-space: nowrap;
+  }
+
+  .course-tabs a span {
+    color: var(--accent);
+    font-family: var(--ff-mono);
+    font-size: .58rem;
+    font-weight: 500;
+  }
+
+  .course-tabs a[aria-current="page"] {
+    border-block-end-color: var(--accent-vivid);
+    color: var(--text);
+    background: var(--accent-wash);
+  }
+}
+
 @supports not (backdrop-filter: blur(1px)) {
   .series-nav-tabs { background: var(--canvas); }
 }
@@ -455,7 +508,7 @@
 }
 
 .chapter-head {
-  margin-block-end: var(--s-6);
+  margin-block-end: var(--s-5);
 }
 
 .chapter-head .label-mono {
@@ -466,7 +519,7 @@
 
 .chapter-head h2 {
   font-size: var(--step-h2);
-  max-width: 22em;
+  max-width: 19em;
 }
 
 .lede {
@@ -688,7 +741,7 @@ footer.site a {
   gap: clamp(12px, 2vw, 28px);
   width: 100%;
   max-width: none;
-  min-height: 76px;
+  min-height: 68px;
   border-block-end: 1px solid var(--line);
   background: var(--canvas);
 }
@@ -752,13 +805,15 @@ footer.site a {
   overflow-y: auto;
   overscroll-behavior: contain;
   scrollbar-gutter: stable;
+  scrollbar-color: var(--line-strong) transparent;
+  scrollbar-width: thin;
 }
 .reader-view[hidden] { display: none !important; }
 .reader-view.is-active { animation: reader-view-in var(--dur-base) var(--ease-out) both; }
 .reader-view :is(h1, h2)[tabindex="-1"]:focus-visible { outline: 2px solid transparent; outline-offset: 0; box-shadow: -4px 0 0 var(--focus-ring); }
 @keyframes reader-view-in { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
-.reader-mode .hero { min-height: 100%; padding-block: clamp(2rem, 5vw, 5rem); justify-content: flex-start; }
-.reader-view.chapter { border-block-start: 0; padding-block: clamp(2.5rem, 5vw, 5.5rem); }
+.reader-mode .hero { min-height: 100%; padding-block: clamp(1.75rem, 4vw, 4rem); justify-content: flex-start; }
+.reader-view.chapter { border-block-start: 0; padding-block: clamp(1.9rem, 4vw, 4.25rem); }
 
 .reader-map {
   display: grid;
@@ -819,12 +874,29 @@ footer.site a {
   .reader-map-link:hover, .reader-actions button:not(:disabled):hover, .reader-phase-list a:hover { background: var(--accent-wash); color: var(--text); }
 }
 @media (min-width: 1120px) {
-  .reader-main { grid-template-rows: 54px 76px minmax(0, 1fr); padding-block-start: 0; }
+  .reader-main { grid-template-rows: 54px 68px minmax(0, 1fr); padding-block-start: 0; }
   .reader-main > .series-nav-tabs { display: block; position: static; }
 }
+@media (min-width: 900px) and (max-width: 1119px) {
+  .reader-main { grid-template-rows: 48px 68px minmax(0, 1fr); padding-block-start: 58px; }
+  .reader-main > .series-nav-tabs { display: block; }
+  .reader-current > span:not(.label-mono) { display: none; }
+}
 @media (max-width: 760px) {
-  .reader-toolbar { grid-template-columns: minmax(0, 1fr) auto; min-height: 70px; padding-inline: 16px; }
-  .reader-map-link { display: none; }
+  .reader-toolbar { grid-template-columns: auto minmax(0, 1fr) auto; gap: 4px; min-height: 70px; padding-inline: 12px; }
+  .reader-map-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    inline-size: 40px;
+    min-height: 40px;
+    padding: 0;
+    border-inline-start: 0;
+    border-radius: var(--r-control);
+  }
+  .reader-map-link .label-mono { display: none; }
+  .reader-map-link strong { font-size: 0; }
+  .reader-map-link strong::after { content: "地图"; font-size: .7rem; }
   .reader-current { grid-template-columns: auto minmax(0, 1fr); gap: 6px 10px; }
   .reader-current > span:not(.label-mono) { display: none; }
   .reader-actions { gap: 4px; }

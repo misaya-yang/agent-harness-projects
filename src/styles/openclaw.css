@@ -38,6 +38,20 @@
 .openclaw-page .surface-detail { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .openclaw-page .surface-detail dd { min-width: 0; overflow-wrap: anywhere; }
 
+.openclaw-page .trace-line {
+  display: block;
+  margin-block: var(--s-4);
+  padding: var(--s-3) var(--s-4);
+  overflow-wrap: anywhere;
+  border-inline-start: 3px solid var(--accent-vivid);
+  border-radius: 0 var(--r-control) var(--r-control) 0;
+  background: var(--surface-console);
+  color: var(--text-on-console);
+  font-family: var(--ff-mono);
+  font-size: var(--step-label);
+  line-height: 1.75;
+}
+
 /* 重试预算条：与 .ctx-bar 同框语言，但语义是 used/max 余量 */
 .oclaw-bar {
   display: flex;

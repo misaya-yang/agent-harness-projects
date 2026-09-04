@@ -16,7 +16,7 @@ const courses: AgentCourse[] = [
     name: "Codex",
     path: "/codex",
     code: "OPENAI / RUST",
-    description: "Thread、Turn、Item 与 App Server 运行时",
+    description: "三层循环、差分上下文与代理树治理",
     chapters: 12,
   },
   {
@@ -24,7 +24,7 @@ const courses: AgentCourse[] = [
     name: "Grok Build",
     path: "/grok",
     code: "XAI / RUST",
-    description: "Session Actors、ACP、Tools 与 Workspace",
+    description: "单写者 Actor、工作区副作用与崩溃恢复",
     chapters: 12,
   },
   {
@@ -32,7 +32,7 @@ const courses: AgentCourse[] = [
     name: "DeepSeek Harness",
     path: "/deepseek",
     code: "DEEPSEEK / TYPESCRIPT",
-    description: "Cordis 插件树、Turn / Step、Session Log 与能力缝",
+    description: "事件日志、插件组合与可替换执行环境",
     chapters: 12,
   },
   {
@@ -40,7 +40,7 @@ const courses: AgentCourse[] = [
     name: "Pi Agent",
     path: "/pi",
     code: "PI / TYPESCRIPT",
-    description: "Agent Loop、统一 LLM、Session Tree 与扩展运行时",
+    description: "纯函数循环、源序回填与可分支会话树",
     chapters: 12,
   },
   {
@@ -48,7 +48,7 @@ const courses: AgentCourse[] = [
     name: "OpenCode",
     path: "/opencode",
     code: "OPENCODE / BUN",
-    description: "服务器即内核：事件投影、审批与子代理",
+    description: "持久循环判据、上下文纪元与事件审批",
     chapters: 12,
   },
   {
@@ -56,7 +56,7 @@ const courses: AgentCourse[] = [
     name: "OpenClaw",
     path: "/openclaw",
     code: "OPENCLAW / TYPESCRIPT",
-    description: "有界 run 预算、持久状态与记忆唤醒",
+    description: "常驻网关、异步回流与跨天记忆",
     chapters: 12,
   },
   {
@@ -64,7 +64,7 @@ const courses: AgentCourse[] = [
     name: "Hermes Agent",
     path: "/hermes",
     code: "HERMES / PYTHON",
-    description: "自演化学习闭环、窄腰工具与六面同核",
+    description: "三段回合、缓存经济与摘要式委派",
     chapters: 12,
   },
 ];
@@ -119,9 +119,9 @@ export function initSeriesNav(): void {
             <span class="series-chevron" aria-hidden="true">⌄</span>
           </summary>
           <div class="series-panel">
-            <div class="series-panel-head"><span>顶级开源 Agent 教学系列</span><small>${courses.length} 门已上线</small></div>
+            <div class="series-panel-head"><span>开源 Agent 工程课程</span><small>${courses.length} 门已上线</small></div>
             <nav aria-label="选择 Agent 课程">${courseItems(currentId)}</nav>
-            <p>持续增加新的开源 Agent · 统一采用源码事实与交互实验</p>
+            <p>统一用问题、运行轨迹与交互实验讲清工程取舍</p>
           </div>
         </details>`;
 

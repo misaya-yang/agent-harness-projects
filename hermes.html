@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content="用事故、白话解释、短 trace 与判断练习，系统学习 Hermes Agent 的回合、上下文、委派和可靠性设计。" />
+    <meta name="description" content="用场景、机制讲解、短 trace 与判断练习，系统学习 Hermes Agent 的回合、上下文、委派和可靠性设计。" />
     <meta property="og:type" content="website" />
     <meta property="og:title" content="Hermes Agent 生产级 Harness 课程" />
     <meta property="og:description" content="从一次回合走到多宿主与多代理：理解 Hermes 如何控制工具、缓存、压缩、恢复与异步回流。" />
@@ -26,7 +26,7 @@
     <div class="progress-line" aria-hidden="true"></div>
     <header class="topbar">
       <a class="brand" href="#top"><span class="brand-long">Hermes Agent</span><span class="brand-short">HMS</span> 实战课 <span class="label-mono">FIELD GUIDE</span></a>
-      <div class="topbar-actions"><div data-series-nav data-variant="top"><a class="series-fallback" href="/codex">Agent 系列</a></div><button class="theme-btn" type="button" data-theme-toggle aria-label="切换到深色模式"><span aria-hidden="true" data-theme-icon>◐</span><span data-theme-label>深色模式</span></button><button class="menu-btn" type="button" data-menu-btn aria-expanded="false" aria-controls="chapter-nav">章节</button></div>
+      <div class="topbar-actions"><div data-series-nav data-variant="top"><a class="series-fallback" href="/">Agent 系列</a></div><button class="theme-btn" type="button" data-theme-toggle aria-label="切换到深色模式"><span aria-hidden="true" data-theme-icon>◐</span><span data-theme-label>深色模式</span></button><button class="menu-btn" type="button" data-menu-btn aria-expanded="false" aria-controls="chapter-nav">章节</button></div>
     </header>
     <nav class="chapter-nav" id="chapter-nav" data-menu-panel hidden aria-label="课程章节">
       <a href="#top" data-spy-link><span class="no">00</span>课程入口</a>
@@ -62,16 +62,16 @@
     </aside>
 
     <main id="main">
-      <div data-series-nav data-variant="tabs"><nav class="course-tabs" aria-label="选择 Agent 课程"><a href="/codex">Codex</a><a href="/grok">Grok Build</a><a href="/deepseek">DeepSeek Harness</a><a href="/pi">Pi Agent</a><a href="/opencode">OpenCode</a><a href="/openclaw">OpenClaw</a><a href="/hermes" aria-current="page">Hermes Agent</a></nav></div>
+      <div data-series-nav data-variant="tabs"><nav class="course-tabs" aria-label="选择 Agent 课程"><a href="/">学习路径</a><a href="/codex">Codex</a><a href="/grok">Grok Build</a><a href="/deepseek">DeepSeek Harness</a><a href="/pi">Pi Agent</a><a href="/opencode">OpenCode</a><a href="/openclaw">OpenClaw</a><a href="/hermes" aria-current="page">Hermes Agent</a></nav></div>
 
       <section class="hero shell" id="top" data-spy>
         <div class="hero-grid">
           <div data-reveal>
             <p class="eyebrow label-mono">TURN ENGINE · CONTEXT ECONOMICS · DELEGATION</p>
-            <h1>让 Agent 会复盘、会委派，<span class="alt">也知道何时停下。</span></h1>
-            <p class="sub">这门课从真实事故出发：用户中途改口、工具卡死、上下文爆窗、子代理完成却无处回流。每章先讲“会坏在哪里”，再用白话和短 trace 还原机制，最后让你做一次工程判断。事实边界固定在快照 <code>97f3229dfdc0</code>。</p>
+            <h1>Hermes Agent 的回合控制，<span class="alt">记忆与委派机制。</span></h1>
+            <p class="sub">课程以用户在途修改任务、工具无响应、上下文达到上限和子代理结果交付为案例。每个单元先明确现象，再用事件轨迹解释机制，最后完成工程判断。事实边界固定在快照 <code>97f3229dfdc0</code>。</p>
             <ul class="hero-outcomes" aria-label="学完本课程你将能够"><li>画出序章—循环—尾声，并选择 steer、redirect、interrupt 或 queue</li><li>解释 stable 前缀、API sidecar 与规范转录为什么必须分开</li><li>设计不会压坏历史的 compaction 事务与恢复出口</li><li>组织多宿主和子代理，并为完成回流、权限与失败归责设边界</li></ul>
-            <div class="hero-cta"><a class="btn-primary" href="#loop">从第一个事故开始 <span class="arrow" aria-hidden="true">→</span></a><a class="btn-secondary" href="#practice">先做综合判断</a></div>
+            <div class="hero-cta"><a class="btn-primary" href="#loop">从第一个场景开始 <span class="arrow" aria-hidden="true">→</span></a><a class="btn-secondary" href="#practice">先做综合判断</a></div>
           </div>
           <figure class="hero-loop" data-hero-loop data-reveal data-reveal-delay="120">
             <svg viewBox="0 0 480 360" role="img" aria-labelledby="hm-hero-title hm-hero-desc">
@@ -88,7 +88,7 @@
             <figcaption><span>one turn · many safe exits</span><button class="pause-btn" type="button" data-loop-pause aria-pressed="false">⏸ 暂停</button></figcaption>
           </figure>
         </div>
-        <div class="hero-meta label-mono" aria-label="课程范围"><span>VERIFIED SNAPSHOT · 97f3229dfdc0</span><span>12 章 · 09 个交互实验</span><span>事故 → 机制 → 判断</span></div>
+        <div class="hero-meta label-mono" aria-label="课程范围"><span>VERIFIED SNAPSHOT · 97f3229dfdc0</span><span>12 章 · 09 个交互实验</span><span>场景 → 机制 → 判断</span></div>
       </section>
 
       <section class="chapter shell" id="loop" data-spy>
@@ -149,14 +149,14 @@
       </div></section>
 
       <section class="chapter shell" id="gateway" data-spy>
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 09 · MULTI-HOST</span><h2>CLI、桌面、消息网关可以长得不同，但不能各自拥有一套回合语义。</h2><p class="lede">Hermes 只有一个会话内核。宿主负责输入仲裁、事件展示和会话写租约；模型调用、工具循环、压缩和恢复都留在内核。新增前端时接协议与工具面，不复制主循环。</p></header>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 09 · MULTI-HOST</span><h2>CLI、桌面、消息网关可以长得不同，但不能各自拥有一套回合语义。</h2><p class="lede">Hermes 只有一个会话内核。宿主负责输入仲裁、事件展示和会话写租约；模型调用、工具循环、压缩和恢复都留在内核。新增前端时接协议与工具面，不复制主循环。</p></header><aside class="course-update"><span>源码复核 · 多客户端写入</span><h3>共享会话时，写入所有权必须单一。</h3><p>最新真实后端测试覆盖了 CLI、TUI 与 Desktop 同时接入时的会话归属和切换。新增客户端不能只复用页面外观；必须沿用同一写租约、消息顺序和恢复语义。</p><p><strong>面试追问：</strong>两个客户端同时发送请求时，你怎样避免一份转录出现两个竞争写者？</p><a href="/#topic-clients">返回「客户端与宿主」主题 ↗</a></aside>
         <div class="primitive-grid" data-reveal><article><span class="primitive-no">01 / INPUT</span><h3>输入仲裁器</h3><p>回合忙时，宿主根据 steer、redirect、interrupt、queue 的语义路由新消息。</p></article><article><span class="primitive-no">02 / OUTPUT</span><h3>事件多路复用</h3><p>流式 token、步骤和工具生命周期通过同一事件面送往终端、WebSocket 或镜像观察者。</p></article><article><span class="primitive-no">03 / WRITE</span><h3>写锁持有者</h3><p>多个路由键可能命中同一会话；按会话 id 的代际租约防两个对象交错写同一转录。</p></article></div>
         <dl class="gloss" data-reveal><div><dt>传输失败</dt><dd>只把明确的“对端已死”当正常断开；本机磁盘、序列化等错误必须进入崩溃诊断。</dd></div><div><dt>工具面门控</dt><dd>只有能应答桌面操作的宿主才向模型展示桌面工具，从源头消灭不存在的调用。</dd></div><div><dt>配置恢复</dt><dd>进程内配置解析失败沿用上次成功值；新进程没有这份内存快照，只能回退默认。</dd></div></dl>
         <div class="decision" data-reveal><span class="label-mono">CHAPTER CHECK</span><p><strong>练习：</strong>为一个新 IDE 宿主画接线图：它只需要会话 RPC、事件消费和能力门控；若方案里出现第二个 while 工具循环，边界已经错了。</p></div>
       </section>
 
       <section class="chapter band-deep" id="cron" data-spy><div class="shell">
-        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 10 · ASYNC DELIVERY</span><h2>后台任务完成时，父代理还在说话：结果不能硬塞进当前消息序列。</h2><p class="lede">Hermes 把子代理结果、代理间回复与后台进程完成统一放进 completion queue，等目标会话空闲时铸成新回合。这样同时保住角色交替、前缀缓存和崩溃恢复。</p></header>
+        <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 10 · ASYNC DELIVERY</span><h2>后台任务完成时，父代理还在说话：结果不能直接写入当前消息序列。</h2><p class="lede">Hermes 把子代理结果、代理间回复与后台进程完成统一放进 completion queue，等目标会话空闲时作为新回合输入。这样同时保住角色交替、前缀缓存和崩溃恢复。</p></header><aside class="course-update"><span>源码更新 · 可选投递镜像</span><h3>发送成功的通知，是否要进入目标聊天历史？</h3><p>Webhook 新增按路由启用的镜像选项；成功送到聊天平台后，可把已发送内容写入目标聊天会话，使用户回复时 Agent 知道自己刚说过什么。该选项默认关闭，并受目标 profile 范围约束。</p><p><strong>面试追问：</strong>为什么外部投递成功和会话历史已记录必须分别确认？</p><a href="/#topic-state">返回「状态协议」主题 ↗</a></aside>
         <div class="custom-stack" data-reveal><div><span class="custom-key">DISPATCH</span><strong>立即给句柄</strong><p>后台工作不阻塞当前回合；若目标没有耐久消费者，则降级为同步，不发一个永远没人收的句柄。</p></div><div><span class="custom-key">CLAIM</span><strong>先认领再投递</strong><p>耐久账本记录派发、完成和投递状态，claim 租约防两个进程重复交付。</p></div><div><span class="custom-key">REPLAY</span><strong>有界重放</strong><p>重启后可恢复新鲜结果；交付次数和结果年龄都有上限，避免僵尸任务永久回灌。</p></div></div>
         <div class="machine" id="hm-cron" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>这条任务能送到哪</strong></span><span class="label-mono" data-status>选择平台探测</span></div><div class="machine-body state-layout"><div><div class="state-counters"><div><span class="label-mono">白名单</span><strong>19</strong></div><div><span class="label-mono">插件目录</span><strong>22</strong></div><div><span class="label-mono">已探测</span><strong data-checked>0</strong></div></div><div class="state-actions"><button class="cbtn primary" type="button" data-event="telegram" aria-pressed="false">telegram</button><button class="cbtn" type="button" data-event="qqbot" aria-pressed="false">qqbot</button><button class="cbtn" type="button" data-event="ntfy" aria-pressed="false">ntfy</button><button class="cbtn" type="button" data-event="homeassistant" aria-pressed="false">homeassistant</button><button class="cbtn" type="button" data-event="raft" aria-pressed="false">raft</button><button class="cbtn" type="button" data-event="reset">重置</button></div><div class="verdict-badge" data-verdict="ask"><span data-verdict-label aria-live="polite">待探测</span></div></div><div class="stream-log elog" data-log aria-live="polite"></div></div></div>
         <div class="decision" data-reveal><span class="label-mono">CHAPTER CHECK</span><p><strong>判断题：</strong>后台结果刚完成，父回合正夹在 assistant 工具调用和 tool 结果之间。正确做法是等待空闲后开启新回合，不修改运行中的前缀。</p></div>
@@ -172,7 +172,7 @@
 
       <section class="chapter band-edge" id="practice" data-spy><div class="shell">
         <header class="chapter-head" data-reveal><span class="label-mono">CHAPTER 12 · OPERATING JUDGMENT</span><h2>排查 Agent，不要先猜模块；先判断哪一层还有能力修复。</h2><p class="lede">最终练习把前十一章压成五个问题：回合在哪一段？消息该走哪条干预通道？失败应交给机器、模型还是用户？状态是否已耐久？新结果能否在不改写前缀的情况下进入下一回合？</p></header>
-        <div class="spread"><article class="prose" data-reveal><h3>五步事故诊断</h3><ol class="kp-list"><li data-no="01"><span><strong>定范围</strong>：是单次模型请求、工具执行、整回合，还是宿主路由？先别把所有“卡住”都叫网络问题。</span></li><li data-no="02"><span><strong>看退出原因</strong>：区分预算耗尽、中断、护栏、持久化失败、provider 失败与真正的正常回答。</span></li><li data-no="03"><span><strong>查耐久边界</strong>：工具副作用发生前，调用块是否已经可恢复？后台完成是否已进入耐久账本？</span></li><li data-no="04"><span><strong>核对缓存边界</strong>：谁改写了已发送前缀？易变内容是否错误地进入系统提示或规范转录？</span></li><li data-no="05"><span><strong>验证恢复动作</strong>：重试是否只有一个 owner？压缩是否真的降到阈值下？子代理的完成是否有父侧验证句柄？</span></li></ol></article></div>
+        <div class="spread"><article class="prose" data-reveal><h3>五步场景诊断</h3><ol class="kp-list"><li data-no="01"><span><strong>定范围</strong>：是单次模型请求、工具执行、整回合，还是宿主路由？先别把所有“卡住”都叫网络问题。</span></li><li data-no="02"><span><strong>看退出原因</strong>：区分预算耗尽、中断、护栏、持久化失败、provider 失败与真正的正常回答。</span></li><li data-no="03"><span><strong>查耐久边界</strong>：工具副作用发生前，调用块是否已经可恢复？后台完成是否已进入耐久账本？</span></li><li data-no="04"><span><strong>核对缓存边界</strong>：谁改写了已发送前缀？易变内容是否错误地进入系统提示或规范转录？</span></li><li data-no="05"><span><strong>验证恢复动作</strong>：重试是否只有一个 owner？压缩是否真的降到阈值下？子代理的完成是否有父侧验证句柄？</span></li></ol></article></div>
         <div class="machine" id="hm-atlas" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>四症状定位器</strong></span><span class="label-mono" data-status>选择症状</span></div><div class="machine-body atlas-layout"><div class="atlas-choices"><button class="layer-row" type="button" data-key="cost" aria-pressed="false">成本异常</button><button class="layer-row" type="button" data-key="vanish" aria-pressed="false">工具消失</button><button class="layer-row" type="button" data-key="resume" aria-pressed="false">恢复失败</button><button class="layer-row" type="button" data-key="cron" aria-pressed="false">定时不跑</button></div><div class="atlas-detail" data-detail><span class="label-mono">FIRST EVIDENCE</span><h3>选择一种故障</h3><p>先判断故障层，再选第一条最有区分度的证据。</p></div></div></div>
         <div class="interview" data-reveal><span class="label-mono">PROBLEM SET 01 · 干预选择</span><h4>模型正在生成解释，用户改了最终输出格式；模型正在执行不可逆命令，用户说目标错了。两次分别选什么？</h4><div class="qa"><details><summary>展开判断</summary><div class="ans"><p>前者用 redirect：取消在途模型请求并保留已经完成的上下文。后者用 interrupt：副作用目标错误，继续执行的代价更高。若工具正在做安全的长读且用户只是补充范围，用 steer。</p></div></details></div></div>
         <div class="interview" data-reveal><span class="label-mono">PROBLEM SET 02 · 压缩设计</span><h4>摘要后消息少了一半，但下一次真实输入仍高于阈值。算成功吗？下一步怎么做？</h4><div class="qa"><details><summary>展开判断</summary><div class="ans"><p>不算。不可压的系统提示和工具 schema 可能占据地板。应记录无收益，进入 anti-thrash，避免每回合重复烧摘要；到观察期再探测，或先降低不可压固定成本。</p></div></details></div></div>
@@ -182,7 +182,7 @@
       </div></section>
     </main>
 
-    <footer class="site"><div class="shell"><span>顶级 Agent 内核图谱 · Hermes Agent</span><div><a href="/codex">Codex</a> · <a href="/grok">Grok Build</a> · <a href="/deepseek">DeepSeek Harness</a> · <a href="/pi">Pi Agent</a> · <a href="/opencode">OpenCode</a> · <a href="/openclaw">OpenClaw</a> · <a href="/hermes" aria-current="page">Hermes Agent</a> · <a href="#top">返回顶部 ↑</a></div></div></footer>
+    <footer class="site"><div class="shell"><span>Agent Harness 内核图谱 · Hermes Agent</span><div><a href="/codex">Codex</a> · <a href="/grok">Grok Build</a> · <a href="/deepseek">DeepSeek Harness</a> · <a href="/pi">Pi Agent</a> · <a href="/opencode">OpenCode</a> · <a href="/openclaw">OpenClaw</a> · <a href="/hermes" aria-current="page">Hermes Agent</a> · <a href="#top">返回顶部 ↑</a></div></div></footer>
     <script type="module" src="/src/hermes.ts"></script>
   </body>
 </html>

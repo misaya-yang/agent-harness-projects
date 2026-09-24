@@ -6,7 +6,6 @@ type AgentCourse = {
   path: string;
   code: string;
   description: string;
-  chapters: number;
 };
 
 // 新课程只需在这里增加一项；所有页面的顶部选择器与侧栏会同步更新。
@@ -16,8 +15,7 @@ const courses: AgentCourse[] = [
     name: "Codex",
     path: "/codex",
     code: "OPENAI / RUST",
-    description: "三层循环、差分上下文与代理树治理",
-    chapters: 12,
+    description: "提示词分层、记忆分账与可重放 Agent Loop",
   },
   {
     id: "grok",
@@ -25,7 +23,6 @@ const courses: AgentCourse[] = [
     path: "/grok",
     code: "XAI / RUST",
     description: "单写者 Actor、工作区副作用与崩溃恢复",
-    chapters: 12,
   },
   {
     id: "deepseek",
@@ -33,7 +30,6 @@ const courses: AgentCourse[] = [
     path: "/deepseek",
     code: "DEEPSEEK / TYPESCRIPT",
     description: "事件日志、插件组合与可替换执行环境",
-    chapters: 12,
   },
   {
     id: "pi",
@@ -41,7 +37,6 @@ const courses: AgentCourse[] = [
     path: "/pi",
     code: "PI / TYPESCRIPT",
     description: "纯函数循环、源序回填与可分支会话树",
-    chapters: 12,
   },
   {
     id: "opencode",
@@ -49,7 +44,6 @@ const courses: AgentCourse[] = [
     path: "/opencode",
     code: "OPENCODE / BUN",
     description: "持久循环判据、上下文纪元与事件审批",
-    chapters: 12,
   },
   {
     id: "openclaw",
@@ -57,7 +51,6 @@ const courses: AgentCourse[] = [
     path: "/openclaw",
     code: "OPENCLAW / TYPESCRIPT",
     description: "常驻网关、异步回流与跨天记忆",
-    chapters: 12,
   },
   {
     id: "hermes",
@@ -65,7 +58,6 @@ const courses: AgentCourse[] = [
     path: "/hermes",
     code: "HERMES / PYTHON",
     description: "三段回合、缓存经济与摘要式委派",
-    chapters: 12,
   },
 ];
 
@@ -82,8 +74,8 @@ function courseItems(currentId: string): string {
       </span>
       <span class="series-meta">
         <small>${course.code}</small>
-        <b>${course.chapters} 章</b>
-        <span class="series-progress-pill ${stats.percent === 100 ? "is-complete" : ""}" data-course-progress="${course.id}">${stats.completedCount}/${course.chapters} (${stats.percent}%)</span>
+        <b>${stats.totalCount} ${course.id === "codex" ? "模块" : "课"}</b>
+        <span class="series-progress-pill ${stats.percent === 100 ? "is-complete" : ""}" data-course-progress="${course.id}">${stats.completedCount}/${stats.totalCount} (${stats.percent}%)</span>
       </span>
     </a>`;
     })
@@ -91,7 +83,8 @@ function courseItems(currentId: string): string {
 }
 
 function courseTabs(currentId: string): string {
-  return courses.map((course, index) => `
+  const home = `<a href="/" ${currentId === "home" ? 'aria-current="page"' : ""}>学习路径</a>`;
+  return home + courses.map((course, index) => `
     <a href="${course.path}" ${course.id === currentId ? 'aria-current="page"' : ""}>
       <span>${String(index + 1).padStart(2, "0")}</span>${course.name}
     </a>`).join("");
@@ -99,12 +92,13 @@ function courseTabs(currentId: string): string {
 
 export function initSeriesNav(): void {
   const currentId = document.body.dataset.agent ?? "codex";
-  const current = courses.find((course) => course.id === currentId) ?? courses[0];
+  const current = courses.find((course) => course.id === currentId);
 
   const renderNav = () => {
     document.querySelectorAll<HTMLElement>("[data-series-nav]").forEach((root) => {
       const variant = root.dataset.variant ?? "top";
-      root.className = `series-nav series-nav-${variant}`;
+      root.classList.remove("series-nav-top", "series-nav-tabs");
+      root.classList.add("series-nav", `series-nav-${variant}`);
 
       if (variant === "tabs") {
         root.innerHTML = `<nav class="course-tabs" aria-label="选择 Agent 课程"><span class="label-mono">课程</span>${courseTabs(currentId)}</nav>`;
@@ -115,7 +109,7 @@ export function initSeriesNav(): void {
         <details class="series-menu">
           <summary aria-label="选择 Agent 课程">
             <span class="series-summary-label">Agent 系列</span>
-            <strong>${current.name}</strong>
+            <strong>${current?.name ?? "学习路径"}</strong>
             <span class="series-chevron" aria-hidden="true">⌄</span>
           </summary>
           <div class="series-panel">
@@ -150,7 +144,7 @@ export function initSeriesNav(): void {
     courses.forEach((c) => {
       const stats = getCourseProgress(c.id);
       document.querySelectorAll<HTMLElement>(`[data-course-progress="${c.id}"]`).forEach((el) => {
-        el.textContent = `${stats.completedCount}/${c.chapters} (${stats.percent}%)`;
+        el.textContent = `${stats.completedCount}/${stats.totalCount} (${stats.percent}%)`;
         el.classList.toggle("is-complete", stats.percent === 100);
       });
     });

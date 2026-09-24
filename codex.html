@@ -1,0 +1,439 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="以 12 个核心模块系统学习 Codex 的 Agent Loop、提示词工程、上下文压缩、记忆管理、工具、安全、恢复与多代理治理。" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Codex 内核图谱 · 交互式 Agent 工程课" />
+    <meta property="og:description" content="用完整模块而非零散名词，读懂 Codex 如何运行、记忆、恢复、执行工具并治理多代理。" />
+    <meta property="og:url" content="https://harness.lvy-u.chatgpt.site/codex" />
+    <meta property="og:image" content="https://harness.lvy-u.chatgpt.site/og.png" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <link rel="canonical" href="https://harness.lvy-u.chatgpt.site/codex" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Codex 内核图谱 · 交互式 Agent 工程课" />
+    <meta name="twitter:description" content="用完整模块而非零散名词，读懂 Codex 如何运行、记忆、恢复、执行工具并治理多代理。" />
+    <meta name="twitter:image" content="https://harness.lvy-u.chatgpt.site/og.png" />
+    <title>Codex 内核图谱 · 交互式 Agent 工程课</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&amp;family=Noto+Sans+SC:wght@400;500;700&amp;family=Noto+Serif+SC:wght@700;900&amp;display=swap" rel="stylesheet" />
+    <link href="/src/styles/tokens.css" rel="stylesheet" />
+    <script>
+      document.documentElement.classList.add("js");
+      try {
+        const savedTheme = localStorage.getItem("codex-atlas-theme");
+        if (savedTheme === "light" || savedTheme === "dark") {
+          document.documentElement.dataset.theme = savedTheme;
+        }
+      } catch {}
+      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+        document.documentElement.classList.add("rm");
+      }
+    </script>
+  </head>
+  <body data-agent="codex">
+    <a class="skip-link" href="#main">跳到正文</a>
+    <div class="progress-line" aria-hidden="true"></div>
+    <header class="topbar">
+      <a class="brand" href="#top">Codex 内核图谱 <span class="label-mono">FIELD GUIDE</span></a>
+      <div class="topbar-actions"><div data-series-nav data-variant="top"><a class="series-fallback" href="/">Agent 系列</a></div><button class="theme-btn" type="button" data-theme-toggle aria-label="切换到深色模式"><span aria-hidden="true" data-theme-icon>◐</span><span data-theme-label>深色模式</span></button><button class="menu-btn" type="button" data-menu-btn aria-expanded="false" aria-controls="chapter-nav">章节</button></div>
+    </header>
+    <nav class="chapter-nav" id="chapter-nav" data-menu-panel hidden aria-label="课程章节">
+      <a href="#top" data-spy-link><span class="no">00</span>课程入口</a>
+      <a href="#loop" data-spy-link><span class="no">01</span>Agent Loop</a>
+      <a href="#protocol" data-spy-link><span class="no">02</span>状态与协议</a>
+      <a href="#tools" data-spy-link><span class="no">03</span>工具系统</a>
+      <a href="#safety" data-spy-link><span class="no">04</span>安全边界</a>
+      <a href="#context" data-spy-link><span class="no">05</span>提示词工程</a>
+      <a href="#platform" data-spy-link><span class="no">06</span>平台架构</a>
+      <a href="#state" data-spy-link><span class="no">07</span>持久化与恢复</a>
+      <a href="#extensions" data-spy-link><span class="no">08</span>记忆管理</a>
+      <a href="#customization" data-spy-link><span class="no">09</span>定制与扩展</a>
+      <a href="#environments" data-spy-link><span class="no">10</span>多代理编排</a>
+      <a href="#surfaces" data-spy-link><span class="no">11</span>配置与客户端</a>
+      <a href="#practice" data-spy-link><span class="no">12</span>可靠性工程</a>
+    </nav>
+    <aside class="rail" aria-label="课程章节">
+      <a class="brand" href="#top">Codex 内核图谱</a>
+      <a href="#top" data-spy-link><span class="no">00</span>课程入口</a>
+      <a href="#loop" data-spy-link><span class="no">01</span>Agent Loop</a>
+      <a href="#protocol" data-spy-link><span class="no">02</span>状态与协议</a>
+      <a href="#tools" data-spy-link><span class="no">03</span>工具系统</a>
+      <a href="#safety" data-spy-link><span class="no">04</span>安全边界</a>
+      <a href="#context" data-spy-link><span class="no">05</span>提示词工程</a>
+      <a href="#platform" data-spy-link><span class="no">06</span>平台架构</a>
+      <a href="#state" data-spy-link><span class="no">07</span>持久化与恢复</a>
+      <a href="#extensions" data-spy-link><span class="no">08</span>记忆管理</a>
+      <a href="#customization" data-spy-link><span class="no">09</span>定制与扩展</a>
+      <a href="#environments" data-spy-link><span class="no">10</span>多代理编排</a>
+      <a href="#surfaces" data-spy-link><span class="no">11</span>配置与客户端</a>
+      <a href="#practice" data-spy-link><span class="no">12</span>可靠性工程</a>
+      <button class="theme-btn rail-theme" type="button" data-theme-toggle aria-label="切换到深色模式"><span aria-hidden="true" data-theme-icon>◐</span><span data-theme-label>深色模式</span></button>
+    </aside>
+    <main id="main">
+      <div data-series-nav data-variant="tabs"><nav class="course-tabs" aria-label="选择 Agent 课程"><a href="/">学习路径</a><a href="/codex" aria-current="page">Codex</a><a href="/grok">Grok Build</a><a href="/deepseek">DeepSeek Harness</a><a href="/pi">Pi Agent</a><a href="/opencode">OpenCode</a><a href="/openclaw">OpenClaw</a><a href="/hermes">Hermes Agent</a></nav></div>
+      <section class="hero shell" id="top" data-spy>
+        <div class="hero-grid">
+          <div data-reveal>
+            <p class="eyebrow label-mono">12 个核心模块 · 一套完整运行时模型</p>
+            <h1>从 Agent Loop 到记忆系统，<span class="alt">建立可迁移的 Codex 工程知识。</span></h1>
+            <p class="sub">课程按运行时模块组织。每个模块讲清职责、输入输出、状态边界、关键取舍与可操作的故障实验。</p>
+            <ul class="hero-outcomes" aria-label="学完本课程你将能够"><li>推导一个 Turn 为什么继续、收束、转向或中断</li><li>写出一次模型请求中 instructions、动态上下文、历史与工具的真实分层</li><li>区分 transcript、active history、compaction、长期记忆与授权证据</li><li>解释并行工具、重试与恢复怎样保持可重放</li><li>判断安全、多客户端与多代理机制分别由哪一层负责</li></ul>
+            <div class="hero-cta">
+              <a class="btn-primary" href="#loop">从第一个故障开始 <span class="arrow" aria-hidden="true">→</span></a>
+              <a class="btn-secondary" href="#kernel-atlas">先看学习路线</a>
+            </div>
+          </div>
+          <figure class="hero-loop" data-hero-loop data-reveal data-reveal-delay="120">
+            <svg viewBox="0 0 480 360" role="img" aria-labelledby="hero-loop-title hero-loop-desc">
+              <title id="hero-loop-title">Agent 回合循环概览</title>
+              <desc id="hero-loop-desc">输入、模型、工具、环境和事件五个节点组成循环，琥珀色数据包沿路径持续移动。</desc>
+              <circle class="ring" cx="240" cy="180" r="128" />
+              <g class="hnode"><circle cx="240" cy="48" r="38"/><text x="240" y="44" text-anchor="middle">输入</text><text class="hno" x="240" y="61" text-anchor="middle">OP</text></g>
+              <g class="hnode"><circle cx="365" cy="140" r="38"/><text x="365" y="136" text-anchor="middle">模型</text><text class="hno" x="365" y="153" text-anchor="middle">SSE</text></g>
+              <g class="hnode"><circle cx="318" cy="288" r="38"/><text x="318" y="284" text-anchor="middle">工具</text><text class="hno" x="318" y="301" text-anchor="middle">CALL</text></g>
+              <g class="hnode"><circle cx="162" cy="288" r="38"/><text x="162" y="284" text-anchor="middle">环境</text><text class="hno" x="162" y="301" text-anchor="middle">EXEC</text></g>
+              <g class="hnode"><circle cx="115" cy="140" r="38"/><text x="115" y="136" text-anchor="middle">事件</text><text class="hno" x="115" y="153" text-anchor="middle">LOG</text></g>
+              <circle class="packet" cx="240" cy="52" r="5"><animateTransform attributeName="transform" type="rotate" from="0 240 180" to="360 240 180" dur="7s" repeatCount="indefinite" /></circle>
+            </svg>
+            <figcaption><span>turn_loop / live map</span><button class="pause-btn" type="button" data-loop-pause aria-pressed="false">⏸ 暂停</button></figcaption>
+          </figure>
+        </div>
+        <div class="hero-meta label-mono" aria-label="课程范围"><span>VERIFIED SNAPSHOT · 498d40b29f60</span><span>12 个模块 · 12 个实验</span><span>模块地图 → 核心问题 → 机制 → 验证</span></div>
+
+        <section class="lesson-brief" id="kernel-atlas" data-reveal>
+          <span class="label-mono">LEARNING MAP · 4 PASSES</span>
+          <h3>先建立模块地图，再进入每个模块的关键问题。</h3>
+          <p>问题用于打开机制，不是章节本身。每章先交代这个模块在整个 harness 中拥有哪段状态、接收什么输入、产出什么事实，再用多个问题、反例和实验把边界讲透。</p>
+          <div class="custom-stack">
+            <div><span class="custom-key">PASS 01 · 01—03</span><strong>运行内核</strong><p>Agent Loop、状态与协议、工具系统：一次工作如何被接收、推进、观察和回注。</p></div>
+            <div><span class="custom-key">PASS 02 · 04—06</span><strong>控制与上下文</strong><p>安全边界、提示词工程、平台架构：模型看见什么、能做什么、由哪一层负责。</p></div>
+            <div><span class="custom-key">PASS 03 · 07—09</span><strong>连续性系统</strong><p>持久化与恢复、记忆管理、定制与扩展：任务如何跨窗口、跨进程和跨会话延续。</p></div>
+            <div><span class="custom-key">PASS 04 · 10—12</span><strong>生产治理</strong><p>多代理编排、配置与客户端、可靠性工程：把同一套内核放进真实产品。</p></div>
+          </div>
+          <p class="lesson-result"><strong>学习方法：</strong>先回答每章开头的问题，再操作实验，最后用章末判断题验证自己是否真的会用。</p>
+        </section>
+      </section>
+      <section class="chapter shell" id="loop" data-spy>
+        <header class="chapter-head" data-reveal>
+          <span class="label-mono">MODULE 01 · AGENT LOOP</span>
+          <h2>Agent Loop 如何把一次请求推进到确定结束？</h2>
+          <p class="lede">本模块建立课程的执行骨架：提交循环接收操作，Turn 循环组织工作，sampling step 与模型交互。后续所有工具、压缩、恢复与协作机制都挂在这三层上。</p>
+        </header>
+        <article class="lesson-brief" data-reveal>
+          <span class="label-mono">INCIDENT 01 · TEST PASSED, TURN STILL RUNNING</span>
+          <h3>命令成功，只说明一个 Item 完成；它不代表整个 Turn 已收束。</h3>
+          <p>把一次任务分成三层就不容易误判：提交循环接收操作，Turn 循环决定是否继续，单次 sampling step 只负责一次模型请求。每步结束都执行同一个裁决：<code>needs_follow_up = model_needs_follow_up || has_pending_input</code>。</p>
+          <ol class="source-route">
+            <li><span><strong>看到命令退出码 0</strong>：只确认这次执行成功。</span></li>
+            <li><span><strong>看到 tool output 回注</strong>：模型现在才拿到执行事实。</span></li>
+            <li><span><strong>看到仍需跟进</strong>：模型或排队输入要求再跑一个 step。</span></li>
+            <li><span><strong>看到 turn completed</strong>：整轮才真正结束。</span></li>
+          </ol>
+          <p class="lesson-result"><strong>模块目标：</strong>能从任意停点判断当前仍在 submission、Turn 还是 sampling step，并用续跑等式解释下一步为什么发生。</p>
+        </article>
+        <div class="spread">
+          <article class="prose" data-reveal>
+            <h3>心智模型</h3>
+            <p><strong>一次回合不是一次模型调用。</strong>它从用户输入入队开始，经过上下文组装、流式响应、工具判定、受控执行与结果回注，直到模型不再请求工具、也没有排队输入才收敛。</p>
+            <p>当模型产生工具调用时，工具结果必须先回到历史，下一 step 才能据此判断；当模型不再要求跟进且输入队列为空时，Turn 才自然收束。成功的 Item、完成的 sampling response 与完成的 Turn 是三个不同事实。</p>
+            <div class="decision"><span class="label-mono">ROOT-CAUSE LENS</span><p>把故障归到拥有它的层：模型选错工具、策略拒绝权限、执行环境失败、还是结果没有正确回注。不要把所有失败都叫作“模型不行”。</p></div>
+          </article>
+          <ol class="kp-list" data-reveal data-reveal-delay="100">
+            <li data-no="01"><span><strong>提交</strong>：输入变成可追踪的操作。</span></li>
+            <li data-no="02"><span><strong>推理</strong>：模型读取上下文并选择下一步。</span></li>
+            <li data-no="03"><span><strong>行动</strong>：工具在权限与沙箱边界内执行。</span></li>
+            <li data-no="04"><span><strong>回注</strong>：结果进入历史，驱动下一次判断。</span></li>
+          </ol>
+        </div>
+        <div class="machine" id="machine-loop" data-reveal>
+          <div class="machine-bar">
+            <span class="title"><span class="led" data-led></span><strong>回合循环步进机</strong></span>
+            <span class="label-mono" data-phase>idle</span>
+          </div>
+          <div class="machine-body loop-layout">
+            <div class="diagram-frame">
+              <svg data-diagram viewBox="0 0 680 350" role="img" aria-labelledby="turn-diagram-title turn-diagram-desc">
+                <title id="turn-diagram-title">九阶段回合循环</title>
+                <desc id="turn-diagram-desc">从提交、上下文、模型、工具、审批、执行、回注、收敛到完成的循环图。</desc>
+                <defs><marker id="loop-arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M 0 0 L 10 5 L 0 10 z" fill="currentColor" /></marker></defs>
+                <path class="loop-edge" data-edge="submit-context" d="M145 70 H235"/><path class="loop-edge" data-edge="context-model" d="M325 70 H415"/><path class="loop-edge" data-edge="model-tool" d="M505 70 C575 70 590 105 590 145"/>
+                <path class="loop-edge" data-edge="tool-approval" d="M545 180 H455"/><path class="loop-edge" data-edge="approval-exec" d="M365 180 H275"/><path class="loop-edge" data-edge="exec-inject" d="M185 180 H95 C55 180 55 255 95 255"/>
+                <path class="loop-edge" data-edge="inject-converge" d="M185 255 H275"/><path class="loop-edge" data-edge="converge-done" d="M365 255 H455"/><path class="loop-edge" data-edge="converge-model" d="M320 220 C320 125 430 125 460 108"/>
+                <g class="loop-node" data-node="submit"><rect x="55" y="45" width="90" height="50" rx="9"/><text x="100" y="67" text-anchor="middle">提交</text><text class="nno" x="100" y="83" text-anchor="middle">01 / OP</text></g>
+                <g class="loop-node" data-node="context"><rect x="235" y="45" width="90" height="50" rx="9"/><text x="280" y="67" text-anchor="middle">上下文</text><text class="nno" x="280" y="83" text-anchor="middle">02 / PROMPT</text></g>
+                <g class="loop-node" data-node="model"><rect x="415" y="45" width="90" height="50" rx="9"/><text x="460" y="67" text-anchor="middle">模型</text><text class="nno" x="460" y="83" text-anchor="middle">03 / SSE</text></g>
+                <g class="loop-node" data-node="tool"><rect x="545" y="145" width="90" height="50" rx="9"/><text x="590" y="167" text-anchor="middle">工具决策</text><text class="nno" x="590" y="183" text-anchor="middle">04 / CALL</text></g>
+                <g class="loop-node" data-node="approval"><rect x="365" y="155" width="90" height="50" rx="9"/><text x="410" y="177" text-anchor="middle">审批</text><text class="nno" x="410" y="193" text-anchor="middle">05 / POLICY</text></g>
+                <g class="loop-node" data-node="exec"><rect x="185" y="155" width="90" height="50" rx="9"/><text x="230" y="177" text-anchor="middle">执行</text><text class="nno" x="230" y="193" text-anchor="middle">06 / SANDBOX</text></g>
+                <g class="loop-node" data-node="inject"><rect x="95" y="230" width="90" height="50" rx="9"/><text x="140" y="252" text-anchor="middle">结果回注</text><text class="nno" x="140" y="268" text-anchor="middle">07 / OUTPUT</text></g>
+                <g class="loop-node" data-node="converge"><rect x="275" y="230" width="90" height="50" rx="9"/><text x="320" y="252" text-anchor="middle">收敛?</text><text class="nno" x="320" y="268" text-anchor="middle">08 / LOOP</text></g>
+                <g class="loop-node" data-node="done"><rect x="455" y="230" width="90" height="50" rx="9"/><text x="500" y="252" text-anchor="middle">完成</text><text class="nno" x="500" y="268" text-anchor="middle">09 / EVENT</text></g>
+              </svg>
+            </div>
+            <div>
+              <div class="m-controls"><button class="cbtn primary" type="button" data-run>▶ 连续运行</button><button class="cbtn" type="button" data-step>单步 →</button><button class="cbtn" type="button" data-reset>重置</button></div>
+              <ol class="m-steps" data-steps><li data-no="01">提交入队</li><li data-no="02">组装上下文</li><li data-no="03">模型流式响应</li><li data-no="04">工具调用决策</li><li data-no="05">审批判定</li><li data-no="06">沙箱执行</li><li data-no="07">结果回注</li><li data-no="08">收敛判断</li><li data-no="09">回合完成</li></ol>
+              <p class="stage-note" data-stage-note>按“单步”观察每个阶段的职责，再用“连续运行”看完整闭环。</p>
+            </div>
+            <div class="loop-logwrap stream-log elog" data-log aria-live="polite"></div>
+          </div>
+        </div>
+        <p class="lesson-result" data-reveal><strong>快速判断：</strong>用户在执行中补充条件，应该 steer 还是 interrupt？若旧任务仍有价值就排队 steer；若继续执行可能造成错误副作用，才 interrupt，并检查已启动工具是否留下取消回执。</p>
+      </section>
+      <section class="chapter band-deep" id="protocol" data-spy>
+        <div class="shell">
+          <header class="chapter-head" data-reveal><span class="label-mono">MODULE 02 · STATE & INTERVENTION</span><h2>Thread、Turn、Item 怎样承载状态，用户又怎样安全地改变在途任务？</h2><p class="lede">本模块把状态容器、事件生命周期和三种人机干预放到同一张时间线上：steer 改变下一步，interrupt 停止当前工作，异步消息只承诺送达。</p></header>
+          <div class="spread"><article class="prose" data-reveal><h3>先确定作用对象，再选择动作</h3><p><strong>状态层次：</strong>Thread 保存可恢复的长期容器；Turn 表示一次用户请求及其全部 Agent 工作；Item 是消息、命令、文件变更或工具调用等可观察事实。操作必须明确落在哪一层。</p><p><strong>Steer</strong> 把新输入放进当前 Turn 的 pending queue，在下一个完整 step 边界进入历史，不抢断正在生成的 token。<strong>Interrupt</strong> 取消活动任务，先给约 100ms 收尾窗口，必要时硬终止，并留下 aborted 历史事实与工具取消回执。</p><p>同步 <code>request_user_input</code> 会登记等待项并阻塞对应工具；异步用户消息立即返回 accepted，回答以后续输入到达。accepted 表示送达，不表示用户已经回答。</p></article><ol class="kp-list" data-reveal><li data-no="THREAD"><span><strong>Thread</strong>：保存身份、历史、配置基线与多个 Turn。</span></li><li data-no="TURN"><span><strong>Turn</strong>：拥有活动任务、取消信号、等待表和 pending input。</span></li><li data-no="ITEM"><span><strong>Item</strong>：必须有开始、完成或明确中止的生命周期。</span></li><li data-no="INPUT"><span><strong>干预</strong>：steer 排队，interrupt 取消，async message 只投递。</span></li></ol></div>
+          <div class="machine" id="machine-stream" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>在途干预事件回放</strong></span><span class="label-mono" data-phase>0/16</span></div><div class="machine-body"><div class="m-controls"><button class="cbtn primary" type="button" data-play aria-pressed="false">▶ 播放</button><button class="cbtn" type="button" data-speed aria-pressed="false">1×</button><button class="cbtn" type="button" data-restart>↻ 重播</button></div><div class="stream-log elog" data-log aria-live="polite"></div></div></div>
+          <div class="interview" data-reveal><span class="label-mono">CHECK YOUR MODEL</span><h4>“测试正在运行，用户补充‘不要修改数据库’，应该 steer 还是 interrupt？”</h4><div class="qa"><details><summary>展开判断与答案</summary><div class="ans">若当前动作尚未触及数据库，可 steer，让约束在下一 step 生效；若危险副作用已经可能发生，应 interrupt，随后检查已启动工具的实际状态与取消回执。选择标准不是输入有多重要，而是继续当前 step 是否仍然安全。</div></details></div></div>
+          <div class="decision" data-reveal><span class="label-mono">反例</span><p>把所有新输入都实现成抢占会制造残缺 Item、孤儿工具调用和不可重放历史；把所有输入都排队又会让危险动作继续。干预语义必须与副作用风险绑定。</p></div>
+          <p class="lesson-result" data-reveal><strong>模块验收：</strong>给出一个在途任务，能指出状态位于 Thread、Turn 还是 Item，并选择 steer、interrupt、同步询问或异步消息。</p>
+        </div>
+      </section>
+      <section class="chapter shell" id="tools" data-spy>
+        <header class="chapter-head" data-reveal><span class="label-mono">MODULE 03 · TOOL SYSTEM</span><h2>工具怎样被发现、并行执行、取消并可靠回注？</h2><p class="lede">本模块覆盖工具的完整生命周期：step 快照、暴露档、延迟发现、参数校验、授权、并行门闩、输出截断与调用—回执配对。</p></header>
+        <div class="spread"><article class="prose" data-reveal><h3>六个检查点，一条定位顺序</h3><p><strong>短 trace：</strong><code>可见？ → 参数对？ → 允许？ → 执行了？ → 输出完整？ → 回到历史？</code>。先找第一个“否”，不要跨层猜原因。</p><div class="decision"><span class="label-mono">DEBUG ORDER</span><p>工具未出现 → 查本 step 的可见工具；参数错 → 查 schema；执行被拒 → 查审批、规则与沙箱；命令成功但回答错 → 查输出截断和回注。</p></div><p>当前机制会在每个 step 重建工具路由，因此 MCP、项目规则和动态工具的变化最迟下一步生效。工具还分直接、延迟、仅模型调用、仅 code mode 与隐藏等暴露方式；列表太大时由 <code>tool_search</code> 按需发现。取消也不能让调用凭空消失：每个已派发调用都必须得到真实或合成回执，历史才可重放。</p><p>另一个容易混淆的新变化：同步用户提问会挂起等待；异步用户提问或消息会立即返回“已接受”，答案以后续输入到达。看到“工具成功”时，先确认它承诺的是完成，还是仅仅送达。</p></article><ol class="kp-list" data-reveal><li data-no="01"><span><strong>发现</strong>：这个 step 里模型是否看得见。</span></li><li data-no="02"><span><strong>校验</strong>：参数是否符合结构化契约。</span></li><li data-no="03"><span><strong>授权</strong>：策略、规则与权限是否允许。</span></li><li data-no="04"><span><strong>执行</strong>：在限定环境中启动并采集结果。</span></li><li data-no="05"><span><strong>归一化</strong>：保留头尾诊断并声明截断。</span></li><li data-no="06"><span><strong>回注</strong>：让模型基于事实继续。</span></li></ol></div>
+        <div class="machine" id="cx-tools" data-reveal>
+          <div class="machine-bar"><span class="title"><span class="led"></span><strong>工具管线步进器</strong></span><span class="label-mono" data-status>0/6 · 待步进</span></div>
+          <div class="machine-body sim-layout">
+            <div>
+              <div class="m-controls"><button class="cbtn primary" type="button" data-advance>下一检查点 →</button><button class="cbtn" type="button" data-back>← 回退</button><button class="cbtn" type="button" data-reset>重置</button></div>
+              <ol class="m-steps"><li data-no="01">发现</li><li data-no="02">校验</li><li data-no="03">授权</li><li data-no="04">执行</li><li data-no="05">归一化</li><li data-no="06">回注</li></ol>
+              <p class="stage-note" data-stage-note>以一次 cargo test 调用为例：沿六个检查点逐段前进，右侧同步留下该段 trace。</p>
+            </div>
+            <div>
+              <ol class="trace-list" data-trace><li>等待第一步……</li></ol>
+              <div class="stream-log elog" data-log aria-live="polite"></div>
+            </div>
+          </div>
+        </div>
+        <div class="interview" data-reveal><span class="label-mono">CHECK YOUR MODEL</span><h4>“三个工具并行结束，为什么结果仍按模型调用顺序进入历史？”</h4><div class="qa"><details><summary>展开判断与答案</summary><div class="ans">执行可以乐观并行，但回填使用有序队列。可并行工具共享读锁，声明串行的工具拿写锁形成屏障；框架不猜参数依赖。这样同时保留速度、确定顺序和可重放性。</div></details></div></div>
+        <p class="lesson-result" data-reveal><strong>模块验收：</strong>能沿“可见性 → schema → 授权 → 执行 → 归一化 → 回注”定位故障，并解释并行完成为什么不等于乱序提交。</p>
+      </section>
+      <section class="chapter band-edge" id="safety" data-spy>
+        <div class="shell">
+          <header class="chapter-head" data-reveal><span class="label-mono">MODULE 04 · SAFETY BOUNDARIES</span><h2>Codex 怎样把模型意图变成受控的真实副作用？</h2><p class="lede">本模块分开讲审批策略、权限画像、命令规则、OS 沙箱、Guardian、受管网络与凭据代理。核心不是“是否安全”，而是谁分类、谁授权、谁最终强制。</p></header>
+          <div class="machine" id="machine-sandbox" data-reveal><div class="machine-bar"><span class="title"><span class="led"></span><strong>沙箱 × 审批决策台</strong></span><span class="label-mono">common policies</span></div><div class="machine-body sim-layout"><div><div class="sim-group" data-group-op><span class="label-mono">01 · 选择操作</span><div class="seg-row"><button class="cbtn" type="button" data-v="read">读取项目文件</button><button class="cbtn" type="button" data-v="test">跑测试</button><button class="cbtn" type="button" data-v="patch">改文件</button><button class="cbtn" type="button" data-v="net">访问网络</button><button class="cbtn" type="button" data-v="outside">写工作区外</button><button class="cbtn" type="button" data-v="purge">删除构建产物</button></div></div><div class="sim-group" data-group-sbx><span class="label-mono">02 · SandboxPolicy</span><div class="seg-row"><button class="cbtn" type="button" data-v="ro">ReadOnly</button><button class="cbtn" type="button" data-v="ww">WorkspaceWrite</button><button class="cbtn" type="button" data-v="dfa">DangerFullAccess</button></div></div><div class="sim-group" data-group-apr><span class="label-mono">03 · ApprovalPolicy</span><div class="seg-row"><button class="cbtn" type="button" data-v="untrusted">Untrusted</button><button class="cbtn" type="button" data-v="on-request">OnRequest</button><button class="cbtn" type="button" data-v="never">Never</button></div></div></div><div><code class="cmd-line" data-cmd></code><div style="margin-block: var(--s-4)"><span class="verdict-badge" data-verdict></span></div><p class="stage-note" data-verdict-desc></p><ol class="trace-list" data-trace></ol><div class="stream-log elog" data-log aria-live="polite"></div></div></div></div>
+          <div class="spread"><article class="prose" data-reveal><h3>把一次拒绝拆成三问</h3><p><strong>短 trace：</strong><code>命令规则分类 → 是否允许询问 → 权限画像与沙箱执行</code>。规则可给出允许、询问或禁止；Granular 还能分别开关沙箱升级、规则询问、Skill 脚本、权限申请和 MCP elicitation，关掉某类意味着自动拒绝，不是静默放行。</p><p>当自动审查被启用且路由条件满足时，Guardian 可以代替用户裁决；它超时、执行失败或格式错误时都 fail-closed。受管网络还可以把出口收敛到代理，启用凭据 broker 时，沙箱进程只看到占位值，真实凭据在出口注入。</p><p>判断法：先问“谁拒绝”，再问“这个拒绝能否通过审批改变”。沙箱硬边界、企业约束和禁止规则不是点一下按钮就会消失。</p></article></div>
+          <div class="interview" data-reveal><span class="label-mono">CHECK YOUR MODEL</span><h4>“审批策略设成 never，是不是就没有安全边界了？”</h4><div class="qa"><details><summary>展开判断与答案</summary><div class="ans">不是。never 只表示系统绝不向用户升级询问，沙箱、权限画像与禁止规则仍然生效；越界结果会直接回给模型。审批是交互策略，沙箱才是执行强制。</div></details></div></div>
+          <div class="decision" data-reveal><span class="label-mono">BOUNDARY</span><p>实验台展示常见沙箱与审批组合；实际裁决还可能叠加 Granular 分类、企业 requirements、Guardian 与受管网络。不要从一个开关推断整条安全链。</p></div>
+          <p class="lesson-result" data-reveal><strong>模块验收：</strong>面对一次拒绝，能按“规则分类 → 是否允许询问 → 权限画像 → OS 强制”找出首个收紧点，并说明批准为什么不等于关闭沙箱。</p>
+        </div>
+      </section>
+      <section class="chapter shell" id="context" data-spy>
+        <header class="chapter-head" data-reveal><span class="label-mono">MODULE 05 · PROMPT & CONTEXT ENGINEERING</span><h2>Codex 每个 Step 实际把什么发给模型？</h2><p class="lede">本模块不教“写一段更长的 Prompt”，而是拆开基础指令、动态世界状态、活跃历史、工具定义与输出约束，并解释它们怎样在 step 边界重新组装。</p></header>
+        <div class="fact-boundary" data-reveal><span class="label-mono">REQUEST SHAPE</span><strong>Prompt = Base Instructions + Active Input</strong><span>Active Input 由动态上下文、活跃历史、当前输入与 compact checkpoint 组成；Tools 和 output schema 作为独立请求字段。</span></div>
+        <div class="spread"><article class="prose" data-reveal><h3>提示词工程首先是状态工程</h3><p><strong>Step 快照：</strong>每步开始时冻结模型设置、权限、环境、AGENTS.md、MCP runtime、Skills 与模型可见工具。运行中的更新只影响下一步，避免同一次请求看到互相矛盾的世界。</p><p><strong>World State 差分：</strong>项目指令、权限和环境被拆成有身份的区块。前态为 Known 时只发送替换或删除差分；前态为 Unknown 时全量重注入，宁可多花 token，也不假装模型已经知道。</p><p><strong>稳定前缀：</strong>基础指令和稳定区块尽量保持顺序与身份稳定，帮助 prompt cache 命中；动态区块、历史与工具结果放在后部。缓存优化不能改变语义边界。</p></article><ol class="kp-list" data-reveal><li data-no="BASE"><span><strong>Base Instructions</strong>：会话级行为基线，不随普通 compaction 被摘要替换。</span></li><li data-no="STATE"><span><strong>Dynamic Context</strong>：项目、环境、权限和扩展贡献的可差分状态。</span></li><li data-no="HIST"><span><strong>Active History</strong>：消息、推理项、工具调用与回执的模型工作集。</span></li><li data-no="TOOLS"><span><strong>Tool Specs</strong>：本 step 可调用能力的独立结构化字段。</span></li></ol></div>
+        <div class="machine" id="cx-prompt" data-reveal><div class="machine-bar"><span class="title"><span class="led is-done"></span><strong>Prompt 分层检查器</strong></span><span class="label-mono">select a layer</span></div><div class="machine-body atlas-layout"><div class="atlas-choices"><button class="layer-row" type="button" data-prompt-layer="base">Base Instructions</button><button class="layer-row" type="button" data-prompt-layer="dynamic">Dynamic Context</button><button class="layer-row" type="button" data-prompt-layer="history">Active History</button><button class="layer-row" type="button" data-prompt-layer="tools">Tool Specs</button><button class="layer-row" type="button" data-prompt-layer="schema">Output Schema</button></div><div class="atlas-detail"><span class="label-mono">SELECTED LAYER</span><h3 data-prompt-title></h3><p data-prompt-role></p><code class="cmd-line" data-prompt-wire></code><div class="stage-note"><span class="label-mono">CHANGE BOUNDARY</span><span data-prompt-boundary></span></div></div></div></div>
+        <article class="lesson-brief" data-reveal><span class="label-mono">DEEP DIVE · COMPACTION IS A HISTORY REPLACEMENT</span><h3>完整 transcript 继续追加；compact 只替换 Agent Loop 使用的 active history。</h3><p>同一个 Thread 内，rollout/transcript 保存原始事件与压缩检查点；模型请求不会每轮重读整份文件。本地摘要路径保留受预算限制的近期真实用户消息并放入一个新摘要；Remote V2 保留另一套受限消息并放入一个 opaque compaction item。下一次压缩基于当前 checkpoint 与新增后缀，不默认回读压缩前全部历史。</p><ol class="source-route"><li><span><strong>持久化账本</strong>：append-only transcript / rollout，记录发生过什么。</span></li><li><span><strong>活跃工作集</strong>：replacement history，决定模型下一步实际看什么。</span></li><li><span><strong>本地保留预算</strong>：约 20k token 的真实用户消息，不是整个请求上限。</span></li><li><span><strong>远端 V2</strong>：约 64k 保留预算 + 单个 compaction item，具体算法在服务端。</span></li></ol></article>
+        <div class="machine" id="machine-context" data-reveal><div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>Transcript × Active Context 实验台</strong></span><span class="label-mono">100k teaching window</span></div><div class="machine-body"><div class="state-counters context-counters"><div><span class="label-mono">TRANSCRIPT</span><strong data-transcript>0k · append-only</strong></div><div><span class="label-mono">ACTIVE CONTEXT</span><strong data-active>0k</strong></div><div><span class="label-mono">CHECKPOINT</span><strong data-checkpoint>none</strong></div></div><p class="stage-note">下方只画模型工作集；完整 transcript 在上方独立计数，不会因 compact 缩短。</p><div class="ctx-bar" data-bar aria-label="模型活跃上下文占用"></div><div class="ctx-meta"><span data-counter></span><span data-cache></span></div><div class="ctx-legend"><span style="--dot: oklch(0.62 0.07 245)">基础指令</span><span style="--dot: oklch(0.70 0.09 205)">动态上下文</span><span style="--dot: oklch(0.86 0.12 78)">当前 checkpoint</span><span style="--dot: oklch(0.80 0.12 75)">用户</span><span style="--dot: oklch(0.74 0.10 165)">工具</span><span style="--dot: oklch(0.84 0.06 90)">模型</span></div><div class="m-controls" style="margin-block-start: var(--s-4)"><button class="cbtn primary" type="button" data-next>+ 追加一个 Turn</button><button class="cbtn" type="button" data-compact>触发 Compact</button><button class="cbtn" type="button" data-reset>重置</button></div><div class="stream-log elog" data-log aria-live="polite"></div></div></div>
+        <div class="interview" data-reveal><span class="label-mono">CHECK YOUR MODEL</span><h4>“Compact 后，下一次 LLM 请求会重新读取完整 transcript 吗？”</h4><div class="qa"><details><summary>展开判断与答案</summary><div class="ans">默认不会。Agent Loop 从 replacement history 派生新的 active input；完整 transcript 继续作为持久化事实源。后续压缩读取当前 active history——上一 checkpoint 加新增消息——而不是重新加载最初全部历史。</div></details></div></div>
+        <div class="decision" data-reveal><span class="label-mono">TEACHING SCALE</span><p>100k 窗口、86% 阈值和摘要压缩率只用于展示状态变化；真实限额由模型、provider、feature 与压缩路径决定。实验必须保持“替换 checkpoint”，不能把摘要画成无限累加。</p></div>
+        <p class="lesson-result" data-reveal><strong>模块验收：</strong>能写出实际请求的五层组成，并区分未注入、被截断、被压缩、被回滚和未主动检索长期记忆五种“忘记”。</p>
+      </section>
+      <section class="chapter band-deep" id="platform" data-spy>
+        <div class="shell">
+          <header class="chapter-head" data-reveal><span class="label-mono">MODULE 06 · HARNESS ARCHITECTURE</span><h2>Core、App Server、客户端与执行环境怎样组成一个 Codex？</h2><p class="lede">本模块建立平台拓扑：Core 拥有会话语义，App Server 负责跨进程协议，客户端负责投影与交互，执行宿主负责真正的文件、进程和网络边界。</p></header>
+          <div class="fact-boundary" data-reveal><span class="label-mono">MENTAL MODEL</span><strong>内核拥有</strong><span>会话 actor、Turn 循环、工具与历史语义。</span><strong>协议拥有</strong><span>请求顺序、双向交互、类型生成与多种传输。</span></div>
+          <div class="spread"><article class="prose" data-reveal><h3>一个内核，两套协议，两种部署形态</h3><p><strong>短 trace：</strong><code>客户端 → App Server → 会话 actor → 工具与模型 → 事件返回客户端</code>。进程内提交用操作队列和回复通道；跨进程接入用双向 JSON-RPC。Rust 类型单向生成客户端类型与 schema，减少多端接口漂移。</p><p>TUI 可以内嵌 App Server，也可以通过 stdio、Unix socket 或 WebSocket 接入常驻服务。远程控制、daemon 和不同前端改变的是部署与传输，不改变 Thread / Turn / Item 的核心语义。</p><p>判断所有权时问一句：这项逻辑是否影响“任何客户端都必须遵守的事实”？是，就放进内核或协议；只是呈现、租户接入或产品工作流，则留在外层。</p></article></div>
+          <div class="machine" id="machine-platform" data-reveal><div class="machine-bar"><span class="title"><span class="led is-done"></span><strong>Harness 真实层次剖面</strong></span><span class="label-mono">click a layer</span></div><div class="machine-body pmap-layout"><div class="layer-stack"><button class="layer-row" type="button" data-layer="client"><span>客户端表面</span><span class="label-mono">client</span></button><button class="layer-row" type="button" data-layer="appserver"><span>App Server</span><span class="label-mono">protocol</span></button><button class="layer-row" type="button" data-layer="session"><span>会话 Actor</span><span class="label-mono">session</span></button><button class="layer-row" type="button" data-layer="turn"><span>Turn / Step 循环</span><span class="label-mono">control</span></button><button class="layer-row" type="button" data-layer="tool"><span>工具路由与派发</span><span class="label-mono">execution</span></button><button class="layer-row" type="button" data-layer="sandbox"><span>策略与系统沙箱</span><span class="label-mono">boundary</span></button><button class="layer-row" type="button" data-layer="history"><span>历史与 Rollout</span><span class="label-mono">state</span></button><button class="layer-row" type="button" data-layer="config"><span>配置与扩展</span><span class="label-mono">context</span></button></div><div><div class="pmap-detail"><span class="label-mono" data-detail-en></span><h4 data-detail-name></h4><p data-detail></p></div><div class="journey"><span class="label-mono">一次请求的旅程</span><div class="seg-row"><button class="cbtn" type="button" data-jstep="① 输入">① 输入</button><button class="cbtn" type="button" data-jstep="② 步快照">② 步快照</button><button class="cbtn" type="button" data-jstep="③ 模型">③ 模型</button><button class="cbtn" type="button" data-jstep="④ 工具">④ 工具</button><button class="cbtn" type="button" data-jstep="⑤ 回注">⑤ 回注</button><button class="cbtn" type="button" data-jstep="⑥ 收束">⑥ 收束</button><button class="cbtn" type="button" data-jstep="⑦ 持久化">⑦ 持久化</button></div></div></div></div></div>
+          <p class="lesson-result" data-reveal><strong>模块验收：</strong>能把一个新需求放进 Core、协议、客户端、扩展或执行宿主中的正确一层，并说明放错层会产生什么漂移。</p>
+        </div>
+      </section>
+      <section class="chapter shell" id="state" data-spy>
+        <header class="chapter-head" data-reveal><span class="label-mono">MODULE 07 · PERSISTENCE & RECOVERY</span><h2>Codex 怎样从追加日志恢复出与在线运行一致的状态？</h2><p class="lede">本模块覆盖 Thread、Turn、Item 的寿命，rollout 检查点、反向重放、resume、fork、interrupt 与 rollback。重点不是“保存消息”，而是恢复模型真正看见的状态。</p></header>
+        <div class="primitive-grid" data-reveal>
+          <article><span class="primitive-no">01</span><h3>Thread</h3><p>拥有身份、历史与运行状态；可 start、resume、fork、archive，并包含多个 Turn。</p></article>
+          <article><span class="primitive-no">02</span><h3>Turn</h3><p>一次请求与 Agent 工作；可 steer、interrupt，完成时发出明确 final status。</p></article>
+          <article><span class="primitive-no">03</span><h3>Item</h3><p>最小可观察单元；拥有 started / completed 生命周期并承载增量更新。</p></article>
+        </div>
+        <div class="spread"><article class="prose" data-reveal><h3>三层对应三种恢复问题</h3><p><strong>短 trace：</strong><code>Thread 持有历史 → Turn 持有本次任务 → Item 记录可观察事实</code>。Thread 可恢复、分叉与归档；Turn 可转向、中断并明确收尾；Item 则必须保持调用与输出配对。</p><p>会话记录采用追加日志与替换历史检查点。恢复时从日志尾部向前找到最近检查点，再正向重放尾部；回滚写成新的事实，而不是删除曾经发生的记录。这样在线视图与恢复视图可以由同一套重放语义生成。</p><p>如果只保存消息列表，“命令已经执行但最终回答还没完成”就无法准确表达。三层模型能保住已提交 Item，同时把未完成 Turn 标成中断，而不是假装它从未发生。</p></article></div>
+        <div class="machine" id="machine-state" data-reveal>
+          <div class="machine-bar"><span class="title"><span class="led is-run"></span><strong>Thread 状态实验台</strong></span><span class="label-mono" data-state>尚未初始化</span></div>
+          <div class="machine-body state-layout">
+            <div>
+              <div class="state-counters"><div><span class="label-mono">THREAD</span><strong>thread_demo</strong></div><div><span class="label-mono">TURNS</span><strong data-turn-count>00</strong></div><div><span class="label-mono">ITEMS</span><strong data-item-count>00</strong></div></div>
+              <div class="state-actions"><button class="cbtn primary" type="button" data-action="start">Start</button><button class="cbtn" type="button" data-action="item">+ Item</button><button class="cbtn" type="button" data-action="steer">Steer</button><button class="cbtn" type="button" data-action="complete">Complete</button><button class="cbtn" type="button" data-action="interrupt">Interrupt</button><button class="cbtn" type="button" data-action="resume">Resume</button><button class="cbtn" type="button" data-action="fork">Fork</button><button class="cbtn" type="button" data-action="archive">Archive</button><button class="cbtn" type="button" data-action="reset">Reset</button></div>
+              <p class="stage-note" data-state-note></p>
+            </div>
+            <div class="stream-log elog" data-log aria-live="polite"></div>
+          </div>
+        </div>
+        <div class="interview" data-reveal><span class="label-mono">CHECK YOUR MODEL</span><h4>“Resume 会从 transcript 第一行重新回放全部历史吗？”</h4><div class="qa"><details><summary>展开判断与答案</summary><div class="ans">不会。恢复逻辑从日志尾部寻找最新存活的 replacement-history 检查点，以它作为完整基线，再正向重放之后的尾部；World State 的 full/patch、Turn 设置和窗口身份也在同一次重建中恢复。</div></details></div></div>
+        <div class="decision" data-reveal><span class="label-mono">OPERATION BOUNDARY</span><p>Compaction 替换模型工作历史；rollback 撤销指定用户轮及其上下文更新；fork 在稳定采样边界复制出新 Thread；interrupt 只终止当前在途 Turn。四者不能互换。</p></div>
+        <p class="lesson-result" data-reveal><strong>模块验收：</strong>能画出“追加日志 → 最新检查点 → 尾部重放”的恢复链，并预测 compaction、rollback、fork、interrupt 各自改变哪本账。</p>
+      </section>
+
+      <section class="chapter band-edge" id="extensions" data-spy>
+        <div class="shell">
+          <header class="chapter-head" data-reveal><span class="label-mono">MODULE 08 · MEMORY MANAGEMENT</span><h2>Codex 说“记住”时，究竟写进了哪一套记忆？</h2><p class="lede">本模块把短期工作集、完整会话日志、授权审查证据、宿主验证事实和跨 Thread 的长期 Memories 分开。它们拥有不同寿命、写入者、读取方式和清理语义。</p></header><aside class="course-update"><span>源码更新 · 授权证据</span><h3>压缩后，谁还能证明用户授权？</h3><p>当前实现把 Guardian 的 Thread 上下文作为常开路径；授权审查所需证据由独立保留层协调。模型工作历史被 compact 替换，不等于批准事实被删除。</p><p><strong>面试追问：</strong>普通压缩和 rollback 对授权证据的影响为何不同？</p><a href="/#topic-memory">返回「记忆与恢复」主题 ↗</a></aside>
+          <div class="spread"><article class="prose" data-reveal><h3>五套记忆，解决五种连续性问题</h3><p><strong>Active History</strong> 服务下一次模型请求，可被 compaction 替换。<strong>Rollout</strong> 是每个 Thread 的追加式事实日志，用于恢复与审计，但不会每轮全量进入模型。</p><p><strong>Guardian Review History</strong> 保留授权判断所需的原始证据，普通 compaction 不删除已有的授权证据。<strong>Verified Answers</strong> 保存少量由宿主验证的回答，当前快照最多 8 条、单条约 16 KiB、总量约 64 KiB。</p><p><strong>Long-term Memories</strong> 跨 Thread 工作：后台先从 rollout 提取候选事实，再由整理阶段合并到记忆文件；新会话只注入小摘要和检索入口，需要时再 list/read/search。外部上下文会标记污染，避免不可信内容被固化。</p></article><ol class="kp-list" data-reveal><li data-no="WORK"><span><strong>工作记忆</strong>：当前模型需要继续任务的 active history。</span></li><li data-no="FACT"><span><strong>事实日志</strong>：Thread 独立 rollout，追加发生过的事件。</span></li><li data-no="AUTH"><span><strong>授权证据</strong>：供 Guardian/审批判断，不依赖模型摘要。</span></li><li data-no="LONG"><span><strong>长期记忆</strong>：跨会话的精选事实，不是完整 transcript。</span></li></ol></div>
+          <div class="machine" id="machine-extensions" data-reveal>
+            <div class="machine-bar"><span class="title"><span class="led is-done"></span><strong>记忆分账图谱</strong></span><span class="label-mono">select a store</span></div>
+            <div class="machine-body atlas-layout"><div class="atlas-choices"><button class="layer-row" type="button" data-atlas="active">Active History</button><button class="layer-row" type="button" data-atlas="rollout">Thread Rollout</button><button class="layer-row" type="button" data-atlas="review">Review History</button><button class="layer-row" type="button" data-atlas="verified">Verified Answers</button><button class="layer-row" type="button" data-atlas="longterm">Long-term Memories</button></div><div class="atlas-detail"><span class="label-mono">SELECTED MEMORY</span><h3 data-atlas-title></h3><p data-atlas-role></p><div class="stage-note"><span class="label-mono">READ / CLEAR BOUNDARY</span><span data-atlas-boundary></span></div></div></div>
+          </div>
+
+          <article class="lesson-brief" id="codex-memory-boundary" data-reveal>
+            <span class="label-mono">INCIDENT 08 · MODEL FORGOT, APPROVAL STILL VALID</span>
+            <h3>模型看不到旧信息，不代表授权证据已被删除。</h3>
+            <p>Compaction 只替换模型工作历史；审查证据和仍有效的宿主验证回答走独立保留路径。Rollback 才表示用户要撤销某段历史，因此会同步调整工作历史与相应证据。长期 Memories 又是另一条异步管线，不能拿来恢复精确 Turn 状态。</p>
+            <ol class="source-route">
+              <li><span><strong>继续当前任务</strong>：读 Active History。</span></li>
+              <li><span><strong>恢复原 Thread</strong>：读最新 checkpoint 与 rollout 尾部。</span></li>
+              <li><span><strong>判断授权</strong>：读审查证据与仍有效的 Verified Answers。</span></li>
+              <li><span><strong>跨 Thread 延续偏好</strong>：检索 Long-term Memories。</span></li>
+            </ol>
+            <p class="lesson-result"><strong>判断练习：</strong>“新 Thread 应该精确恢复上一 Thread 最后一条工具调用吗？”不应该；这是 resume 的责任。长期记忆只保存值得跨会话复用的事实与偏好。</p>
+          </article>
+          <div class="interview" data-reveal><span class="label-mono">CHECK YOUR MODEL</span><h4>“完整 transcript 已经在磁盘上，为什么还需要长期 Memories？”</h4><div class="qa"><details><summary>展开判断与答案</summary><div class="ans">Transcript 服务单 Thread 的精确恢复，体积大且包含过程噪声；长期 Memories 服务跨 Thread 检索，只保存经过提取与整理的少量事实。两者分别优化重放正确性与跨会话可用性。</div></details></div></div>
+          <div class="decision" data-reveal><span class="label-mono">边界</span><p>记忆不是一个万能数据库。先确定寿命、写入者、读取者和清理动作，再决定放进 active history、rollout、审查证据、Verified Answers 还是长期 Memories。</p></div>
+          <p class="lesson-result" data-reveal><strong>模块验收：</strong>面对“模型忘了、Thread 重启、授权仍有效、新会话需要偏好”四种需求，能选择正确记忆层并说明其他层为什么不适合。</p>
+        </div>
+      </section>
+
+      <section class="chapter shell" id="customization" data-spy>
+        <header class="chapter-head" data-reveal><span class="label-mono">MODULE 09 · CUSTOMIZATION & EXTENSIONS</span><h2>行为要求、复用流程、外部连接与强制规则应该分别放在哪里？</h2><p class="lede">本模块比较 AGENTS.md、Skills、MCP、Apps、Hooks、Plugins 与配置层。选择标准是作用域、执行者、生命周期和是否需要确定性强制，而不是把所有东西都写进长 Prompt。</p></header><aside class="course-update"><span>源码更新 · 扩展权力</span><h3>模型请求钩子能改到哪一层？</h3><p>新的受信宿主扩展点可给请求附加受限元数据，并按注册顺序包装模型响应流；它必须传播取消，合成模型可见内容也必须有界。这是请求与流的宿主接线，不应当成任意 Skill 都能拦截模型。</p><p><strong>面试追问：</strong>为什么“让模型读一段指令”和“在宿主内包装响应流”不是同一级扩展？</p><a href="/#topic-extension">返回「扩展机制」主题 ↗</a></aside>
+        <div class="custom-stack" data-reveal>
+          <div><span class="custom-key">GUIDE</span><strong>AGENTS.md</strong><p>随代码库传播的持久指导；适合命令、约定、评审标准和目录级规则。</p></div>
+          <div><span class="custom-key">REMEMBER</span><strong>Memories</strong><p>把仍会影响后续工作的事实带到新对话；不是完整聊天记录，也不是模型参数。</p></div>
+          <div><span class="custom-key">REUSE</span><strong>Skills</strong><p>按需加载的流程与领域知识；可声明工具、环境变量或 MCP 依赖。</p></div>
+          <div><span class="custom-key">CONNECT</span><strong>MCP</strong><p>把外部工具与共享系统接入 Codex；连接不等于自动授权。</p></div>
+          <div><span class="custom-key">DELEGATE</span><strong>Subagents</strong><p>独立上下文与工具配置的专业执行者；并行不应扩大原任务授权。</p></div>
+          <div><span class="custom-key">ENFORCE</span><strong>Hooks</strong><p>在 Session、Turn 和工具生命周期运行确定性脚本，用于校验、日志和安全控制。</p></div>
+        </div>
+        <div class="decision" data-reveal><span class="label-mono">CHOOSING THE MECHANISM</span><p>让模型知道仓库规则 → AGENTS；复用一套判断流程 → Skill；访问外部系统 → MCP；确定性拦截或强制 → Hook；隔离并行工作 → Subagent；跨对话保留局部事实 → Memory。</p></div>
+        <div class="spread"><article class="prose" data-reveal><h3>两条容易记反的规则</h3><p><strong>配置是覆盖，项目指令是拼接。</strong>配置层有明确优先级：打包默认、设备管理、系统、企业、用户、项目、会话参数逐层合并，遗留托管层仍可能拥有更高优先级；企业 requirements 还能直接拒绝越界值。项目指令则从项目根到当前目录逐层收集，局部 override 只替换同目录主文件，总量还受字节预算限制。</p><p>Subagent 不是“多开一次模型调用”，而是独立会话：可选择继承全部、最近若干轮或不继承父历史；历史会洗掉推理过程和工具噪声，只保留适合交接的内容。消息可只排队，也可唤醒目标；最终答案会沿父子关系回传。资源还分别受并发、驻留与整棵树预算约束，权限只能收紧不能扩大。</p></article></div>
+        <div class="machine" id="cx-customization" data-reveal>
+          <div class="machine-bar"><span class="title"><span class="led"></span><strong>配置覆盖判定器</strong></span><span class="label-mono" data-status>题 1/4 · 待判定</span></div>
+          <div class="machine-body sim-layout">
+            <div>
+              <div class="seg-row" data-scenarios><button class="cbtn" type="button" data-sc="0" aria-pressed="false">题一 · model 键</button><button class="cbtn" type="button" data-sc="1" aria-pressed="false">题二 · sandbox_mode</button><button class="cbtn" type="button" data-sc="2" aria-pressed="false">题三 · 受管机器</button><button class="cbtn" type="button" data-sc="3" aria-pressed="false">题四 · AGENTS.md</button></div>
+              <div class="sim-group" style="margin-block-start: var(--s-4)"><span class="label-mono">谁生效？点一个候选</span><div class="seg-row" data-candidates></div></div>
+              <p class="stage-note" data-scenario-note></p>
+            </div>
+            <div>
+              <code class="cmd-line" data-conflict></code>
+              <div style="margin-block: var(--s-4)"><span class="verdict-badge" data-verdict>等待作答</span></div>
+              <p class="stage-note" data-verdict-desc>先在左侧选一题，再点出你认为生效的文件或规则。</p>
+              <ol class="trace-list" data-trace><li>判定后这里会展开优先级阶梯。</li></ol>
+              <div class="stream-log elog" data-log aria-live="polite"></div>
+            </div>
+          </div>
+        </div>
+        <div class="interview" data-reveal><span class="label-mono">CHECK YOUR MODEL</span><h4>“AGENTS.md 是不是写得越长越保险？”</h4><div class="qa"><details><summary>展开判断与答案</summary><div class="ans">不是。它按层拼接且受总字节预算约束，越长越可能把真正重要的尾部截掉。仓库约束留在 AGENTS，可复用流程放 Skill，硬性执行放 Hook，外部访问放 MCP。</div></details></div></div>
+        <p class="lesson-result" data-reveal><strong>模块验收：</strong>给出一条新需求，能按“指导、流程、连接、强制、分发、配置”归类并选择正确扩展面。</p>
+      </section>
+
+      <section class="chapter band-deep" id="environments" data-spy>
+        <div class="shell">
+          <header class="chapter-head" data-reveal><span class="label-mono">MODULE 10 · MULTI-AGENT ORCHESTRATION</span><h2>Codex 怎样让多个 Agent 并行，又不复制噪声、越权或耗尽资源？</h2><p class="lede">本模块覆盖 rooted tree、路径身份、fork_turns、历史洗除、mailbox、结果回传、并发与驻留闸门、树级预算以及根用户授权。</p></header><aside class="course-update"><span>源码更新 · 消息持久性</span><h3>跨 Agent 消息发出后，崩溃恢复靠什么？</h3><p>待处理的 Agent 间消息现在会物化到 Thread 的 rollout。持久化解决“消息事实能恢复”，信箱交付仍需看目标状态；写下消息不等于目标已经读到或醒来。</p><p><strong>面试追问：</strong>如何区分已记录、已送达、已消费和已完成四种状态？</p><a href="/#topic-agents">返回「多代理编排」主题 ↗</a></aside>
+          <div class="spread"><article class="prose" data-reveal><h3>多代理首先是治理系统</h3><p><strong>创建：</strong>spawn 是工具调用，子代理拥有独立 Thread；<code>fork_turns</code> 决定继承 none、全部或最近 N 个 Turn。Fork 会删除推理、工具调用和过程噪声，只留下适合交接的消息与最终结论。</p><p><strong>通信：</strong>代理通过路径身份和 mailbox 交流。<code>send_message</code> 只排队，<code>followup_task</code> 可以唤醒空闲代理；子代理终态的 final answer 自动沿父链回传，父代理默认不能读取子 transcript。</p><p><strong>治理：</strong>并发执行、内存驻留和整棵树 token 预算分别限流。V2 可把空闲代理驱逐到磁盘，消息到来后经属主与权限校验再重载。子权限只能继承或收紧，授权最终锚定根用户意图。</p></article><ol class="kp-list" data-reveal><li data-no="TREE"><span><strong>身份</strong>：结构化 AgentPath 保证树关系与寻址唯一。</span></li><li data-no="FORK"><span><strong>上下文</strong>：按任务选择 fork_turns，并洗除父过程噪声。</span></li><li data-no="MAIL"><span><strong>通信</strong>：排队与唤醒分开，完成结果沿父链上行。</span></li><li data-no="BUDGET"><span><strong>资源</strong>：并发、驻留、预算和权限分别封顶。</span></li></ol></div>
+          <div class="machine" id="cx-environments" data-reveal>
+            <div class="machine-bar"><span class="title"><span class="led"></span><strong>委派边界实验台</strong></span><span class="label-mono" data-status>independent · last 2 · queue</span></div>
+            <div class="machine-body sim-layout">
+              <div>
+                <div class="sim-group" data-group-task><span class="label-mono">01 · 任务关系</span><div class="seg-row"><button class="cbtn" type="button" data-v="independent" aria-pressed="false">独立子问题</button><button class="cbtn" type="button" data-v="dependent" aria-pressed="false">阻塞主线</button><button class="cbtn" type="button" data-v="shared-write" aria-pressed="false">共享写集</button></div></div>
+                <div class="sim-group" data-group-fork><span class="label-mono">02 · fork_turns</span><div class="seg-row"><button class="cbtn" type="button" data-v="none" aria-pressed="false">none</button><button class="cbtn" type="button" data-v="2" aria-pressed="false">最近 2 轮</button><button class="cbtn" type="button" data-v="all" aria-pressed="false">all</button></div></div>
+                <div class="sim-group" data-group-delivery><span class="label-mono">03 · 消息方式</span><div class="seg-row"><button class="cbtn" type="button" data-v="queue" aria-pressed="false">只排队</button><button class="cbtn" type="button" data-v="wake" aria-pressed="false">排队并唤醒</button></div></div>
+                <div class="sim-group" data-group-target><span class="label-mono">04 · 目标状态</span><div class="seg-row"><button class="cbtn" type="button" data-v="idle" aria-pressed="false">idle</button><button class="cbtn" type="button" data-v="busy" aria-pressed="false">busy</button><button class="cbtn" type="button" data-v="evicted" aria-pressed="false">evicted</button></div></div>
+              </div>
+              <div>
+                <code class="cmd-line" data-cmd></code>
+                <div style="margin-block: var(--s-4)"><span class="verdict-badge" data-verdict></span></div>
+                <p class="stage-note" data-verdict-desc></p>
+                <ol class="trace-list" data-trace></ol>
+                <div class="stream-log elog" data-log aria-live="polite"></div>
+              </div>
+            </div>
+          </div>
+          <div class="interview" data-reveal><span class="label-mono">CHECK YOUR MODEL</span><h4>“子代理为什么不应该默认继承父代理全部工具过程？”</h4><div class="qa"><details><summary>展开判断与答案</summary><div class="ans">工具过程包含大量临时噪声、未完成状态和累计用量；Fork 需要的是任务事实与结论。Codex 会洗除 reasoning、工具调用和中间评论，再按 fork_turns 决定保留多少用户轮。</div></details></div></div>
+          <p class="lesson-result" data-reveal><strong>模块验收：</strong>能为一个候选子任务确定是否值得委派、继承多少上下文、是否唤醒目标，以及怎样避免写集、权限与预算失控。</p>
+        </div>
+      </section>
+
+      <section class="chapter shell" id="surfaces" data-spy>
+        <header class="chapter-head" data-reveal><span class="label-mono">MODULE 11 · CONFIGURATION, ENVIRONMENTS & CLIENTS</span><h2>生效配置、执行宿主与客户端契约怎样共同决定实际行为？</h2><p class="lede">本模块把“谁的配置赢”“代码在哪里执行”“客户端如何接入”放在一条部署链上。相同任务换一个配置层、宿主或交互表面，等待、权限、恢复与失败契约都会变化。</p></header>
+        <div class="environment-matrix" data-reveal>
+          <div class="matrix-head"><span>层</span><span>决定什么</span><span>排障先看什么</span></div>
+          <div><strong>配置栈</strong><span>模型、Provider、feature、MCP 与默认策略</span><code>有效值 + 来源层</code></div>
+          <div><strong>企业约束</strong><span>哪些高优先级值仍不允许越界</span><code>requirements</code></div>
+          <div><strong>Step 快照</strong><span>本次请求冻结的配置、权限和工具面</span><code>生效边界</code></div>
+          <div><strong>执行宿主</strong><span>文件寿命、Shell、网络、沙箱与可写根</span><code>local / worktree / cloud / remote</code></div>
+          <div><strong>客户端</strong><span>人机交互、双向审批、事件投影与退出码</span><code>CLI / IDE / App Server / SDK / exec</code></div>
+        </div>
+        <div class="machine" id="machine-surfaces" data-reveal>
+          <div class="machine-bar"><span class="title"><span class="led is-done"></span><strong>客户端表面交换台</strong></span><span class="label-mono">choose by contract</span></div>
+          <div class="machine-body surface-layout"><div class="surface-choices"><button class="cbtn" type="button" data-surface="cli">CLI</button><button class="cbtn" type="button" data-surface="ide">IDE</button><button class="cbtn" type="button" data-surface="appserver">App Server</button><button class="cbtn" type="button" data-surface="sdk">SDK</button><button class="cbtn" type="button" data-surface="exec">codex exec</button><button class="cbtn" type="button" data-surface="action">GitHub Action</button></div><dl class="surface-detail"><div><dt>契约</dt><dd data-surface-contract></dd></div><div><dt>最适合</dt><dd data-surface-best></dd></div><div><dt>连接方式</dt><dd data-surface-transport></dd></div></dl></div>
+        </div>
+        <div class="spread"><article class="prose" data-reveal><h3>先解析有效状态，再选择交互表面</h3><p><strong>配置：</strong>普通层按优先级覆盖，企业 requirements 另行钳制允许范围；AGENTS.md 则从项目根到 cwd 拼接，不遵循同一套覆盖代数。配置在 step 捕获后才成为本次请求事实。</p><p><strong>环境：</strong>Local、Worktree、Cloud 与 Remote host 决定真正的文件、网络与沙箱边界。远程执行时客户端只发送意图，最终强制发生在远程宿主。</p><p><strong>表面：</strong>需要持续呈现 Item、接收反向审批和恢复 Thread 时使用 App Server；人机协作用 CLI/IDE；应用代码驱动用 SDK；一次进出与明确退出码用非交互入口。无人值守流程必须提前消除“等用户回答”的分支。</p></article></div>
+          <div class="interview" data-reveal><span class="label-mono">CHECK YOUR MODEL</span><h4>“CI 里为什么通常不直接复刻 App Server 富客户端？”</h4><div class="qa"><details><summary>展开判断与答案</summary><div class="ans">CI 的核心契约是一次进出、可重试、退出码清晰；它通常没有审批人，也不需要维护复杂 UI 投影。只有确实需要双向审批、历史恢复与细粒度流事件时，才值得接入完整 App Server。</div></details></div></div>
+        <div class="decision" data-reveal><span class="label-mono">BOUNDARY</span><p>表面可以不同，事实源不能分叉。无论 CLI、IDE 还是自定义客户端，都不应另造一套 Turn 或 Item 语义。</p></div>
+        <p class="lesson-result" data-reveal><strong>模块验收：</strong>能先给出有效配置及来源、实际执行宿主，再根据是否有人在场、是否双向交互、是否恢复与怎样返回失败选择客户端。</p>
+      </section>
+
+      <section class="chapter band-edge" id="practice" data-spy>
+        <div class="shell">
+          <header class="chapter-head" data-reveal><span class="label-mono">MODULE 12 · RELIABILITY ENGINEERING</span><h2>工具失败、模型流断开或进程重启时，系统怎样确定性收口？</h2><p class="lede">本模块整合错误分类、工具自救、流式重试、传输降级、取消回执、幂等记录、日志恢复、可观测性和 wire-level 测试。</p></header>
+          <div class="spread"><article class="prose"><h3>失败先分类，再选择去处</h3><p>工具层首先判断失败是否可以回给模型：非零退出、沙箱拒绝、用户拒绝和多数超时都变成可行动的 tool output；程序性崩溃才作为 Fatal 结束 Turn。模型看到的是文本，不是内部 success 布尔值。</p><p>采样流失败时，只对明确可重试类别执行带 jitter 的退避，并优先采用服务端等待时间。每次重试从权威 history 重新构建请求；若工具已经执行，调用记录会按 call id 重新附回，减少模型盲目重复副作用。它不是事务或 exactly-once 保证。</p><p>WebSocket 预算耗尽后可以单向切到 HTTPS；中断、崩溃和压缩造成的孤儿调用会在请求前补齐或移除。可靠性目标不是“永不失败”，而是失败必有去处、历史仍可重放。</p></article><ol class="kp-list"><li data-no="A"><span><strong>分类</strong>：可重试、回给模型、终止 Turn 或等待用户。</span></li><li data-no="B"><span><strong>收口</strong>：每个调用必须有真实或合成回执。</span></li><li data-no="C"><span><strong>防重</strong>：记录已执行副作用，不假装具备事务。</span></li><li data-no="D"><span><strong>验证</strong>：断言模型在 wire 上实际收到了什么。</span></li></ol></div>
+          <div class="decision" data-reveal><span class="label-mono">FIVE-STEP DEBUG LOOP</span><p>定位容器 → 找最后事实 → 检查安全/环境边界 → 核对 active context 与回注 → 设计一个能推翻当前假设的最小实验。</p></div>
+
+          <div class="interview" data-reveal>
+            <span class="label-mono">PROBLEM SET 01 · 架构设计题</span>
+            <h4>“流在工具执行后断开，重试为什么可能制造重复副作用？”</h4>
+            <div class="qa">
+              <details>
+                <summary>展开答题骨架与解耦推演</summary>
+                <div class="ans">
+                  <p><strong>【先定位】</strong> 工具 Item 已执行，但模型流没有自然完成。重试粒度通常是重新发送从历史派生的请求，不是从断开的字节位置继续。</p>
+                  <p><strong>【关键风险】</strong> 如果模型不知道调用已经执行，就可能再次触发同一命令。系统会记录已尝试调用并在重建请求时附回；这是“告诉模型事实”，不是事务回滚。</p>
+                  <p><strong>【最小验证】</strong> 检查第一次调用是否有稳定 call id、执行记录是否完整、重试请求是否带回已执行事实，以及外部动作本身能否设计为幂等。</p>
+                  <p><strong>【答题结论】</strong> Agent 重试的底线不是“绝不重复”，而是“重复前拥有足够事实，并让副作用尽量幂等”。</p>
+                </div>
+              </details>
+            </div>
+          </div>
+
+          <div class="interview" data-reveal>
+            <span class="label-mono">PROBLEM SET 02 · 故障排查题</span>
+            <h4>“用户提交了 MCP 表单，为什么工具仍然超时？”</h4>
+            <div class="qa">
+              <details>
+                <summary>展开答题骨架与排查路径</summary>
+                <div class="ans">
+                  <p><strong>【先定位】</strong> 这是反向请求的应答关联问题，不是模型生成问题。先确认请求已发出、客户端已展示、响应已返回、等待项已命中四个事实。</p>
+                  <p><strong>【关键证据】</strong> 请求键是否一致？等待项在响应前是否被取消或清理？连接断开后有没有明确的中止结果？</p>
+                  <p><strong>【避免误判】</strong> 不要在没有证据时断言“多线程竞争”或随意延长超时。先找最后一个已确认事件，再修拥有断点的那一层。</p>
+                </div>
+              </details>
+            </div>
+          </div>
+
+          <div class="interview" data-reveal>
+            <span class="label-mono">PROBLEM SET 03 · 安全攻防题</span>
+            <h4>“WorkspaceWrite 与 OnRequest 同时存在，跨工作区写入该怎么判？”</h4>
+            <div class="qa">
+              <details>
+                <summary>展开答题骨架与权限决策</summary>
+                <div class="ans">
+                  <p><strong>【先分轴】</strong> WorkspaceWrite 描述当前可写边界，OnRequest 描述何时允许询问。命令规则与企业约束还可能进一步收紧。</p>
+                  <p><strong>【判断顺序】</strong> 先看规则是否禁止或要求询问，再看策略是否允许展示询问，最后由权限画像与系统沙箱执行。某些模式可在明确批准后尝试升级执行，但绝不能把“用户点了同意”直接等同于“沙箱已被关闭”。</p>
+                  <p><strong>【答题结论】</strong> 三轴是组合关系，不是二选一。要回答谁能放行，必须先指出当前拒绝来自哪一轴。</p>
+                </div>
+              </details>
+            </div>
+          </div>
+          <div class="decision" data-reveal><span class="label-mono">边界</span><p>课程事实边界为快照 498d40b29f60。实验性能力、事件名和默认配置会继续变化；生产集成应以运行版本的能力协商与生成 schema 为准。能说出结论的失效条件，才算真正掌握。</p></div>
+          <p class="lesson-result" data-reveal><strong>模块验收：</strong>任选一个失败，能在 60 秒内说清最后事实、负责模块、重试或收口策略、一个可证伪假设和最小验证动作。</p>
+          <section aria-labelledby="glossary-title" data-reveal><h3 id="glossary-title">速查术语</h3><dl class="gloss"><div><dt>Thread</dt><dd>包含多个 Turn、独立 rollout 与恢复身份的持久状态容器。</dd></div><div><dt>Turn</dt><dd>一次用户请求及 Agent 随后完成的全部工作。</dd></div><div><dt>Item</dt><dd>消息、命令、文件变更或工具调用等最小输入输出单元。</dd></div><div><dt>Base Instructions</dt><dd>会话级模型行为基线，与动态上下文和活跃历史分层。</dd></div><div><dt>Active History</dt><dd>Agent Loop 为下一次模型请求维护的可替换工作集。</dd></div><div><dt>Rollout</dt><dd>每个 Thread 独立追加的持久化事实日志。</dd></div><div><dt>Compaction</dt><dd>生成 checkpoint 并替换 active history；不会把完整 transcript 改写成一个文件摘要。</dd></div><div><dt>Memories</dt><dd>跨 Thread 提取与整理的长期事实层，不替代精确 resume。</dd></div><div><dt>SandboxPolicy</dt><dd>命令实际可访问的文件系统与网络边界。</dd></div><div><dt>ApprovalPolicy</dt><dd>何时暂停并请求越界授权的交互策略。</dd></div><div><dt>Hook</dt><dd>在 Codex 生命周期节点运行的确定性脚本或 MCP 处理器。</dd></div></dl></section>
+          <section class="source-notes" aria-labelledby="sources-title" data-reveal><span class="label-mono">VERSION BOUNDARY · UPDATED 2026-09-03</span><h3 id="sources-title">继续查证</h3><p>课程机制按源码快照复核；产品入口、协议字段与实验特性仍应以运行版本的生成 schema 和 OpenAI Docs 为准。</p><div><a href="https://developers.openai.com/api/reference/java/resources/responses/methods/compact">Responses Compaction</a><a href="https://learn.chatgpt.com/docs/customization/memories">Memories</a><a href="https://learn.chatgpt.com/docs/app-server">App Server</a><a href="https://learn.chatgpt.com/docs/agent-configuration/agents-md">AGENTS.md</a><a href="https://learn.chatgpt.com/docs/agent-approvals-security">安全与审批</a><a href="https://learn.chatgpt.com/docs/config-file/config-reference">配置参考</a></div></section>
+        </div>
+      </section>
+    </main>
+    <footer class="site"><div class="shell"><span>Codex 内核图谱</span><div><a href="/grok">Grok Build</a> · <a href="/deepseek">DeepSeek Harness</a> · <a href="/pi">Pi Agent</a> · <a href="/opencode">OpenCode</a> · <a href="/openclaw">OpenClaw</a> · <a href="/hermes">Hermes Agent</a> · <a href="#top">返回顶部 ↑</a></div></div></footer>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

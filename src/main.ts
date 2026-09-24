@@ -34,9 +34,10 @@ function boot(): void {
   initStateModel(document.querySelector("#machine-state"));
   initExtensionAtlas(document.querySelector("#machine-extensions"));
   initSurfaceSwitchboard(document.querySelector("#machine-surfaces"));
+  initCxPromptLayers(document.querySelector("#cx-prompt"));
   initCxToolPipeline(document.querySelector("#cx-tools"));
   initCxConfigOrder(document.querySelector("#cx-customization"));
-  initCxEvironments(document.querySelector("#cx-environments"));
+  initCxMultiAgent(document.querySelector("#cx-environments"));
   initChapterReader();
 }
 
@@ -63,6 +64,63 @@ function syncPressed(scope: Element | null | undefined, current: string): void {
   scope?.querySelectorAll<HTMLButtonElement>("[data-v]").forEach((btn) => {
     btn.setAttribute("aria-pressed", String(btn.dataset.v === current));
   });
+}
+
+const CX_PROMPT_LAYERS: Record<string, { title: string; role: string; wire: string; boundary: string }> = {
+  base: {
+    title: "Base Instructions",
+    role: "会话级行为基线与模型指令。它独立于普通对话历史，不应被误画成一条用户消息。",
+    wire: "request.instructions / BaseInstructions",
+    boundary: "会话配置或明确的模型设置改变；普通 compaction 不把它折进摘要。",
+  },
+  dynamic: {
+    title: "Dynamic Context",
+    role: "AGENTS.md、环境、权限、时间与扩展贡献的具名 World State 区块，按 Known / Unknown 前态做差分或全量重注入。",
+    wire: "request.input[] · contextual fragments",
+    boundary: "每个 step 重新捕获；本 step 中途变化到下一 step 才生效。",
+  },
+  history: {
+    title: "Active History",
+    role: "用户消息、模型输出、工具调用与回执的当前工作集，由完整 transcript 或最新 compaction checkpoint 派生。",
+    wire: "request.input[] · normalized history",
+    boundary: "工具回注、steer、rollback 或 compaction 会改变；不是完整 rollout 的逐轮重放。",
+  },
+  tools: {
+    title: "Tool Specs",
+    role: "本 step 可见工具的结构化 schema；MCP 与延迟发现工具按 exposure 进入，不属于保留用户消息预算。",
+    wire: "request.tools[]",
+    boundary: "ToolRouter 随 step 重建；工具注册变化不会改写旧历史。",
+  },
+  schema: {
+    title: "Output Schema",
+    role: "需要结构化结果时约束本次模型输出；它控制出口形状，不是长期记忆或安全策略。",
+    wire: "request.text.format / output_schema",
+    boundary: "只作用于对应请求；Guardian 等专用会话可能选择自由文本或不同 schema。",
+  },
+};
+
+function initCxPromptLayers(root: HTMLElement | null): void {
+  if (!root) return;
+  const title = root.querySelector<HTMLElement>("[data-prompt-title]");
+  const role = root.querySelector<HTMLElement>("[data-prompt-role]");
+  const wire = root.querySelector<HTMLElement>("[data-prompt-wire]");
+  const boundary = root.querySelector<HTMLElement>("[data-prompt-boundary]");
+  const select = (id: string): void => {
+    const layer = CX_PROMPT_LAYERS[id];
+    if (!layer || !title || !role || !wire || !boundary) return;
+    title.textContent = layer.title;
+    role.textContent = layer.role;
+    wire.textContent = layer.wire;
+    boundary.textContent = layer.boundary;
+    root.querySelectorAll<HTMLButtonElement>("[data-prompt-layer]").forEach((button) =>
+      button.setAttribute("aria-pressed", String(button.dataset.promptLayer === id)),
+    );
+  };
+  root.addEventListener("click", (event) => {
+    const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-prompt-layer]");
+    if (button?.dataset.promptLayer) select(button.dataset.promptLayer);
+  });
+  select("base");
 }
 
 /* ========== 机器一：cx-tools 工具管线步进器 ========== */
@@ -184,90 +242,19 @@ function initCxToolPipeline(root: HTMLElement | null): void {
   render();
 }
 
-/* ========== 机器二：cx-environments 环境 × 沙箱 × 审批 ========== */
+/* ========== 机器二：cx-environments 多代理委派边界 ========== */
 
-type CxEnv = "local" | "worktree" | "cloud" | "remote";
-type CxSbx = "read-only" | "workspace-write" | "danger-full-access";
-type CxApr = "untrusted" | "on-request" | "never";
-type CxCmd = "test" | "net" | "outside";
+type CxTask = "independent" | "dependent" | "shared-write";
+type CxFork = "none" | "2" | "all";
+type CxDelivery = "queue" | "wake";
+type CxTarget = "idle" | "busy" | "evicted";
 
-const CX_ENV_CMDS: Record<CxCmd, { cmd: string; allowlisted: boolean }> = {
-  test: { cmd: "cargo test", allowlisted: true },
-  net: { cmd: "curl -s https://api.example.com", allowlisted: false },
-  outside: { cmd: "write <outside-workspace>", allowlisted: false },
-};
-
-const CX_ENV_SHORT: Record<CxEnv, string> = {
-  local: "当前机器执行，系统沙箱在本地强制",
-  worktree: "独立 Git 工作树执行，改动与主检出隔离",
-  cloud: "托管环境执行，隔离与网络由环境模板共同决定",
-  remote: "远程宿主执行，沙箱在宿主侧生效",
-};
-
-const CX_ENV_VERDICTS = {
-  ok: { tag: "沙箱内放行", cls: "ok", desc: "执行环境已覆盖操作所需边界，命令直接跑，无需请示。" },
-  ask: {
-    tag: "升级请示",
-    cls: "ask",
-    desc: "当前边界不足且策略允许询问：系统发出审批请求。批准只处理这次明确的权限需求，不应被理解为永久关闭沙箱。",
-  },
-  deny: {
-    tag: "直接拒绝",
-    cls: "deny",
-    desc: "审批通道关闭：失败作为工具结果回注模型，回合继续，但命令没有跑。",
-  },
-} as const;
-
-function cxEnvDecide(
-  env: CxEnv,
-  cmd: CxCmd,
-  sbx: CxSbx,
-  apr: CxApr,
-): { key: "ok" | "ask" | "deny"; trace: string[] } {
-  const trace: string[] = [`环境=${env}：${CX_ENV_SHORT[env]}`];
-  let blocked: string | null = null;
-  if (sbx === "read-only") {
-    blocked = cmd === "net" ? "当前网络权限不覆盖该访问" : "read-only 不允许这次写入";
-  } else if (sbx === "workspace-write") {
-    if (cmd === "net") blocked = "当前网络权限不覆盖该访问";
-    else if (cmd === "outside") blocked = "写入目标越出工作区可写根";
-  }
-
-  if (blocked) {
-    trace.push(`sandbox=${sbx}：${blocked}`);
-    if (apr === "never") {
-      trace.push("approval=never：不请示，失败直接回注模型");
-      return { key: "deny", trace };
-    }
-    trace.push(
-      apr === "untrusted"
-        ? "approval=untrusted：白名单外命令执行前请示"
-        : "approval=on-request：模型发起升级请示",
-    );
-    if (env === "remote") trace.push("审批决定回传后，仍由远程宿主执行最终边界");
-    else trace.push("批准只覆盖明确权限，不整体解除系统沙箱");
-    return { key: "ask", trace };
-  }
-
-  trace.push(`sandbox=${sbx} 允许该操作`);
-  if (env === "worktree" && cmd === "test")
-    trace.push("测试产生的改动留在独立工作树，主检出不受影响");
-  if (env === "cloud") trace.push("文件寿命由托管环境的持久化契约决定");
-  if (env === "remote") trace.push("可写边界由远程宿主解析，客户端视图不能代替宿主事实");
-  if (apr === "untrusted" && !CX_ENV_CMDS[cmd].allowlisted) {
-    trace.push("approval=untrusted：exec policy 未放行 → 仍要请示");
-    return { key: "ask", trace };
-  }
-  trace.push("无需请示 → 执行并采集输出");
-  return { key: "ok", trace };
-}
-
-function initCxEvironments(root: HTMLElement | null): void {
+function initCxMultiAgent(root: HTMLElement | null): void {
   if (!root) return;
-  let cmd: CxCmd = "test";
-  let env: CxEnv = "local";
-  let sbx: CxSbx = "workspace-write";
-  let apr: CxApr = "on-request";
+  let task: CxTask = "independent";
+  let fork: CxFork = "2";
+  let delivery: CxDelivery = "queue";
+  let target: CxTarget = "idle";
 
   const status = root.querySelector<HTMLElement>("[data-status]");
   const cmdLine = root.querySelector<HTMLElement>("[data-cmd]");
@@ -275,67 +262,80 @@ function initCxEvironments(root: HTMLElement | null): void {
   const desc = root.querySelector<HTMLElement>("[data-verdict-desc]");
   const trace = root.querySelector<HTMLElement>("[data-trace]");
   const log = root.querySelector<HTMLElement>("[data-log]");
-  let touched = false; // 日志 = 用户真实试验的历史：boot 首渲染与重复组合不记行
+  let touched = false;
   let lastTrial = "";
 
   const render = (): void => {
-    const res = cxEnvDecide(env, cmd, sbx, apr);
-    const v = CX_ENV_VERDICTS[res.key];
-    if (status) status.textContent = `${env} · ${sbx} · ${apr}`;
-    if (cmdLine) cmdLine.textContent = CX_ENV_CMDS[cmd].cmd;
-    if (badge) {
-      badge.dataset.verdict = v.cls;
-      badge.textContent = v.tag;
+    const steps: string[] = [];
+    let verdict: { tag: string; cls: "ok" | "ask" | "deny"; desc: string };
+    if (task === "dependent") {
+      verdict = { tag: "留在主线", cls: "ask", desc: "这项工作阻塞下一步判断，委派只会增加等待与交接成本。" };
+      steps.push("任务依赖主线当前结论 → 不 spawn");
+    } else if (task === "shared-write") {
+      verdict = { tag: "写集冲突", cls: "deny", desc: "并行代理共享文件系统；没有明确所有权时不要同时修改同一写集。" };
+      steps.push("共享写集没有唯一 owner → 拒绝并行编辑");
+    } else {
+      verdict = { tag: "适合委派", cls: "ok", desc: "独立、有界、可用一段最终答案回传的任务适合子代理。" };
+      steps.push("独立子问题 → spawn_agent");
     }
-    if (desc) desc.textContent = v.desc;
+    steps.push(
+      fork === "none"
+        ? "fork_turns=none → 任务描述必须自包含"
+        : fork === "2"
+          ? "fork_turns=2 → 只继承最近两轮并洗除工具过程"
+          : "fork_turns=all → 保留完整父历史，但上下文更重",
+    );
+    steps.push(
+      delivery === "wake"
+        ? "followup_task → 消息排队，目标空闲时触发新 Turn"
+        : "send_message → 只排队，不主动唤醒目标",
+    );
+    steps.push(
+      target === "busy"
+        ? "目标 busy → 在消息边界或当前工具完成后接收"
+        : target === "evicted"
+          ? "目标 evicted → 校验属主与权限后从 rollout 重载"
+          : "目标 idle → 是否启动由 delivery mode 决定",
+    );
+
+    if (status) status.textContent = `${task} · fork ${fork} · ${delivery} · ${target}`;
+    if (cmdLine)
+      cmdLine.textContent = task === "independent" ? `spawn_agent({ fork_turns: "${fork}" })` : "continue locally";
+    if (badge) {
+      badge.dataset.verdict = verdict.cls;
+      badge.textContent = verdict.tag;
+    }
+    if (desc) desc.textContent = verdict.desc;
     if (trace) {
-      trace.replaceChildren();
-      for (const t of res.trace) {
-        const li = document.createElement("li");
-        li.textContent = t;
-        trace.append(li);
-      }
+      trace.replaceChildren(...steps.map((text) => Object.assign(document.createElement("li"), { textContent: text })));
     }
     if (log && touched) {
-      const trial = `[${CX_ENV_CMDS[cmd].cmd}] × ${env} × ${sbx} × ${apr} → ${v.tag}`;
+      const trial = `${task} × fork ${fork} × ${delivery} × ${target} → ${verdict.tag}`;
       if (trial !== lastTrial) {
         lastTrial = trial;
-        log.append(
-          consoleLine(
-            res.key === "ok" ? "k-tool" : res.key === "ask" ? "k-warn" : "k-sys",
-            trial,
-          ),
-        );
+        log.append(consoleLine(verdict.cls === "ok" ? "k-tool" : verdict.cls === "ask" ? "k-warn" : "k-sys", trial));
         while (log.children.length > 8) log.firstElementChild?.remove();
       }
     }
-    syncPressed(root.querySelector("[data-group-cmd]"), cmd);
-    syncPressed(root.querySelector("[data-group-env]"), env);
-    syncPressed(root.querySelector("[data-group-sbx]"), sbx);
-    syncPressed(root.querySelector("[data-group-apr]"), apr);
+    syncPressed(root.querySelector("[data-group-task]"), task);
+    syncPressed(root.querySelector("[data-group-fork]"), fork);
+    syncPressed(root.querySelector("[data-group-delivery]"), delivery);
+    syncPressed(root.querySelector("[data-group-target]"), target);
   };
 
-  const wire = (groupSel: string, set: (v: string) => void): void => {
-    root.querySelector(groupSel)?.addEventListener("click", (e) => {
-      const btn = (e.target as HTMLElement).closest<HTMLButtonElement>("[data-v]");
-      if (!btn?.dataset.v) return;
+  const wire = (group: string, set: (value: string) => void): void => {
+    root.querySelector(group)?.addEventListener("click", (event) => {
+      const button = (event.target as HTMLElement).closest<HTMLButtonElement>("[data-v]");
+      if (!button?.dataset.v) return;
       touched = true;
-      set(btn.dataset.v);
+      set(button.dataset.v);
       render();
     });
   };
-  wire("[data-group-cmd]", (v) => {
-    cmd = v as CxCmd;
-  });
-  wire("[data-group-env]", (v) => {
-    env = v as CxEnv;
-  });
-  wire("[data-group-sbx]", (v) => {
-    sbx = v as CxSbx;
-  });
-  wire("[data-group-apr]", (v) => {
-    apr = v as CxApr;
-  });
+  wire("[data-group-task]", (value) => (task = value as CxTask));
+  wire("[data-group-fork]", (value) => (fork = value as CxFork));
+  wire("[data-group-delivery]", (value) => (delivery = value as CxDelivery));
+  wire("[data-group-target]", (value) => (target = value as CxTarget));
   render();
 }
 

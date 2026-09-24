@@ -1,12 +1,29 @@
 const ENTRIES: Record<string, { title: string; role: string; boundary: string }> = {
-  agents: { title: "AGENTS.md", role: "随仓库传播的项目指导：命令、约定、评审要求与目录级规则。", boundary: "进入提示上下文；它约束行为，不执行工具。" },
-  memory: { title: "Memories", role: "把跨对话仍有用的局部事实与偏好带到后续工作。", boundary: "是持久上下文，不等于模型参数或完整聊天历史。" },
-  skill: { title: "Skills", role: "把可复用流程、领域知识与依赖声明封装成按需加载的能力。", boundary: "可作为 turn input item 显式注入；仍受工具权限约束。" },
-  mcp: { title: "MCP", role: "连接外部工具、资源与共享系统，并支持 OAuth、资源读取和 elicitation。", boundary: "远端内容是不可信输入；副作用工具仍需审批。" },
-  app: { title: "Apps / Connectors", role: "在策略允许时，把经过产品化封装的外部系统能力暴露给模型。", boundary: "可访问、已启用、可调用是三个不同状态。" },
-  dynamic: { title: "Dynamic tools", role: "客户端在 Thread 启动时注入的动态工具，并通过 item/tool/call 回调执行。", boundary: "当前属于实验性 App Server API。" },
-  hook: { title: "Hooks", role: "在生命周期节点运行确定性脚本，用于校验、日志、安全检查与记忆生成。", boundary: "钩子代码需要被信任；它不是模型自行决定的工具调用。" },
-  subagent: { title: "Subagents", role: "把有边界的专业子任务交给独立上下文与工具配置的 Agent。", boundary: "委派扩大并行度，但不自动扩大主任务的授权范围。" },
+  active: {
+    title: "Active History",
+    role: "当前 Agent Loop 用来派生下一次模型请求的工作集，包含消息、工具调用、回执和一个当前 compaction checkpoint。",
+    boundary: "Compaction 可以替换；不会自动回读完整 transcript。",
+  },
+  rollout: {
+    title: "Thread Rollout",
+    role: "每个 Thread 独立的追加式事实日志，记录消息、检查点、World State、设置与必要事件。",
+    boundary: "用于 resume、fork 与审计；不是每轮完整塞给模型。",
+  },
+  review: {
+    title: "Guardian Review History",
+    role: "保留审批判断需要的用户意图和原始证据，使模型历史被压缩后仍能审查授权。",
+    boundary: "普通 compaction 不清除；显式 rollback 会同步调整相关证据。",
+  },
+  verified: {
+    title: "Verified Answers",
+    role: "由宿主确认的少量高价值问答，当前快照有条数与字节总量上限。",
+    boundary: "是窄事实缓存，不是完整授权记录，也不是长期聊天记忆。",
+  },
+  longterm: {
+    title: "Long-term Memories",
+    role: "后台从多个 rollout 提取、去敏并整理可跨 Thread 复用的事实，再通过摘要和检索工具按需读取。",
+    boundary: "外部上下文会触发污染防护；不能替代精确 resume。",
+  },
 };
 
 export function initExtensionAtlas(root: HTMLElement | null): void {
@@ -31,5 +48,5 @@ export function initExtensionAtlas(root: HTMLElement | null): void {
     if (button) select(button.dataset.atlas ?? "");
   });
 
-  select("agents");
+  select("active");
 }

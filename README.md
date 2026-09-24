@@ -1,8 +1,8 @@
-# 顶级 Agent 内核图谱 · Agent Kernel Atlas
+# Agent Harness 工程课
 
-一个面向 **Agent 工程师学习与面试备战** 的开源顶级 Agent 教学系列，当前包含：
+面向已有编程经验、希望通过开源实现提升 **Agent 设计能力与架构面试表达** 的学习网站。首页按运行循环、状态协议、工具、安全、上下文、记忆、扩展、多代理、客户端和可靠性十个能力模块组织，再深入七个真实项目：
 
-- **Codex 内核图谱**：Thread / Turn / Item、App Server、工具、权限、上下文与扩展体系。
+- **Codex 内核图谱**：Agent Loop、状态与协议、工具、安全、提示词工程、压缩、记忆管理、恢复、多代理与客户端集成。
 - **Grok Build 内核图谱**：Rust crate 分层、Session actors、ACP、Tools、Workspace、权限/沙箱、压缩、扩展与子代理。
 - **DeepSeek Harness 内核图谱**：Cordis 插件树、Turn / Step、Session Log、工具管线、能力缝、安全隔离与运行表面。
 - **Pi Agent 内核图谱**：Agent State、统一 Provider 流、工具批次、JSONL Session Tree、扩展、TUI 与协议表面。
@@ -10,7 +10,7 @@
 - **OpenClaw 内核图谱**：三层循环、有界 run 预算、双 SQLite 状态、记忆/自动化唤醒、多通道网关与人格扩展。
 - **Hermes Agent 内核图谱**：Python 单体内核、学习闭环、窄腰工具、七个执行后端、状态库、网关与两代演化谱系。
 
-每门课程都用「具体问题 → 短运行轨迹 → 交互实验 → 工程判断」讲解。网页正文不要求学生追文件路径或行号；版本与证据映射保留在独立分析资料中。阅读器以课程地图和单章舞台组织内容，支持章节直达、前后章切换与浏览器返回；JS 失效时仍保留完整静态长文。
+主题路径从具体任务进入：先预测运行轨迹，再读项目机制，完成迁移练习与面试自测。Agent 案例保留完整模块和交互实验；正文不要求学生追文件路径或行号，版本与证据映射保留在独立索引。阅读器支持模块直达、前后切换与浏览器返回；JS 失效时仍保留完整静态长文。
 
 ## 运行
 
@@ -23,7 +23,8 @@ npm run preview    # 预览构建产物
 
 ## 结构
 
-- `index.html` —— Codex 课程（12 章、11 个交互实验）
+- `index.html` —— 十个能力模块的主题学习路径与七项目案例入口
+- `codex.html` —— Codex 课程（12 个模块、12 个交互实验）
 - `grok.html` —— Grok Build 课程（12 章、10 个交互实验）
 - `deepseek.html` —— DeepSeek Harness 课程（12 章、10 个交互实验）
 - `pi.html` —— Pi Agent 课程（12 章、11 个交互实验）
@@ -42,7 +43,8 @@ npm run preview    # 预览构建产物
 | 协议事件流 | 第二章 | Submission / Event 的 JSONL 观感 |
 | 工具管线步进器 | 第三章 | 一次工具调用从发现到回注的六个检查点 |
 | 沙箱 × 审批模拟器 | 第四章 | SandboxPolicy × ApprovalPolicy 决策矩阵 |
-| 上下文计量表 | 第五章 | 窗口填充、auto-compact 与前缀缓存 |
+| Prompt 分层检查器 | 第五章 | Base Instructions、动态上下文、活跃历史、工具与输出约束 |
+| Transcript × Active Context 实验台 | 第五章 | 独立 rollout、replacement history 与 checkpoint 替换 |
 | 平台架构图 | 第六章 | HTTP → 能力/审批/工具 → 内核 → 事件存储 → 租约 |
 | Thread 状态实验台 | 第七章 | Thread / Turn / Item 与 start、resume、fork、steer、interrupt |
 | 扩展边界图谱 | 第八章 | AGENTS、Memories、Skills、MCP、Apps、Hooks、Subagents |
@@ -64,7 +66,7 @@ Hermes Agent 课程另含回合生命周期步进机、Footprint Ladder 判定�
 
 ## 事实边界
 
-- 本轮课程依据 2026-09-03 的预整理分析资料更新，七个快照依次为 Codex `498d40b2`、Grok Build `72a61251`、DeepSeek Harness `49a606bc`、Pi `4e69b0c2`、OpenCode `b578b726`、OpenClaw `5e9875ab`、Hermes `97f3229d`。
+- 原课程主体依据 2026-09-03 的预整理分析资料。2026-09-23 的源码增量与本机七个 HEAD 逐项记录在 [源码增量审校](docs/source-audit-2026-09-23.md)；新增内容标记为“源码更新”或“源码复核”，不将旧主体冒称为最新完整快照。
 - 网页只呈现学生需要的机制、运行轨迹、取舍与练习；源码文件、行号和证据映射不再混入课程正文。
 - 数字默认值、实验特性和迁移中能力只对对应快照与入口成立；页面会明确区分当前实现、实验能力与教学简化。
 - 交互装置用于解释状态变化，不模拟官方 API，也不构成性能、安全或产品能力承诺。

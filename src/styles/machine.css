@@ -1000,7 +1000,7 @@
 
 @media (min-width: 760px) {
   .fact-boundary {
-    grid-template-columns: 8em minmax(0, 1fr);
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 
@@ -1341,4 +1341,19 @@
 .machine:fullscreen .machine-body {
   min-height: calc(100vh - 58px);
   padding: clamp(18px, 4vw, 48px);
+}
+
+@media (max-width: 520px) {
+  .context-counters {
+    grid-template-columns: 1fr;
+  }
+
+  .context-counters > div {
+    border-inline-end: 0;
+    border-block-end: 1px solid var(--line-on-console);
+  }
+
+  .context-counters > div:last-child {
+    border-block-end: 0;
+  }
 }

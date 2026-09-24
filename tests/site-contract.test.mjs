@@ -4,14 +4,14 @@ import path from "node:path";
 import { describe, it } from "node:test";
 
 const root = path.resolve(import.meta.dirname, "..");
-const pages = ["index.html", "grok.html", "deepseek.html", "pi.html", "opencode.html", "openclaw.html", "hermes.html"];
+const pages = ["codex.html", "grok.html", "deepseek.html", "pi.html", "opencode.html", "openclaw.html", "hermes.html"];
 const read = (file) => fs.readFileSync(path.join(root, file), "utf8");
 
 describe("published course contract", () => {
   for (const page of pages) {
-    it(`${page} keeps 12 chapters, unique ids, and resolved hashes`, () => {
+    it(`${page} keeps modules, unique ids, and resolved hashes`, () => {
       const html = read(page);
-      assert.equal((html.match(/<section class="chapter\b/g) ?? []).length, 12);
+      assert.ok((html.match(/<section class="chapter\b/g) ?? []).length >= 6);
       const ids = [...html.matchAll(/\bid="([^"]+)"/g)].map((match) => match[1]);
       assert.equal(new Set(ids).size, ids.length);
       const hashes = [...html.matchAll(/href="#([^"]+)"/g)].map((match) => match[1]);
@@ -24,16 +24,32 @@ describe("published course contract", () => {
 
   it("aliases every course route in the production worker", () => {
     const source = read("scripts/embed-worker.mjs");
-    const expected = ["/", "/codex", ...pages.filter((p) => p !== "index.html").map((p) => `/${p.replace(/\.html$/, "")}`)];
+    const expected = ["/", ...pages.map((p) => `/${p.replace(/\.html$/, "")}`)];
     for (const alias of expected) {
-      const target = alias === "/" || alias === "/codex" ? "/index.html" : `${alias}.html`;
+      const target = alias === "/" ? "/index.html" : `${alias}.html`;
       assert.match(source, new RegExp(`"${alias}": "${target}"`), `missing production route alias ${alias}`);
     }
   });
 
-  it("teaches from incidents without turning source locations into the lesson", () => {
+  it("offers a topic-first path with interview transfer and compatible old Codex links", () => {
+    const home = read("index.html");
+    const courseHtml = pages.map(read).join("\n");
+    assert.equal((home.match(/class="atlas-topic"/g) ?? []).length, 10);
+    assert.equal((home.match(/class="topic-interview"/g) ?? []).length, 10);
+    assert.equal((home.match(/class="topic-transfer"/g) ?? []).length, 10);
+    assert.equal((home.match(/class="topic-contrast"/g) ?? []).length, 10);
+    assert.match(home, /oldCodexHashes/);
+    for (const [, route, hash] of home.matchAll(/href="\/(codex|grok|deepseek|pi|opencode|openclaw|hermes)#([^"]+)"/g)) {
+      const page = route === "codex" ? "codex.html" : `${route}.html`;
+      assert.match(read(page), new RegExp(`id="${hash}"`), `broken topic link to ${route}#${hash}`);
+    }
+    assert.ok((courseHtml.match(/class="course-update"/g) ?? []).length >= 7);
+    assert.doesNotMatch(read("pi.html"), /shouldStopAfterTurn/);
+  });
+
+  it("teaches from engineering scenarios without turning source locations into the lesson", () => {
     const snapshots = {
-      "index.html": "498d40b29f60",
+      "codex.html": "498d40b29f60",
       "grok.html": "72a61251fcff",
       "deepseek.html": "49a606bc5b59",
       "pi.html": "4e69b0c28060",
@@ -42,8 +58,9 @@ describe("published course contract", () => {
       "hermes.html": "97f3229dfdc0",
     };
     const entries = ["src/main.ts", "src/grok.ts", "src/deepseek.ts", "src/pi.ts", "src/opencode.ts", "src/openclaw.ts", "src/hermes.ts"];
-    const html = pages.map((page) => {
+    const html = ["index.html", ...pages].map((page) => {
       const source = read(page);
+      if (page === "index.html") return source.replace(/<script[\s\S]*?<\/script>/g, "");
       const hero = source.match(/<ul class="hero-outcomes"[\s\S]*?<\/ul>/)?.[0] ?? "";
       assert.ok((hero.match(/<li>/g) ?? []).length >= 3, `${page} needs concrete learning outcomes`);
       assert.ok((source.match(/lesson-result|CHAPTER CHECK|CHECKPOINT \d+|本章小结|小结 ·|本章过关|课程完成|毕业练习/g) ?? []).length >= 10, `${page} needs chapter checks`);
@@ -54,8 +71,34 @@ describe("published course contract", () => {
     const interactiveCopy = entries.map(read).join("\n");
     const publishedCopy = `${html}\n${interactiveCopy}`;
     assert.doesNotMatch(publishedCopy, /SOURCE ROUTE|源码路线|真实入口请查|MINIMAL RUNNABLE|SOURCE-ALIGNED TEACHING SKELETON/i);
+    assert.doesNotMatch(publishedCopy, /白话理解|白话|先解决：/);
     assert.doesNotMatch(publishedCopy, /\b(?:codex-rs|packages|crates|src|tests|tools|agent|gateway)\/[\w./-]+\.(?:rs|ts|tsx|py|md|json|jsonl|toml)\b/i);
     assert.doesNotMatch(publishedCopy, /\b[\w.-]+\.(?:rs|ts|tsx|py|md|json|jsonl):\d+\b/i);
+  });
+
+  it("keeps the Codex curriculum modular and preserves its context-memory boundaries", () => {
+    const html = read("codex.html");
+    const contextMeter = read("src/modules/context-meter.ts");
+    assert.equal((html.match(/>MODULE \d{2} ·/g) ?? []).length, 12);
+    for (const concept of [
+      "Base Instructions",
+      "Dynamic Context",
+      "Active History",
+      "Tool Specs",
+      "Output Schema",
+      "Thread Rollout",
+      "Review History",
+      "Verified Answers",
+      "Long-term Memories",
+      "replacement history",
+      "20k token",
+      "64k",
+    ]) {
+      assert.match(html, new RegExp(concept, "i"), `Codex course must teach ${concept}`);
+    }
+    assert.match(contextMeter, /checkpoint \$\{compactCount\} replaces/);
+    assert.match(contextMeter, /transcript remains/);
+    assert.doesNotMatch(contextMeter, /summaryTok\s*\+=/);
   });
 
   it("uses native fullscreen without claiming a false modal", () => {

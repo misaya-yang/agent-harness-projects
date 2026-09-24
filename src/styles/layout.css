@@ -631,6 +631,28 @@
   color: var(--text);
 }
 
+/* 源码增量只呈现会改变工程判断的内容；路径与提交证据留在内部索引。 */
+.course-update {
+  max-width: 49em;
+  margin-block: var(--s-5) var(--s-6);
+  padding-block: 19px 22px;
+  border-block-start: 1px solid var(--accent-line);
+  border-block-end: 1px solid var(--line);
+}
+.course-update > span {
+  color: var(--accent);
+  font-family: var(--ff-mono);
+  font-size: .72rem;
+  font-weight: 600;
+  letter-spacing: .04em;
+}
+.course-update h3 { margin-block: 8px 10px; font-family: var(--ff-body); font-size: 1.22rem; font-weight: 700; }
+.course-update p { max-width: 43em; color: var(--text-2); font-size: .92rem; line-height: 1.8; }
+.course-update p + p { margin-block-start: 10px; }
+.course-update p strong { color: var(--text); }
+.course-update a { display: inline-block; margin-block-start: 13px; color: var(--accent); font-size: .82rem; font-weight: 700; text-decoration: none; }
+.course-update a:hover { text-decoration: underline; }
+
 /* ---- 面试视角 ---- */
 .interview {
   border: 1px solid var(--line-strong);
@@ -908,3 +930,79 @@ footer.site a {
   .reader-phase-list { grid-template-columns: 1fr; }
 }
 @media (prefers-reduced-motion: reduce) { .reader-view.is-active { animation: none; } }
+
+/* 教材阅读器：把章节操作放回章末，给正文留出笔记本空间。 */
+.reader-main { grid-template-rows: minmax(0, 1fr); }
+.reader-main > .series-nav-tabs { display: none; }
+.reader-toolbar {
+  position: static;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  min-height: 0;
+  margin-block-start: clamp(3rem, 5vw, 5rem);
+  padding-block: 24px 32px;
+  border-block-start: 1px solid var(--line);
+  border-block-end: 0;
+  background: transparent;
+}
+.reader-map-link { border-inline-start-color: var(--accent); }
+.reader-current > i { display: none; }
+.reader-mode #kernel-atlas { display: none; }
+.reader-mode .hero-grid { display: block; }
+.reader-mode .hero-grid > div { max-width: 850px; }
+.reader-mode .hero-loop { display: none; }
+.reader-mode .hero h1 { max-width: 15em; font-size: clamp(2.4rem, 3.7vw, 3.45rem); }
+.reader-mode .hero .sub { max-width: 34em; }
+.reader-mode .chapter-head h2 { max-width: 27em; font-family: var(--ff-body); font-size: clamp(1.95rem, 2.4vw, 2.55rem); font-weight: 700; line-height: 1.4; }
+.reader-mode .chapter-head .lede { font-size: 1.05rem; }
+.reader-mode .chapter { line-height: 1.78; }
+.reader-view.chapter { padding-block: clamp(2.3rem, 3.5vw, 3.7rem); }
+.reader-map { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 28px 42px; margin-block-start: 70px; padding-block: 50px; }
+.reader-map-head { grid-column: 1 / -1; max-width: 760px; }
+.reader-phase { display: block; min-width: 0; }
+.reader-phase > .label-mono { display: block; margin-block-end: 7px; }
+.reader-phase-list { grid-column: auto; grid-template-columns: 1fr; margin-block-start: 14px; }
+.kp-list li { grid-template-columns: max-content minmax(0, 1fr); gap: 15px; }
+.kp-list li::before { white-space: nowrap; }
+
+@media (min-width: 1280px) {
+  .rail { width: 210px; padding-inline: 18px; }
+  main { padding-inline-start: 210px; }
+  .course-tabs { max-width: none; gap: 0; overflow-x: auto; padding-inline: 28px; scrollbar-width: none; }
+  .course-tabs > .label-mono, .course-tabs a span { display: none; }
+  .course-tabs a { flex: 0 0 auto; padding-inline: 13px; font-size: .78rem; white-space: nowrap; }
+  .reader-main { grid-template-rows: 54px minmax(0, 1fr); padding-block-start: 0; }
+  .reader-main > .series-nav-tabs { display: block; }
+}
+
+@media (min-width: 900px) and (max-width: 1279px) {
+  .topbar { display: flex; }
+  .rail { display: none; }
+  main { padding-inline-start: 0; }
+  main:not(.reader-main) { padding-block-start: 58px; }
+  .reader-main { grid-template-rows: 48px minmax(0, 1fr); padding-block-start: 58px; }
+  .reader-main > .series-nav-tabs { display: block; }
+  .course-tabs { display: flex; align-items: stretch; gap: 4px; overflow-x: auto; scrollbar-width: none; }
+  .course-tabs::-webkit-scrollbar { display: none; }
+  .course-tabs a { flex: 0 0 auto; padding-inline: 14px; }
+  .course-tabs > .label-mono, .course-tabs a span { display: none; }
+  .course-tabs a:first-of-type { margin-inline-start: 0; }
+  .course-tabs a:last-of-type { margin-inline-end: 0; }
+}
+
+@media (max-width: 899px) {
+  .reader-main { grid-template-rows: minmax(0, 1fr); }
+  .reader-map { grid-template-columns: 1fr; gap: 28px; }
+  .reader-phase-list { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 760px) {
+  .reader-toolbar { grid-template-columns: 1fr; gap: 16px; }
+  .reader-map-link { inline-size: auto; justify-content: start; padding-inline: 12px; }
+  .reader-map-link strong { font-size: .8rem; }
+  .reader-map-link strong::after { content: none; }
+  .reader-current { display: none; }
+  .reader-actions { justify-content: space-between; }
+  .reader-actions button { inline-size: auto; min-width: 40px; padding-inline: 12px; }
+  .reader-actions button > span:not(.chk-box) { display: inline; }
+}

@@ -16,7 +16,9 @@ type ProgressState = {
 
 const STORAGE_KEY = "agent-learning-progress-v1";
 const COURSE_IDS = ["codex", "grok", "deepseek", "pi", "opencode", "openclaw", "hermes"];
-const TOTAL_CHAPTERS = 12;
+const COURSE_CHAPTER_COUNTS: Record<string, number> = {
+  codex: 12, grok: 12, deepseek: 12, pi: 12, opencode: 12, openclaw: 12, hermes: 12,
+};
 let storageAvailable = true;
 let memoryState = emptyState();
 
@@ -40,7 +42,7 @@ function sanitize(value: unknown): ProgressState {
     if (!course) return;
     state.courses[id] = {
       completedChapters: Array.isArray(course.completedChapters)
-        ? [...new Set(course.completedChapters.filter((chapter): chapter is string => typeof chapter === "string" && chapter.length > 0))].slice(0, TOTAL_CHAPTERS)
+        ? [...new Set(course.completedChapters.filter((chapter): chapter is string => typeof chapter === "string" && chapter.length > 0))]
         : [],
       updatedAt: typeof course.updatedAt === "number" ? course.updatedAt : Date.now(),
     };
@@ -79,11 +81,19 @@ function writeState(state: ProgressState, courseId: string): void {
 }
 
 export function getCourseProgress(courseId: string): CourseStats {
-  const completedCount = readState().courses[courseId]?.completedChapters.length ?? 0;
+  const currentCourse = document.body.dataset.agent === courseId;
+  const chapterIds = currentCourse
+    ? Array.from(document.querySelectorAll<HTMLElement>("section.chapter[data-spy]"), (section) => section.id)
+    : [];
+  const totalCount = chapterIds.length || COURSE_CHAPTER_COUNTS[courseId] || 0;
+  const saved = readState().courses[courseId]?.completedChapters ?? [];
+  const completedCount = currentCourse
+    ? saved.filter((id) => chapterIds.includes(id)).length
+    : Math.min(saved.length, totalCount);
   return {
     completedCount,
-    totalCount: TOTAL_CHAPTERS,
-    percent: Math.round((completedCount / TOTAL_CHAPTERS) * 100),
+    totalCount,
+    percent: totalCount ? Math.round((completedCount / totalCount) * 100) : 0,
   };
 }
 
@@ -98,7 +108,7 @@ export function toggleChapterCompletion(courseId: string, chapterId: string): bo
   const completed = course.completedChapters.includes(chapterId);
   course.completedChapters = completed
     ? course.completedChapters.filter((id) => id !== chapterId)
-    : [...course.completedChapters, chapterId].slice(0, TOTAL_CHAPTERS);
+    : [...course.completedChapters, chapterId];
   course.updatedAt = Date.now();
   state.courses[courseId] = course;
   writeState(state, courseId);
@@ -120,6 +130,7 @@ function updateProgressUI(courseId: string): void {
   const state = readState();
   const progress = state.courses[courseId] ?? emptyCourse();
   const stats = getCourseProgress(courseId);
+  const unit = courseId === "codex" ? "模块" : "课";
   const completed = new Set(progress.completedChapters);
 
   document.querySelectorAll<HTMLAnchorElement>("#reader-map .reader-phase-list a").forEach((link) => {
@@ -142,7 +153,7 @@ function updateProgressUI(courseId: string): void {
       mapHead.append(summary);
     }
     summary.innerHTML = `
-      <div class="progress-bar-label"><span>全课学习进度</span><strong>${stats.completedCount} / ${stats.totalCount} 章 · ${stats.percent}%</strong></div>
+      <div class="progress-bar-label"><span>全课学习进度</span><strong>${stats.completedCount} / ${stats.totalCount} ${unit} · ${stats.percent}%</strong></div>
       <div class="progress-track" role="progressbar" aria-valuenow="${stats.percent}" aria-valuemin="0" aria-valuemax="100" aria-label="课程总体学习进度"><div class="progress-fill" style="width:${stats.percent}%"></div></div>
       <button class="cbtn reset-progress-btn" type="button" data-reset-progress>重置进度</button>`;
     summary.querySelector("[data-reset-progress]")?.addEventListener("click", () => {
@@ -161,7 +172,7 @@ function updateProgressUI(courseId: string): void {
       summary.className = "rail-progress";
       rail.append(summary);
     }
-    summary.innerHTML = `<div class="rail-progress-bar"><div class="rail-progress-fill" style="width:${stats.percent}%"></div></div><span class="rail-progress-text">${stats.completedCount}/${stats.totalCount} 章 · ${stats.percent}%</span>`;
+    summary.innerHTML = `<div class="rail-progress-bar"><div class="rail-progress-fill" style="width:${stats.percent}%"></div></div><span class="rail-progress-text">${stats.completedCount}/${stats.totalCount} ${unit} · ${stats.percent}%</span>`;
   }
 
   const activeId = document.querySelector<HTMLElement>(".reader-view.is-active")?.id ?? "";
@@ -172,7 +183,7 @@ function updateProgressUI(courseId: string): void {
     completeButton.setAttribute("aria-pressed", String(done));
     completeButton.classList.toggle("primary", done);
     const text = completeButton.querySelector(".btn-text");
-    if (text) text.textContent = done ? "已学完" : "完成打卡";
+    if (text) text.textContent = done ? "已学完" : "完成这一节";
   }
 }
 

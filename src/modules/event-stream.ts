@@ -1,8 +1,4 @@
-/**
- * 协议事件流演示器：
- * 回放一轮当前 App Server Thread/Turn/Item 通知序列（JSONL 观感），
- * 支持播放/暂停、速度切换与重放；减弱动效下直接完整呈现。
- */
+/** 回放一次 steer 后又 interrupt 的在途 Turn；减弱动效下直接完整呈现。 */
 
 interface Line {
   cls: string;
@@ -12,21 +8,22 @@ interface Line {
 }
 
 const SCRIPT: Line[] = [
-  { cls: "k-user", dir: "in", text: 'turn/start { threadId, input: [{ type: "text", text: "修复 test_login" }] }' },
+  { cls: "k-user", dir: "in", text: 'turn/start { input: "修复 test_login" }' },
   { cls: "k-sys", text: "◂ turn/started { turn.id: turn_42 }" },
-  { cls: "k-sys", text: "◂ item/started { type: agentMessage }" },
-  { cls: "k-model", text: '◂ item/agentMessage/delta "先复现这个用例。"' },
-  { cls: "k-sys", text: "◂ item/completed { type: agentMessage }" },
   { cls: "k-tool", dir: "out", text: "◂ item/started { type: commandExecution }" },
-  { cls: "k-warn", text: "◂ item/commandExecution/requestApproval", note: "threadId + turnId + itemId" },
-  { cls: "k-user", dir: "in", text: '→ { decision: "accept" }' },
-  { cls: "k-sys", text: "◂ serverRequest/resolved { requestId }" },
+  { cls: "k-user", dir: "in", text: 'turn/steer { input: "不要修改数据库" }' },
+  { cls: "k-sys", text: "pending_input += steer", note: "当前 token 流不被抢断" },
   { cls: "k-tool", text: "◂ item/completed { commandExecution · exitCode: 1 }" },
-  { cls: "k-tool", dir: "out", text: "◂ item/started { type: fileChange }" },
-  { cls: "k-tool", text: "◂ item/completed { fileChange · status: completed }" },
-  { cls: "k-model", text: '◂ item/agentMessage/delta "已修复并验证 6 passed。"' },
-  { cls: "k-sys", text: "◂ item/completed { type: agentMessage }" },
-  { cls: "k-sys", text: "◂ turn/completed { status: completed }" },
+  { cls: "k-sys", text: "step boundary → drain pending_input" },
+  { cls: "k-user", text: 'history += "不要修改数据库"' },
+  { cls: "k-model", text: "next sampling step · 新约束已可见" },
+  { cls: "k-tool", dir: "out", text: "◂ item/started { type: commandExecution }" },
+  { cls: "k-user", dir: "in", text: "turn/interrupt { turnId: turn_42 }" },
+  { cls: "k-warn", text: "cancellation token fired · grace ≤ 100ms" },
+  { cls: "k-tool", text: "synthetic tool output · aborted by user" },
+  { cls: "k-sys", text: "history += <turn_aborted>", note: "副作用可能已部分发生" },
+  { cls: "k-sys", text: "◂ item/completed { status: aborted }" },
+  { cls: "k-sys", text: "◂ turn/completed { status: interrupted }" },
 ];
 
 export function initEventStream(

@@ -1,9 +1,4 @@
-/**
- * 上下文窗口计量与自动压缩演示：
- * 每轮对话向窗口追加负载；越过阈值触发 auto-compact——
- * 旧历史折叠为摘要段，缓存前缀失效部分被标出。
- * 数字为教学示意（真实窗口随模型而定）。
- */
+/** 区分 append-only transcript 与 compact 后被替换的模型工作集。 */
 
 interface Turn {
   kind: "user" | "assistant" | "tool";
@@ -18,6 +13,7 @@ const THRESHOLD = 0.86;
 let turns: Turn[] = [];
 let summaryTok = 0;
 let compactCount = 0;
+let transcriptTok = 0;
 
 const rand = (min: number, max: number): number =>
   min + Math.floor(Math.random() * (max - min + 1));
@@ -40,6 +36,9 @@ export function initContextMeter(root: HTMLElement | null): void {
   const bar = root.querySelector<HTMLElement>("[data-bar]");
   const counter = root.querySelector<HTMLElement>("[data-counter]");
   const cacheEl = root.querySelector<HTMLElement>("[data-cache]");
+  const transcriptEl = root.querySelector<HTMLElement>("[data-transcript]");
+  const activeEl = root.querySelector<HTMLElement>("[data-active]");
+  const checkpointEl = root.querySelector<HTMLElement>("[data-checkpoint]");
   const log = root.querySelector<HTMLElement>("[data-log]");
   const nextBtn = root.querySelector<HTMLButtonElement>("[data-next]");
   const compactBtn = root.querySelector<HTMLButtonElement>("[data-compact]");
@@ -51,7 +50,7 @@ export function initContextMeter(root: HTMLElement | null): void {
     el.className = `cseg ${cls}`;
     el.style.flexGrow = String(Math.max(flex, 0.4));
     el.dataset.title = title;
-    el.textContent = flex > WINDOW * 0.06 ? title : "";
+    el.textContent = flex > WINDOW * 0.015 ? title : "";
     return el;
   };
 
@@ -67,14 +66,14 @@ export function initContextMeter(root: HTMLElement | null): void {
     log.scrollTop = log.scrollHeight;
   };
 
-  const render = (cachedPrefix = true): void => {
+  const render = (prefixChanged = false): void => {
     const u = used();
     const pct = Math.min(u / WINDOW, 1);
 
     bar.replaceChildren();
-    bar.append(seg("seg-system", SYSTEM, "系统指令"));
-    bar.append(seg("seg-docs", DOCS, "AGENTS.md+环境"));
-    if (summaryTok > 0) bar.append(seg("seg-summary", summaryTok, "摘要"));
+    bar.append(seg("seg-system", SYSTEM, "基础指令"));
+    bar.append(seg("seg-docs", DOCS, "动态上下文"));
+    if (summaryTok > 0) bar.append(seg("seg-summary", summaryTok, `checkpoint ${compactCount}`));
     for (const t of turns) {
       bar.append(
         seg(
@@ -88,9 +87,10 @@ export function initContextMeter(root: HTMLElement | null): void {
 
     counter.textContent = `${(u / 1000).toFixed(1)}k / ${(WINDOW / 1000).toFixed(0)}k tok · ${Math.round(pct * 100)}%`;
     counter.dataset.level = pct >= THRESHOLD ? "hot" : pct >= THRESHOLD - 0.14 ? "warm" : "cool";
-
-    const cached = cachedPrefix ? Math.round(pct * 100 - compactCount * 7) : Math.round((u - (turns.at(-1)?.tok ?? 0)) / WINDOW * 100);
-    if (cacheEl) cacheEl.textContent = `prefix cache ≈ ${Math.max(cached, 12)}%`;
+    if (transcriptEl) transcriptEl.textContent = `${(transcriptTok / 1000).toFixed(1)}k · append-only`;
+    if (activeEl) activeEl.textContent = `${(u / 1000).toFixed(1)}k · replaceable`;
+    if (checkpointEl) checkpointEl.textContent = compactCount ? `window ${compactCount + 1} · compact ${compactCount}` : "window 1 · none";
+    if (cacheEl) cacheEl.textContent = prefixChanged ? "stable prefix · 部分重算" : "stable prefix · 可复用";
 
     if (compactBtn) compactBtn.disabled = turns.length < 6;
 
@@ -105,18 +105,24 @@ export function initContextMeter(root: HTMLElement | null): void {
     const keep = turns.slice(-4);
     const folded = turns.slice(0, -4);
     const foldedTok = folded.reduce((a, t) => a + t.tok, 0);
+    const previousSummaryTok = summaryTok;
+    const sourceTok = previousSummaryTok + foldedTok;
 
     turns = keep;
-    summaryTok += Math.round(foldedTok * 0.09);
     compactCount += 1;
+    // 教学模型：新 checkpoint 替换旧 checkpoint，并保持有界；不是摘要累加器。
+    summaryTok = Math.max(900, Math.min(3_600, Math.round(sourceTok * 0.12)));
 
     logLine("k-warn", `threshold ${Math.round(THRESHOLD * 100)}% crossed → EventMsg::ContextCompacted`);
-    logLine("k-sys", `summarize ${folded.length} turns (${(foldedTok / 1000).toFixed(1)}k → 摘要 ${(summaryTok / 1000).toFixed(1)}k)`);
+    logLine(
+      "k-sys",
+      `checkpoint ${compactCount} replaces ${compactCount === 1 ? "none" : `checkpoint ${compactCount - 1}`} · source ${(sourceTok / 1000).toFixed(1)}k → ${(summaryTok / 1000).toFixed(1)}k`,
+    );
     logLine(
       "k-model",
-      `history replaced · freed ${((before - used()) / 1000).toFixed(1)}k tok · 缓存前缀部分失效`,
+      `active history replaced · freed ${((before - used()) / 1000).toFixed(1)}k · transcript remains ${(transcriptTok / 1000).toFixed(1)}k`,
     );
-    render(false);
+    render(true);
   };
 
   const manualCompact = (): void => {
@@ -133,14 +139,16 @@ export function initContextMeter(root: HTMLElement | null): void {
     ];
     summaryTok = 0;
     compactCount = 0;
+    transcriptTok = turns.reduce((a, t) => a + t.tok, 0);
     if (log) log.replaceChildren();
-    logLine("k-sys", "new session · system+docs 常驻，历史从零累积");
+    logLine("k-sys", "same thread · rollout 持续追加，active history 单独派生");
     render();
   };
 
   nextBtn.addEventListener("click", () => {
     const t = nextTurn();
     turns.push(...t);
+    transcriptTok += t.reduce((a, x) => a + x.tok, 0);
     logLine(
       "k-user",
       `turn +${t.reduce((a, x) => a + x.tok, 0)} tok（输入+工具输出+回复）`,

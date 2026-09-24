@@ -15,6 +15,7 @@ export default defineConfig({
       preserveEntrySignatures: "strict",
       input: {
         app: "index.html",
+        codex: "codex.html",
         grok: "grok.html",
         deepseek: "deepseek.html",
         pi: "pi.html",

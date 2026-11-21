@@ -1,0 +1,527 @@
+/*
+ * Cosmos: the public type system and the home hero.
+ *
+ * Three faces, each with one job:
+ *   Unbounded   display: the brand, page titles, section heads. Wide and
+ *               engineered; never running text.
+ *   Geist       text: reading, interface, article titles.
+ *   Geist Mono  the instrument voice: kickers, dates, counts, tags.
+ * Chinese falls through to the platform's Hei face in every role.
+ *
+ * Older sheets pin `font-family: var(--font-sans) !important` on many
+ * elements from a cascade layer. Rather than outrank them, the elements that
+ * should wear another face redefine --font-sans for themselves, which those
+ * pinned declarations then resolve to.
+ */
+
+.public-universe,
+.public-universe .space-page:not(.owner-dark-scope) {
+  --font-sans:
+    "Geist", "PingFang SC", "Hiragino Sans GB", "Source Han Sans SC",
+    "Noto Sans CJK SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-display:
+    "Unbounded", "Geist", "PingFang SC", "Hiragino Sans GB",
+    "Source Han Sans SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+  --font-reading: var(--font-sans);
+  --font-caption: var(--font-sans);
+  --font-mono:
+    "Geist Mono", "JetBrains Mono", ui-monospace, "SF Mono", "PingFang SC",
+    monospace;
+  font-family: var(--font-sans);
+  font-optical-sizing: auto;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Hero and call-to-action colours: declared once, on the outer surface, so
+   the day values below are not shadowed by an inner redeclaration. */
+.public-universe {
+  --cosmos-glow-text: linear-gradient(
+    100deg,
+    #f2f4ff 0%,
+    #a9bcff 46%,
+    #d7a6ff 100%
+  );
+  --cosmos-cta-bg: #eef1ff;
+  --cosmos-cta-ink: #07080b;
+  --cosmos-cta-ring: rgb(255 255 255 / 0.4);
+  --cosmos-cta-glow: rgb(128 150 255 / 0.55);
+  --cosmos-kicker: #9fb4ff;
+  --cosmos-lead: rgb(226 230 242 / 0.78);
+}
+html:not(.dark) .public-universe {
+  --cosmos-glow-text: linear-gradient(
+    100deg,
+    #0e1a5c 0%,
+    #3247e0 48%,
+    #8a2be2 100%
+  );
+  --cosmos-cta-bg: #0b1020;
+  --cosmos-cta-ink: #f5f7fc;
+  --cosmos-cta-ring: rgb(11 16 32 / 0.9);
+  --cosmos-cta-glow: rgb(50 71 224 / 0.42);
+  --cosmos-kicker: #3247e0;
+  --cosmos-lead: #3d465c;
+}
+
+/* --- Display ------------------------------------------------------------- */
+.public-universe
+  :is(
+    .page-title,
+    .brand-wordmark,
+    .cosmos-hero-title,
+    .observatory-featured-heading h2,
+    .observatory-section-heading h2,
+    .observatory-direction h3,
+    .about-title
+  ) {
+  --font-sans: var(--font-display);
+  font-family: var(--font-display);
+  font-variant-ligatures: common-ligatures;
+}
+.public-universe .brand-wordmark {
+  font-size: 15px;
+  font-weight: 560;
+  letter-spacing: -0.02em;
+}
+/* Page titles: the older rules size them with !important from the
+   components layer; among important declarations the earlier base layer
+   wins. */
+@layer base {
+  .public-universe .space-page:not(.owner-dark-scope) .page-title {
+    font-size: clamp(40px, 2rem + 3.2vw, 76px) !important;
+    font-weight: 600 !important;
+    letter-spacing: -0.05em !important;
+    line-height: 1 !important;
+  }
+  html[lang^="zh"]
+    .public-universe
+    .space-page:not(.owner-dark-scope)
+    .page-title:not([lang="en"]) {
+    letter-spacing: 0 !important;
+    line-height: 1.15 !important;
+  }
+}
+
+/* Section heads on the home page. */
+.public-universe
+  .observatory-home
+  :is(.observatory-featured-heading h2, .observatory-section-heading h2) {
+  font-size: clamp(22px, 1rem + 0.9vw, 30px);
+  font-weight: 540;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+}
+.public-universe .observatory-home .observatory-direction h3 {
+  font-size: clamp(20px, 1rem + 0.6vw, 26px);
+  font-weight: 520;
+  letter-spacing: -0.035em;
+}
+html[lang^="zh"]
+  .public-universe
+  .observatory-home
+  :is(
+    .observatory-featured-heading h2,
+    .observatory-section-heading h2,
+    .observatory-direction h3
+  ) {
+  letter-spacing: 0;
+}
+
+/* Article titles stay in the text face, set tighter and heavier. */
+.public-universe .article-page-title:not(:lang(zh)) {
+  letter-spacing: -0.028em;
+}
+.public-universe :is(.article-page-title, .article-title) {
+  font-weight: 620;
+}
+
+/* --- The instrument voice ------------------------------------------------ */
+.public-universe
+  :is(
+    .observatory-label,
+    .observatory-paper-number,
+    .observatory-paper-meta,
+    .article-meta,
+    .signal-chip,
+    .technical-label,
+    .article-entry-kicker,
+    .cosmos-kicker,
+    .cosmos-hero-index,
+    .cosmos-scroll
+  ) {
+  --font-sans: var(--font-mono);
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+}
+.public-universe :is(.observatory-label, .signal-chip, .article-entry-kicker) {
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+.public-universe .article-meta {
+  font-size: 12px;
+  letter-spacing: 0.02em;
+}
+
+/* --- Home hero ------------------------------------------------------------
+   One column of copy on the page's measure, the rose to its right, and an
+   index line at the foot. The copy is a single vertical rhythm: kicker,
+   wordmark, lead, actions; every gap is a step of 8px. */
+.public-universe .cosmos-hero {
+  --hero-edge: max(32px, calc((100% - 1180px) / 2 + 32px));
+  position: relative;
+  display: grid;
+  align-content: center;
+  min-height: clamp(620px, calc(100svh - 68px), 980px);
+  padding: 48px var(--hero-edge) 148px;
+  pointer-events: none;
+}
+.public-universe .cosmos-hero-copy,
+.public-universe .cosmos-hero-base {
+  position: relative;
+  z-index: 2;
+  pointer-events: auto;
+}
+.public-universe .cosmos-hero-copy {
+  width: min(600px, 46vw);
+}
+
+.public-universe .cosmos-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin: 0;
+  color: var(--cosmos-kicker);
+  font-size: 11.5px;
+  font-weight: 500;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+.public-universe .cosmos-kicker-pulse {
+  position: relative;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+  box-shadow: 0 0 12px 2px currentColor;
+}
+.public-universe .cosmos-kicker-pulse::after {
+  content: "";
+  position: absolute;
+  inset: -5px;
+  border-radius: 50%;
+  border: 1px solid currentColor;
+  opacity: 0;
+  /* A signal as the page arrives, then a steady light: an endless loop
+     would keep the page restyling every frame for an effect long seen. */
+  animation: cosmos-ping 2.8s cubic-bezier(0.16, 1, 0.3, 1) 6;
+}
+@keyframes cosmos-ping {
+  0% {
+    opacity: 0.7;
+    scale: 0.4;
+  }
+  70%,
+  100% {
+    opacity: 0;
+    scale: 1.6;
+  }
+}
+
+.public-universe .cosmos-hero-title {
+  display: grid;
+  margin: 24px 0 32px;
+  color: var(--observatory-ink);
+  font-size: clamp(56px, 1.5rem + 6.2vw, 120px);
+  font-weight: 620;
+  line-height: 0.9;
+  letter-spacing: -0.06em;
+}
+.public-universe .cosmos-hero-title > span {
+  display: block;
+  /* Tight tracking pulls the last letter into the edge of the box. */
+  padding-right: 0.06em;
+}
+.public-universe .cosmos-hero-title-glow {
+  background: var(--cosmos-glow-text);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  /* Room for the clip below the baseline. */
+  padding-bottom: 0.08em;
+}
+
+.public-universe .cosmos-hero-lead {
+  max-width: 31ch;
+  margin: 0;
+  color: var(--cosmos-lead);
+  font-size: clamp(17px, 0.85rem + 0.45vw, 20px);
+  font-weight: 400;
+  line-height: 1.5;
+  letter-spacing: -0.006em;
+  text-wrap: pretty;
+}
+html[lang^="zh"] .public-universe .cosmos-hero-lead {
+  max-width: 22em;
+  line-height: 1.8;
+  letter-spacing: 0.02em;
+}
+
+.public-universe .cosmos-hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px 28px;
+  margin-top: 40px;
+}
+.public-universe .cosmos-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  height: 48px;
+  padding: 0 20px 0 24px;
+  border-radius: 999px;
+  background: var(--cosmos-cta-bg);
+  color: var(--cosmos-cta-ink);
+  font-size: 14.5px;
+  font-weight: 560;
+  letter-spacing: -0.005em;
+  text-decoration: none;
+  box-shadow:
+    0 0 0 1px var(--cosmos-cta-ring),
+    0 12px 32px -14px var(--cosmos-cta-glow);
+  transition:
+    translate 200ms cubic-bezier(0.16, 1, 0.3, 1),
+    box-shadow 200ms ease;
+}
+.public-universe .cosmos-cta svg {
+  transition: translate 200ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+.public-universe .cosmos-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 44px;
+  color: var(--observatory-ink);
+  font-size: 14.5px;
+  font-weight: 500;
+  text-decoration: underline;
+  text-decoration-color: color-mix(in srgb, currentColor 32%, transparent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 6px;
+  transition:
+    color 160ms ease,
+    text-decoration-color 160ms ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .public-universe .cosmos-cta:hover {
+    translate: 0 -1px;
+    box-shadow:
+      0 0 0 1px var(--cosmos-cta-ring),
+      0 16px 40px -12px var(--cosmos-cta-glow);
+  }
+  .public-universe .cosmos-cta:hover svg {
+    translate: 3px 0;
+  }
+  .public-universe .cosmos-link:hover {
+    color: var(--cosmos-kicker);
+    text-decoration-color: currentColor;
+  }
+}
+.public-universe :is(.cosmos-cta, .cosmos-link, .cosmos-scroll):focus-visible {
+  outline: 2px solid var(--cosmos-kicker);
+  outline-offset: 4px;
+}
+
+/* The index line: what is here, and how fresh, in the instrument voice. */
+.public-universe .cosmos-hero-base {
+  position: absolute;
+  left: var(--hero-edge);
+  right: var(--hero-edge);
+  bottom: 40px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 32px;
+}
+.public-universe .cosmos-hero-index {
+  display: flex;
+  gap: 40px;
+  width: min(600px, 46vw);
+  margin: 0;
+  padding-top: 16px;
+  border-top: 1px solid var(--observatory-line);
+}
+.public-universe .cosmos-hero-index dt {
+  color: var(--observatory-muted);
+  font-size: 10.5px;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+.public-universe .cosmos-hero-index dd {
+  margin: 6px 0 0;
+  color: var(--observatory-ink);
+  font-size: 13px;
+  font-weight: 450;
+  letter-spacing: 0.01em;
+  white-space: nowrap;
+}
+.public-universe .cosmos-scroll {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 44px;
+  color: var(--observatory-muted);
+  font-size: 11px;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  text-decoration: none;
+}
+/* The nudge moves a wrapper, not the icon: an SVG's transform cannot run on
+   the compositor, so animating it would restyle the page every frame. */
+.public-universe .cosmos-scroll-arrow {
+  display: inline-grid;
+  animation: cosmos-nudge 2.4s cubic-bezier(0.45, 0, 0.55, 1) 6;
+}
+@keyframes cosmos-nudge {
+  0%,
+  100% {
+    translate: 0 -2px;
+  }
+  50% {
+    translate: 0 3px;
+  }
+}
+
+/* The rose takes the right of the hero, centred in its height. */
+@media (min-width: 900px) {
+  .public-universe .cosmos-hero .rose-anchor--home {
+    top: 47%;
+  }
+}
+@media (max-width: 1100px) and (min-width: 721px) {
+  .public-universe .cosmos-hero-fields {
+    display: none;
+  }
+}
+
+/* Phones: the rose in the open sky above, the copy beneath it. */
+@media (max-width: 720px) {
+  .public-universe .cosmos-hero {
+    --hero-edge: 22px;
+    --rose: min(86vw, 46svh);
+    display: block;
+    min-height: 0;
+    padding: calc(var(--rose) + 20px) var(--hero-edge) 40px;
+  }
+  .public-universe .cosmos-hero .rose-anchor--home {
+    top: 8px;
+    width: var(--rose);
+  }
+  .public-universe .cosmos-hero-copy {
+    width: auto;
+  }
+  .public-universe .cosmos-kicker {
+    font-size: 10.5px;
+    letter-spacing: 0.12em;
+  }
+  .public-universe .cosmos-hero-title {
+    margin: 18px 0 22px;
+    font-size: clamp(52px, 16vw, 76px);
+  }
+  .public-universe .cosmos-hero-actions {
+    margin-top: 28px;
+  }
+  .public-universe .cosmos-hero-base {
+    position: static;
+    margin-top: 44px;
+  }
+  .public-universe .cosmos-hero-index {
+    width: auto;
+    flex: 1;
+    gap: 28px;
+  }
+  .public-universe .cosmos-hero-fields,
+  .public-universe .cosmos-scroll {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .public-universe .cosmos-kicker-pulse::after,
+  .public-universe .cosmos-scroll-arrow {
+    animation: none;
+  }
+  .public-universe :is(.cosmos-cta, .cosmos-cta svg, .cosmos-link) {
+    transition: none;
+  }
+}
+
+/* --- The sky's pause control ---------------------------------------------
+   A bare glyph over running text read as a stray mark; it sits on a small
+   frosted disc of its own. */
+.public-universe ~ .starfield-toggle,
+.starfield-toggle {
+  background: color-mix(
+    in srgb,
+    var(--observatory-bg, #07080b) 62%,
+    transparent
+  );
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 0 0 1px color-mix(in srgb, currentColor 18%, transparent);
+}
+.starfield-toggle-label,
+.starfield-menu-control {
+  display: none;
+}
+@media (max-width: 720px) {
+  .starfield-desktop-control {
+    display: none;
+  }
+  .starfield-menu-control {
+    display: block;
+  }
+  .starfield-menu-control .starfield-toggle {
+    position: static;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    height: auto;
+    min-height: 44px;
+    padding: 10px 12px;
+    border-radius: 6px;
+    background: transparent;
+    color: inherit;
+    opacity: 1;
+    box-shadow: none;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    text-align: left;
+  }
+  .starfield-menu-control .starfield-toggle-label {
+    display: inline;
+  }
+}
+
+/* Chinese in the instrument voice: Han glyphs need a size step and less
+   tracking than Latin capitals to read at the same weight. */
+html[lang^="zh"] .public-universe .cosmos-kicker {
+  font-size: 12.5px;
+  letter-spacing: 0.12em;
+}
+html[lang^="zh"] .public-universe .cosmos-hero-index dt {
+  font-size: 11.5px;
+  letter-spacing: 0.08em;
+}
+html[lang^="zh"]
+  .public-universe
+  :is(.observatory-label, .signal-chip, .article-entry-kicker) {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+}

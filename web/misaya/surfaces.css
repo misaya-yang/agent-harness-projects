@@ -1,0 +1,85 @@
+/*
+ * Reading surfaces over the sky, in both themes.
+ *
+ * Code, callouts and tables used translucent fills, so the star field showed
+ * through them: specks between lines of source read as dirt, and the fills
+ * themselves took a muddy cast from whatever drifted behind. Here they are
+ * solid, quietly raised cards in the site's own inks: cobalt and violet by
+ * day, periwinkle by night.
+ *
+ * Older sheets pin these with !important from the components layer. Among
+ * important declarations an earlier layer wins, hence the base layer.
+ */
+
+.public-universe {
+  --surface-card: #ffffff;
+  --surface-card-edge: #e0e5f1;
+  --surface-card-shadow:
+    0 1px 0 rgb(255 255 255 / 0.9) inset, 0 1px 2px rgb(16 24 64 / 0.04),
+    0 14px 34px -26px rgb(28 40 120 / 0.32);
+  --surface-quote: #f7f8fe;
+  --surface-accent: #3247e0;
+}
+.dark .public-universe {
+  --surface-card: #0b0e16;
+  --surface-card-edge: rgb(160 178 255 / 0.11);
+  --surface-card-shadow:
+    0 1px 0 rgb(255 255 255 / 0.04) inset, 0 18px 40px -28px rgb(0 0 0 / 0.9);
+  --surface-quote: #0c0f18;
+  --surface-accent: #8ea2ff;
+}
+/* Syntax inks are declared on the block itself by the older sheet, so they
+   are redeclared there (unlayered, which outranks it). */
+.public-universe .markdown-code-block {
+  --code-ink: #1b2233;
+  --code-muted: #6b7389;
+  --code-keyword: #6f35d8;
+  --code-literal: #2a44d4;
+  --code-string: #a8326c;
+}
+.dark .public-universe .markdown-code-block {
+  --code-ink: #d5dcec;
+  --code-muted: #7d88a2;
+  --code-keyword: #c6a6ff;
+  --code-literal: #9db2ff;
+  --code-string: #f2a6c8;
+}
+
+@layer base {
+  html[data-route-kind] .public-universe .markdown-code-block {
+    border: 1px solid var(--surface-card-edge) !important;
+    border-radius: 14px !important;
+    background: var(--surface-card) !important;
+    box-shadow: var(--surface-card-shadow) !important;
+  }
+  html[data-route-kind] .public-universe .markdown-code-toolbar {
+    border-bottom: 1px solid var(--surface-card-edge);
+    color: var(--code-muted);
+    font-family: var(--font-mono);
+    font-size: 11px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+  }
+  html[data-route-kind]
+    .public-universe
+    .paper-reader-main
+    .article-prose
+    .markdown-code-block
+    > pre {
+    padding-top: 14px !important;
+  }
+
+  html[data-route-kind] .public-universe .article-prose blockquote {
+    border: 0 !important;
+    border-left: 2px solid var(--surface-accent) !important;
+    border-radius: 0 12px 12px 0 !important;
+    background: var(--surface-quote) !important;
+    box-shadow: inset 0 0 0 1px var(--surface-card-edge) !important;
+  }
+
+  html[data-route-kind] .public-universe .article-prose .technical-table-wrap {
+    border-color: var(--surface-card-edge) !important;
+    background: var(--surface-card) !important;
+    box-shadow: var(--surface-card-shadow) !important;
+  }
+}

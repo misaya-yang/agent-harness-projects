@@ -1,0 +1,233 @@
+/*
+ * The star field's place on the page, and the palette the page shares with it.
+ *
+ * The canvas paints the whole page ground, so the grounds below are the same
+ * colours as NIGHT_SKY and DAY_PAPER in components/starfield/scene.ts.
+ */
+
+/* --- The canvas ---------------------------------------------------------- */
+.starfield {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  contain: strict;
+}
+.starfield canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  transition: opacity 600ms ease-out;
+}
+.starfield canvas[data-ready="true"] {
+  opacity: 1;
+}
+
+/* --- Where pages put their figure --------------------------------------- */
+.rose-anchor {
+  touch-action: pan-y;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+.rose-anchor--home {
+  position: absolute;
+  right: 2%;
+  top: 12%;
+  width: min(46vw, 78vh);
+  aspect-ratio: 1;
+}
+/* On a phone the rose takes the open sky above the title. */
+@media (max-width: 720px) {
+  .rose-anchor--home {
+    top: 100px;
+    right: 50%;
+    translate: 50% 0;
+    width: min(86vw, 46vh);
+  }
+}
+
+/* Inner pages: the figure rises at the page's right edge, in the margin
+   beside the text, on screens wide enough to have one. Half of it shows on a
+   laptop and most of it on a wide display. The box takes no presses; the
+   artwork is still found by where it is drawn. */
+.public-universe {
+  overflow-x: clip;
+}
+.rose-anchor--page {
+  display: none;
+  position: absolute;
+  z-index: -1;
+  top: 124px;
+  aspect-ratio: 1;
+  pointer-events: none;
+}
+@media (min-width: 1360px) {
+  /* Beside the table of contents. */
+  .rose-anchor--page[data-figure="reader"] {
+    display: block;
+    left: calc(50vw + 514px);
+    width: clamp(340px, calc(100vw - 1028px), 560px);
+  }
+  /* The author's page carries the signed rose whole, as a seal. */
+  .rose-anchor--page[data-figure="seal"] {
+    display: block;
+    top: 150px;
+    left: calc(50vw + 500px);
+    width: clamp(196px, calc(50vw - 514px), 400px);
+  }
+}
+@media (min-width: 1400px) {
+  /* Beside the list pages' wider column. */
+  .rose-anchor--page[data-figure="list"] {
+    display: block;
+    left: calc(50vw + 576px);
+    width: clamp(300px, calc(100vw - 1152px), 560px);
+  }
+}
+
+/* Hovering the artwork offers the hand; dragging it closes the hand and
+   keeps the drag from selecting text on the way. */
+html[data-rose-hover] {
+  cursor: grab;
+}
+html[data-rose-dragging],
+html[data-rose-dragging] * {
+  cursor: grabbing !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+
+/* The small native control owns keyboard focus, never the canvas. */
+.starfield-toggle {
+  position: fixed;
+  z-index: 35;
+  left: 20px;
+  bottom: 20px;
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--observatory-muted);
+  opacity: 0.72;
+  cursor: pointer;
+  transition:
+    opacity 160ms ease-out,
+    background-color 160ms ease-out,
+    color 160ms ease-out;
+}
+.starfield-toggle:hover {
+  color: var(--observatory-ink);
+  background: var(--reader-card-hover);
+  opacity: 1;
+}
+.starfield-toggle:focus-visible {
+  outline: 2px solid var(--reader-focus);
+  outline-offset: 4px;
+  opacity: 1;
+}
+
+/* --- Surfaces over the sky ----------------------------------------------
+   The sky now has light of its own, so a solid strip of page colour shows as
+   a box cut out of it. The header is frosted instead, its lower edge fading
+   out rather than ruling a line across the nebula. The base layer is the
+   one whose !important outranks the older component rules. */
+@layer base {
+  html[data-route-kind] .public-universe .space-page .toc-surface > h3 {
+    margin-top: 0 !important;
+  }
+  .public-universe .space-page:not(.owner-dark-scope) .site-header {
+    background: transparent !important;
+    border-bottom-color: transparent !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+}
+.public-universe .space-page:not(.owner-dark-scope) .site-header::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 -22px;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(
+    color-mix(in srgb, var(--observatory-bg) 88%, transparent),
+    color-mix(in srgb, var(--observatory-bg) 64%, transparent) 70%,
+    transparent
+  );
+  -webkit-backdrop-filter: blur(14px);
+  backdrop-filter: blur(14px);
+  -webkit-mask-image: linear-gradient(#000 68%, transparent);
+  mask-image: linear-gradient(#000 68%, transparent);
+}
+@media (prefers-reduced-transparency: reduce) {
+  .public-universe .space-page:not(.owner-dark-scope) .site-header::before {
+    inset: 0;
+    background: var(--observatory-bg);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+    -webkit-mask-image: none;
+    mask-image: none;
+  }
+}
+/* The contents title no longer sits on a solid strip that hid the list
+   scrolling under it; the title scrolls with the list, and rows fade out at
+   the rail's top edge instead of passing under the title. */
+html[data-route-kind] .public-universe .space-page .toc-surface > h3 {
+  position: static;
+  background: none;
+}
+.public-universe .paper-toc-rail .toc-surface {
+  -webkit-mask-image: linear-gradient(transparent, #000 14px);
+  mask-image: linear-gradient(transparent, #000 14px);
+}
+
+/* --- Night: one sky ------------------------------------------------------ */
+html.dark:has(.public-universe) {
+  background: #07080b;
+}
+.dark .public-universe,
+.dark .public-universe .space-page:not(.owner-dark-scope) {
+  --observatory-bg: #07080b;
+}
+
+/* --- Day: a star atlas ---------------------------------------------------
+   A crisp, cool white with the faintest blue in it, deep-space ink for text,
+   and one electric cobalt for everything that can be followed. The sky is
+   printed in the same inks (shaders.ts): clean cobalt points with only the
+   brighter stars printed, a lilac-to-rose watercolour for the nebula, and
+   the rose running from cobalt through violet to a magenta heart, the
+   signature alone in crimson. Every ink leaves the blue channel open, so
+   nothing prints black or grey. No warm paper, no ochre: on a warm ground
+   the coloured specks read as stains. */
+html:not(.dark):has(.public-universe) {
+  --v2-paper-warm: #f5f7fc;
+  background: #f5f7fc;
+}
+html:not(.dark) .public-universe,
+html:not(.dark) .public-universe .space-page:not(.owner-dark-scope) {
+  --observatory-bg: #f5f7fc;
+  --observatory-surface: #eceff8;
+  --observatory-ink: #0b1020;
+  --observatory-muted: #4a5368;
+  --observatory-accent: #3247e0;
+  --observatory-line: #dbe0ec;
+  --v2-bg: #f5f7fc;
+  --v2-solid-reading: #f5f7fc;
+  --v2-solid-data: #eceff8;
+  --v2-accent: #3247e0;
+  --primary: #3247e0;
+  --ring: #3247e0;
+  --reader-hover-border: #8a93ab;
+  --reader-focus: #3247e0;
+  --reader-current-bg: rgb(50 71 224 / 8%);
+  --reader-card-hover: rgb(11 16 32 / 4%);
+  --reader-card-border: rgb(11 16 32 / 14%);
+  --reader-row-hover: rgb(50 71 224 / 6%);
+}
+html:not(.dark) .public-universe ::selection {
+  background: rgb(50 71 224 / 16%);
+}

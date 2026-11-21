@@ -1,0 +1,495 @@
+/* Misaya Notes · public-components.css */
+@layer components {
+
+  .nav-ink:hover {
+    background: oklch(0.9 0.005 100 / 5%);
+  }
+
+  .nav-ink-active {
+  }
+
+  .nav-ink-active::after {
+    content: "";
+    position: absolute;
+    left: 0.75rem;
+    right: 0.75rem;
+    bottom: -0.76rem;
+    height: 2px;
+    border-radius: 999px;
+    background: oklch(0.78 0.11 185);
+    box-shadow: 0 0 16px oklch(0.72 0.12 185 / 42%);
+  }
+
+  .nav-ink:focus-visible,
+  .glass-button:focus-visible,
+  .article-tag:focus-visible,
+  .series-step:focus-visible,
+  .research-index-row:focus-visible {
+    box-shadow: 0 0 0 4px oklch(0.66 0.038 156 / 20%);
+  }
+}
+
+/* Misaya Notes · notebook.css */
+@layer components {
+  .article-prose {
+    font-family: var(--font-reading) !important;
+    font-size: clamp(1.06rem, 1rem + 0.28vw, 1.16rem) !important;
+    line-height: 1.7 !important;
+    letter-spacing: 0;
+    font-variation-settings: var(--wonk-quiet);
+    font-optical-sizing: auto;
+    text-wrap: pretty;
+  }
+
+  .article-prose :is(h2, h3, h4) {
+    font-family: var(--font-display) !important;
+    font-variation-settings: var(--wonk-quiet);
+    letter-spacing: 0;
+  }
+  .paper-reader-main .article-prose :where(p, li, blockquote),
+  .article-prose :is(p, li, blockquote) {
+    font-weight: 400;
+  }
+  .article-prose :is(code, pre, kbd, samp),
+  .technical-value,
+  .metric-value,
+  .stat-value {
+    font-family: var(--font-mono) !important;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "kern";
+  }
+  .article-prose :is(p, li, blockquote) {
+    max-width: var(--measure-latin) !important;
+  }
+
+  .article-prose:lang(zh) :is(p, li, blockquote),
+  .article-prose :is(p, li, blockquote):lang(zh) {
+    max-width: var(--measure-cjk) !important;
+  }
+  .article-reading-header a,
+  .article-reading-header button,
+  .mobile-toc-nav a,
+  .paper-toc-rail nav a,
+  .article-related-link,
+  .series-progress-action,
+  .article-secondary-actions button,
+  .article-secondary-actions a {
+    display: flex;
+    align-items: center;
+    min-height: 1.75rem;
+  }
+  .paper-reader-main .article-entry-item dd,
+  .article-entry-item dd,
+  .mobile-toc-nav a,
+  .paper-toc-rail nav a,
+  .series-progress-action,
+  .article-related-link span {
+    line-height: 1.6 !important;
+  }
+  .mobile-toc-nav a,
+  .paper-toc-rail nav a {
+    max-width: min(100%, 45em);
+  }
+}
+
+/* Misaya Notes · observatory.css */
+@layer components {
+  html[data-route-kind] .public-universe > .space-page {
+    background: transparent !important;
+    isolation: auto;
+  }
+}
+
+@layer components {
+  .space-page:not(.owner-dark-scope) {
+    --font-display: var(--font-sans);
+    --font-reading: var(--font-sans);
+    --observatory-bg: #0b0c0e;
+    --observatory-surface: #131619;
+    --observatory-ink: #eeefef;
+    --observatory-muted: #a4aaaf;
+    --observatory-accent: #aed0d9;
+    --observatory-line: #2a2e33;
+    background: var(--observatory-bg) !important;
+    color: var(--observatory-ink);
+    overflow: clip;
+  }
+  html:not(.dark) .space-page:not(.owner-dark-scope) {
+    --observatory-bg: #f8fafc;
+    --observatory-surface: #eef2f6;
+    --observatory-ink: #152230;
+    --observatory-muted: #526273;
+    --observatory-accent: #12617a;
+    --observatory-line: #cdd6df;
+    --v2-bg: #f8fafc;
+    --v2-solid-reading: #f8fafc;
+    --v2-solid-data: #eef2f6;
+  }
+  .space-page:not(.owner-dark-scope) .site-header {
+    position: sticky !important;
+    top: 0;
+    z-index: 50;
+    background: var(--observatory-bg) !important;
+    border: 0 !important;
+    border-bottom: 1px solid var(--observatory-line) !important;
+    backdrop-filter: blur(16px);
+    box-shadow: none !important;
+    border-radius: 0 !important;
+  }
+  .space-page:not(.owner-dark-scope) .site-header > .container {
+    height: 68px !important;
+    max-width: 1280px;
+  }
+}
+
+.observatory-container {
+  max-width: 1280px;
+  margin-inline: auto;
+  padding-inline: 32px;
+}
+.observatory-content {
+  border-top: 1px solid var(--observatory-line);
+}
+.observatory-featured {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: 60px;
+  align-items: center;
+  padding-block: 72px;
+  scroll-margin-top: 86px;
+}
+.observatory-featured h2 {
+  font-family: var(--font-sans);
+  font-size: clamp(26px, 2.5vw, 34px);
+  font-weight: 550;
+  line-height: 1.4;
+  margin-block: 18px;
+  text-wrap: pretty;
+}
+.observatory-featured-copy > p:not(.observatory-label) {
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--observatory-muted);
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-bottom: 18px;
+}
+.observatory-footer {
+  border-top: 1px solid var(--observatory-line);
+  display: flex;
+  justify-content: space-between;
+  gap: 24px;
+  padding-block: 28px 36px;
+  color: var(--observatory-muted);
+  font-size: 12px;
+}
+.observatory-featured {
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: 36px;
+  padding-block: 40px;
+}
+.observatory-paper-preview {
+  align-self: stretch;
+  padding: 32px;
+  border: 1px solid var(--observatory-line);
+  border-radius: 16px;
+  background: color-mix(
+    in srgb,
+    var(--observatory-bg) 94%,
+    var(--observatory-accent)
+  );
+}
+.observatory-paper-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+  color: var(--observatory-muted);
+  font-size: 12px;
+}
+.observatory-paper-preview h2 {
+  font-size: clamp(22px, 2vw, 30px);
+  margin-block: 22px 16px;
+}
+.observatory-paper-excerpt {
+  font-size: 15px;
+  line-height: 1.8;
+  color: var(--observatory-muted);
+}
+.observatory-paper-outline {
+  margin: 22px 0;
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 1.9;
+  color: var(--observatory-muted);
+}
+.observatory-paper-picker {
+  min-width: 0;
+}
+.observatory-paper-picker > p {
+  margin-bottom: 12px;
+}
+.observatory-paper-choice {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 44px;
+  align-items: center;
+  gap: 8px;
+}
+.observatory-paper-picker button {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  width: 100%;
+  padding: 14px 18px;
+  border-bottom: 0;
+  border-radius: 10px;
+  text-align: left;
+  font-size: 14px;
+  line-height: 1.5;
+  color: var(--observatory-muted);
+  cursor: pointer;
+  transition:
+    color 160ms ease,
+    background-color 160ms ease;
+}
+.observatory-paper-picker button[aria-pressed="true"] {
+  color: var(--observatory-ink);
+  background: transparent;
+}
+.observatory-paper-number {
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.observatory-paper-picker button:hover {
+  color: var(--observatory-ink);
+}
+.observatory-paper-open {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  color: var(--observatory-muted);
+  transition:
+    color 160ms ease,
+    background-color 160ms ease;
+}
+@media (hover: hover) and (pointer: fine) {
+  .observatory-paper-open:hover {
+    color: var(--observatory-ink);
+    background: var(--reader-row-hover);
+  }
+}
+@layer components {
+  html[data-route-kind]
+    .public-universe
+    > .space-page:not(.observatory-home)
+    .site-header
+    > .container {
+    max-width: 1180px !important;
+    padding-inline: 32px !important;
+  }
+  html[data-route-kind] .public-universe .paper-reader-container {
+    max-width: 1180px !important;
+    padding: 36px 28px 80px !important;
+  }
+  html[data-route-kind] .public-universe .paper-reader-cockpit {
+    display: grid !important;
+    grid-template-columns: minmax(0, 780px) minmax(180px, 240px) !important;
+    gap: 32px !important;
+    align-items: start !important;
+  }
+  html[data-route-kind] .public-universe .paper-reader-main.solid-reading {
+    min-width: 0;
+    padding: 36px !important;
+    border: 1px solid var(--observatory-line) !important;
+    border-radius: 18px !important;
+    background: var(--observatory-bg) !important;
+  }
+  html[data-route-kind] .public-universe .paper-toc-rail .toc-surface {
+    padding: 20px !important;
+    background: var(--observatory-bg) !important;
+    border: 1px solid var(--observatory-line) !important;
+    border-radius: 14px !important;
+  }
+  html[data-route-kind] .public-universe .paper-reader-main .article-prose {
+    min-width: 0;
+    overflow-wrap: anywhere;
+  }
+  html[data-route-kind]
+    .public-universe
+    .paper-reader-main
+    .article-prose
+    :is(pre, table, .katex-display) {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+  @media (max-width: 1023px) {
+    html[data-route-kind] .public-universe .paper-reader-cockpit {
+      grid-template-columns: minmax(0, 1fr) !important;
+    }
+    html[data-route-kind] .public-universe .paper-reader-container {
+      max-width: 820px !important;
+    }
+  }
+  @media (max-width: 639px) {
+    html[data-route-kind]
+      .public-universe
+      > .space-page:not(.observatory-home)
+      .site-header
+      > .container {
+      padding-inline: 20px !important;
+    }
+    html[data-route-kind] .public-universe .paper-reader-container {
+      padding: 24px 16px 80px !important;
+    }
+    html[data-route-kind] .public-universe .paper-reader-main.solid-reading {
+      padding: 24px 20px !important;
+      border-radius: 14px !important;
+    }
+    html[data-route-kind] .public-universe .article-page-title {
+      font-size: 28px !important;
+      line-height: 1.45 !important;
+    }
+  }
+}
+
+/* Misaya Notes · public-surfaces.css */
+@layer components {
+  html[data-route-kind]
+    .public-universe
+    .space-page
+    .site-header
+    .nav-ink-active {
+    background: var(--reader-current-bg) !important;
+    color: var(--observatory-ink);
+  }
+}
+@layer components {
+  .public-universe .paper-toc-rail .toc-surface nav {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+  .public-universe .paper-reader-main .article-reading-header {
+    border-bottom: 1px solid var(--observatory-line);
+  }
+}
+@layer components {
+  html[data-route-kind]
+    .public-universe
+    .paper-reader-main
+    .article-prose
+    .markdown-code-block
+    > pre {
+    margin: 0 !important;
+    padding: 8px 18px 18px !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    overflow: auto !important;
+    max-width: 100%;
+    scrollbar-width: thin;
+    scrollbar-color: rgb(128 145 162 / 45%) transparent;
+    color: var(--code-ink) !important;
+  }
+}
+@layer components {
+  html[data-route-kind]
+    .public-universe
+    .paper-reader-main
+    .article-prose
+    .technical-table-wrap {
+    border: 0 !important;
+    border-radius: 12px !important;
+    background: color-mix(
+      in srgb,
+      var(--public-text) 4%,
+      transparent
+    ) !important;
+    scrollbar-width: thin;
+  }
+  html[data-route-kind]
+    .public-universe
+    .paper-reader-main
+    .article-prose
+    .technical-table-wrap
+    table {
+    display: table !important;
+    margin: 0 !important;
+    border: 0 !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    overflow: visible !important;
+  }
+  html[data-route-kind]
+    .public-universe
+    .paper-reader-main
+    .article-prose
+    .technical-table-wrap
+    th {
+    background: color-mix(
+      in srgb,
+      var(--public-text) 5%,
+      transparent
+    ) !important;
+    color: var(--public-text) !important;
+  }
+  html[data-route-kind]
+    .public-universe
+    .paper-reader-main
+    .article-prose
+    .technical-table-wrap
+    td {
+    color: var(--reader-ink) !important;
+  }
+}
+.public-universe {
+  --reader-hover-border: #778f9f;
+  --reader-focus: #087c9d;
+  --reader-current-bg: rgb(41 103 139 / 8%);
+  --reader-card-hover: rgb(116 115 140 / 5%);
+  --reader-card-border: rgb(81 115 138 / 24%);
+  --reader-row-hover: rgb(71 108 135 / 6%);
+}
+.dark .public-universe {
+  --reader-hover-border: #546776;
+  --reader-focus: #8cd6ec;
+  --reader-current-bg: rgb(122 180 205 / 10%);
+  --reader-card-hover: rgb(180 180 213 / 5%);
+  --reader-card-border: rgb(148 185 208 / 24%);
+  --reader-row-hover: rgb(157 191 214 / 7%);
+}
+@layer components {
+  html[data-route-kind] .public-universe .space-page .paper-toc-rail {
+    top: 92px !important;
+  }
+  html[data-route-kind]
+    .public-universe
+    .space-page
+    .paper-toc-rail
+    .toc-surface {
+    max-height: calc(100svh - 116px);
+    padding: 16px 12px !important;
+    scrollbar-width: thin;
+    scrollbar-color: color-mix(
+        in srgb,
+        var(--reader-hover-border) 55%,
+        transparent
+      )
+      transparent;
+  }
+}
+/* Misaya Notes · page-flow.css */
+@media (min-width: 900px) {
+  .rose-anchor--home {
+    top: 50%;
+    right: max(1%, calc((100% - 1180px) / 2 - 64px));
+    translate: 0 -51%;
+    width: min(44vw, 72vh);
+  }
+}
+

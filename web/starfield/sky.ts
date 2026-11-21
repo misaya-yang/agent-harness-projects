@@ -16,9 +16,9 @@ import { mulberry32 } from "./roseForm";
 const TAU = Math.PI * 2;
 
 /** Stars in the buffer; a viewport draws the share its area needs. */
-export const SKY_STARS = 9000;
+export const SKY_STARS = 6300;
 /** Stars per CSS px² of tile at full share. */
-export const SKY_DENSITY = 0.0012;
+export const SKY_DENSITY = 0.00084;
 /** How far the nebula sits: it parallaxes at this share of the nearest stars. */
 export const NEBULA_DEPTH = 0.34;
 /**

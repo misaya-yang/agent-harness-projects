@@ -44,7 +44,7 @@ export class RenderQuality {
   /** The device pixel ratio to render at for this display and scale. */
   pixelRatio(devicePixelRatio: number) {
     return (
-      Math.round(Math.min(devicePixelRatio || 1, 2) * this.scale * 100) / 100
+      Math.round(Math.min(devicePixelRatio || 1, 1.67) * this.scale * 100) / 100
     );
   }
 

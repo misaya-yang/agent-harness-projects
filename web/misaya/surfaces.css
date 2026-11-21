@@ -69,7 +69,7 @@
     padding-top: 14px !important;
   }
 
-  html[data-route-kind] .public-universe .article-prose blockquote {
+  html[data-route-kind] .public-universe .article-prose:not(.lesson-intro) blockquote {
     border: 0 !important;
     border-left: 2px solid var(--surface-accent) !important;
     border-radius: 0 12px 12px 0 !important;

@@ -48,45 +48,6 @@
   }
 }
 
-/* Inner pages: the figure rises at the page's right edge, in the margin
-   beside the text, on screens wide enough to have one. Half of it shows on a
-   laptop and most of it on a wide display. The box takes no presses; the
-   artwork is still found by where it is drawn. */
-.public-universe {
-  overflow-x: clip;
-}
-.rose-anchor--page {
-  display: none;
-  position: absolute;
-  z-index: -1;
-  top: 124px;
-  aspect-ratio: 1;
-  pointer-events: none;
-}
-@media (min-width: 1360px) {
-  /* Beside the table of contents. */
-  .rose-anchor--page[data-figure="reader"] {
-    display: block;
-    left: calc(50vw + 514px);
-    width: clamp(340px, calc(100vw - 1028px), 560px);
-  }
-  /* The author's page carries the signed rose whole, as a seal. */
-  .rose-anchor--page[data-figure="seal"] {
-    display: block;
-    top: 150px;
-    left: calc(50vw + 500px);
-    width: clamp(196px, calc(50vw - 514px), 400px);
-  }
-}
-@media (min-width: 1400px) {
-  /* Beside the list pages' wider column. */
-  .rose-anchor--page[data-figure="list"] {
-    display: block;
-    left: calc(50vw + 576px);
-    width: clamp(300px, calc(100vw - 1152px), 560px);
-  }
-}
-
 /* Hovering the artwork offers the hand; dragging it closes the hand and
    keeps the drag from selecting text on the way. */
 html[data-rose-hover] {
@@ -129,60 +90,6 @@ html[data-rose-dragging] * {
   outline: 2px solid var(--reader-focus);
   outline-offset: 4px;
   opacity: 1;
-}
-
-/* --- Surfaces over the sky ----------------------------------------------
-   The sky now has light of its own, so a solid strip of page colour shows as
-   a box cut out of it. The header is frosted instead, its lower edge fading
-   out rather than ruling a line across the nebula. The base layer is the
-   one whose !important outranks the older component rules. */
-@layer base {
-  html[data-route-kind] .public-universe .space-page .toc-surface > h3 {
-    margin-top: 0 !important;
-  }
-  .public-universe .space-page:not(.owner-dark-scope) .site-header {
-    background: transparent !important;
-    border-bottom-color: transparent !important;
-    -webkit-backdrop-filter: none !important;
-    backdrop-filter: none !important;
-  }
-}
-.public-universe .space-page:not(.owner-dark-scope) .site-header::before {
-  content: "";
-  position: absolute;
-  inset: 0 0 -22px;
-  z-index: -1;
-  pointer-events: none;
-  background: linear-gradient(
-    color-mix(in srgb, var(--observatory-bg) 88%, transparent),
-    color-mix(in srgb, var(--observatory-bg) 64%, transparent) 70%,
-    transparent
-  );
-  -webkit-backdrop-filter: blur(14px);
-  backdrop-filter: blur(14px);
-  -webkit-mask-image: linear-gradient(#000 68%, transparent);
-  mask-image: linear-gradient(#000 68%, transparent);
-}
-@media (prefers-reduced-transparency: reduce) {
-  .public-universe .space-page:not(.owner-dark-scope) .site-header::before {
-    inset: 0;
-    background: var(--observatory-bg);
-    -webkit-backdrop-filter: none;
-    backdrop-filter: none;
-    -webkit-mask-image: none;
-    mask-image: none;
-  }
-}
-/* The contents title no longer sits on a solid strip that hid the list
-   scrolling under it; the title scrolls with the list, and rows fade out at
-   the rail's top edge instead of passing under the title. */
-html[data-route-kind] .public-universe .space-page .toc-surface > h3 {
-  position: static;
-  background: none;
-}
-.public-universe .paper-toc-rail .toc-surface {
-  -webkit-mask-image: linear-gradient(transparent, #000 14px);
-  mask-image: linear-gradient(transparent, #000 14px);
 }
 
 /* --- Night: one sky ------------------------------------------------------ */

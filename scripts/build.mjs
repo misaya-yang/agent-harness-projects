@@ -35,9 +35,19 @@ const index = [];
 for (const lesson of available) {
   const rendered = renderMarkdown(lesson.body, { id: lesson.id });
   await write(lesson.url, lessonPage(lesson, rendered));
+  let body = rendered.introText;
+  const sections = rendered.intro ? [{ id: "course-notes", title: "课前笔记", start: 0 }] : [];
+  for (const part of rendered.parts) {
+    const passages = part.groups ?? [part];
+    for (const passage of passages) {
+      const title = passage.label ?? part.title;
+      sections.push({ id: passage.id, title, start: body.length + 1 });
+      body += " " + title + " " + passage.searchText;
+    }
+  }
   index.push({
     id: lesson.id, title: lesson.title, url: lesson.url, module: lesson.module.title,
-    body: rendered.plain.replace(/\s+/g, " "),
+    body, sections,
   });
 }
 const roadmapBody = roadmap.slice(roadmap.indexOf("\n")).replace(/^\*\*下一步\*\*：.*$/gm, "").trim();

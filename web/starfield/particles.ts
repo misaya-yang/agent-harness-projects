@@ -36,13 +36,13 @@ export interface ParticleCounts {
 }
 
 export const DESKTOP_COUNTS: ParticleCounts = {
-  rim: 12000,
-  beads: 150,
-  veil: 13000,
+  rim: 8400,
+  beads: 105,
+  veil: 9100,
   script: 230,
   scriptBeads: 14,
-  pollen: 2000,
-  bokeh: 8,
+  pollen: 1400,
+  bokeh: 6,
 };
 
 export interface ParticleSet {

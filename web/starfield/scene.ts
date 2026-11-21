@@ -81,8 +81,8 @@ const SKY_FPS = 30;
 const NEBULA_RANGE = 0.1;
 const NEBULA_RANGE_DAY = 0.26;
 /** Nebula strength: emitted light at night, ink absorbance by day. */
-const NEBULA_NIGHT = 0.04;
-const NEBULA_DAY = 0.34;
+const NEBULA_NIGHT = 0.03;
+const NEBULA_DAY = 0.25;
 /** How much a text column calms each layer: [wide screens, phones]. */
 const QUIET_FIGURE = 0.86;
 const QUIET_STARS = [0.62, 0.35];
@@ -151,7 +151,7 @@ export function createStarfield(
     alpha: false,
     depth: false,
     stencil: false,
-    powerPreference: "high-performance",
+    powerPreference: "default",
   });
   renderer.autoClear = false;
   const canvas = renderer.domElement;
@@ -346,8 +346,8 @@ export function createStarfield(
     magFilter: LinearFilter,
   });
   const bloom = new BloomPyramidPass({
-    levels: 6,
-    resolutionScale: 0.5,
+    levels: 4,
+    resolutionScale: 0.42,
     threshold: 0.9,
     knee: 0.8,
     radius: 0.62,
@@ -366,11 +366,11 @@ export function createStarfield(
     uNebulaPush: { value: new Vector3(0.5, 0.5, 1) },
     uNebulaRange: { value: NEBULA_RANGE },
     uQuiet: { value: new Vector4(0, 0, 1, 0) },
-    uBloom: { value: 0.58 },
-    uBleed: { value: 0.12 },
-    uInk: { value: 1.4 },
+    uBloom: { value: 0.40 },
+    uBleed: { value: 0.085 },
+    uInk: { value: 1.2 },
     uLight: { value: options.light ? 1 : 0 },
-    uExposure: { value: 1.05 },
+    uExposure: { value: 0.9 },
     uGain: { value: 1 / gain },
     uNight: { value: new Color(NIGHT_SKY) },
     uPaper: { value: new Color(DAY_PAPER) },
@@ -490,6 +490,7 @@ export function createStarfield(
 
   const invalidate = () => {
     dirty = true;
+    schedule();
   };
 
   // --- Layout --------------------------------------------------------------
@@ -1283,8 +1284,9 @@ export function createStarfield(
       dirty = false;
       canvas.dataset.ready = "true";
       if (live && !reduced && quality.observe(frameMs, now)) resize();
-    } else if (!skyLive) last = 0;
-    schedule();
+    }
+    if (live || skyLive) schedule();
+    else last = 0;
   };
   function schedule() {
     if (frame || disposed) return;

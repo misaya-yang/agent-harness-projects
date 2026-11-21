@@ -68,7 +68,16 @@ function shell({ name, summary = description, url, type = "public", activeModule
     <div class="space-page ${type === "home" ? "observatory-home" : ""}">
       <header class="site-header">
         <div class="academy-header">
-          <a href="/" class="brand-wordmark" lang="en" aria-label="Misaya Academy 首页"><img src="/assets/academy.svg" width="32" height="32" alt="">${title}</a>
+          <div class="academy-brand">
+            ${outline ? `<details class="nav-disclosure reader-header-outline">
+              <summary class="nav-icon-button" aria-label="本课目录" title="本课目录">${icon("panel-left", 19)}</summary>
+              <div class="nav-panel">
+                ${outline}
+                <nav class="reader-mobile-navigation" aria-label="移动学习导航">${studyNav(url)}${courseLinks(activeModule, false)}</nav>
+              </div>
+            </details>` : ""}
+            <a href="/" class="brand-wordmark" lang="en" aria-label="Misaya Academy 首页"><img src="/assets/academy.svg" width="32" height="32" alt="">${title}</a>
+          </div>
           <nav aria-label="学习导航" class="academy-primary-nav">
             <details class="course-switcher nav-disclosure">
               <summary class="nav-link${activeModule ? " is-current" : ""}">${icon("library-big", 16)}课程库${icon("chevron-down", 13)}</summary>
@@ -77,17 +86,15 @@ function shell({ name, summary = description, url, type = "public", activeModule
             ${studyNav(url)}
           </nav>
           <div class="nav-tools">
-            ${outline ? `<details class="nav-disclosure reader-header-outline"><summary class="nav-link">${icon("list", 16)}本课目录</summary><div class="nav-panel">${outline}</div></details>` : ""}
             <button class="search-trigger" type="button" data-search aria-label="搜索课程">${icon("search", 16)}<span>搜索课程</span><kbd data-search-key>⌘ K</kbd></button>
             ${themeControl}
-            <details class="academy-menu nav-disclosure">
-              <summary class="nav-icon-button" aria-label="${outline ? "课文目录与学习导航" : "学习导航"}">${icon(outline ? "list" : "menu", 19)}</summary>
+            ${!outline ? `<details class="academy-menu nav-disclosure">
+              <summary class="nav-icon-button" aria-label="学习导航">${icon("menu", 19)}</summary>
               <div class="nav-panel">
-                ${outline}
                 <nav aria-label="移动学习导航">${studyNav(url)}${courseLinks(activeModule, !id)}</nav>
                 ${type === "home" ? `<div class="starfield-menu-control">${motionControl}</div>` : ""}
               </div>
-            </details>
+            </details>` : ""}
           </div>
         </div>
       </header>
@@ -226,6 +233,7 @@ export function lessonPage(lesson, rendered) {
   }).join("");
 
   return shell({ name: lesson.title, summary: lesson.summary, url: lesson.url, id: lesson.id, type: "reader", activeModule: lesson.module, math: true, outline, labGroup, body: `<main class="paper-reader-container" id="main">
+    <aside class="reader-margin">${outline}</aside>
     <article class="paper-reader-main">
       <header class="article-reading-header" data-part="lesson-intro" id="lesson-intro">
         <nav class="reader-breadcrumb" aria-label="面包屑"><a href="/#modules">课程库</a>${icon("chevron-right", 12)}<a href="${lesson.module.url}">${lesson.module.title}</a>${icon("chevron-right", 12)}<span>${lesson.id}</span></nav>
@@ -244,7 +252,6 @@ export function lessonPage(lesson, rendered) {
         ? `<a href="${other.url}"><span>${i ? "下一篇" : "上一篇"}</span><strong>${other.id} ${escape(other.name)}</strong></a>`
         : "<span></span>").join("")}</nav>
     </article>
-    <aside class="reader-margin">${outline}</aside>
   </main>` });
 }
 

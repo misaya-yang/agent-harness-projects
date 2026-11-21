@@ -4,11 +4,13 @@ export function setupLessonReader(record, save) {
   const folds = [...document.querySelectorAll(".lesson-supplement, .practice-note")];
   const foldId = fold => fold.dataset.note || fold.dataset.part;
   const links = [...document.querySelectorAll(".lesson-outline a")];
+  const labs = [...document.querySelectorAll(".learning-lab[id]")];
   const byId = id => document.getElementById(id);
   const clamp = n => Math.max(0, Math.min(1, n));
   const top = el => el.getBoundingClientRect().top + scrollY;
   const offset = () => parseFloat(getComputedStyle(document.documentElement).scrollPaddingTop);
   let active;
+  let activeLinkId;
   let frame;
   let timer;
   let ready = false;
@@ -20,12 +22,18 @@ export function setupLessonReader(record, save) {
   }
   function track() {
     frame = 0;
-    const line = scrollY + offset() + 2;
-    const part = parts.findLast(item => top(item) <= line) ?? parts[0];
-    if (active === part) return;
-    active = part;
+    const cursor = offset() + 2;
+    const line = scrollY + cursor;
+    active = parts.findLast(item => top(item) <= line) ?? parts[0];
+    const lab = labs.find(figure => {
+      const box = figure.getBoundingClientRect();
+      return box.top <= cursor && box.bottom > cursor;
+    });
+    const linkId = lab?.id ?? active.dataset.part;
+    if (activeLinkId === linkId) return;
+    activeLinkId = linkId;
     for (const link of links) {
-      if (link.hash.slice(1) === part.dataset.part) link.setAttribute("aria-current", "location");
+      if (link.hash.slice(1) === linkId) link.setAttribute("aria-current", "location");
       else link.removeAttribute("aria-current");
     }
   }

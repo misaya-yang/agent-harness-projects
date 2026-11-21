@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { lessonTopics } from "./lesson-topics.mjs";
-import { lessonFigure } from "./lesson-figures.mjs";
+import { labAnchor, labGroups, labDefinitions } from "./lesson-labs.mjs";
+import { lessonSources, sourceSection } from "./lesson-sources.mjs";
 import { available, lessons, modules, learningOrder, stages } from "./curriculum.mjs";
 
 const title = "Misaya Academy";
@@ -33,7 +34,7 @@ function studyNav(current) {
 const themeControl = `<button class="nav-icon-button nav-theme-toggle" data-theme-toggle type="button" aria-label="切换浅色模式" aria-pressed="true"><span data-sun>${icon("sun", 17)}</span><span data-moon hidden>${icon("moon", 17)}</span></button>`;
 const motionControl = `<button class="starfield-toggle" type="button" data-sky-toggle aria-pressed="false" aria-label="暂停星场动画" aria-describedby="starfield-keys" hidden><span data-pause>${icon("pause", 14)}</span><span data-play hidden>${icon("play", 14)}</span><span class="starfield-toggle-label">暂停星场动画</span></button>`;
 
-function shell({ name, summary = description, url, type = "public", activeModule, body, id, outline = "", math = false }) {
+function shell({ name, summary = description, url, type = "public", activeModule, body, id, outline = "", labGroup, math = false }) {
   const canonicalOrigin = process.env.SITE_URL || "https://ai-algorithm-academy.lvy-u.chatgpt.site";
   const pageTitle = name ? `${name} · ${title}` : `${title} · AI 算法研习`;
   return `<!doctype html>
@@ -53,13 +54,15 @@ function shell({ name, summary = description, url, type = "public", activeModule
   <link rel="stylesheet" href="/misaya/surfaces.css">
   ${math ? '<link rel="stylesheet" href="/katex/katex.min.css">' : ""}
   <link rel="stylesheet" href="/academy.css">
+  ${id ? '<link rel="stylesheet" href="/labs.css">' : ""}
+  ${labGroup ? `<script type="module" src="/labs/${labGroup}.js"></script>` : ""}
   <script src="/theme.js"></script>
   <script type="module" src="/app.js"></script>
 </head>
 <body data-study-order="${learningOrder.map(lesson => lesson.id).join(" ")}"${id ? ` data-lesson="${id}"` : ""}>
   <a class="skip-link" href="#main">跳到正文</a>
   <div class="public-universe">
-    <div class="starfield" aria-hidden="true"></div>
+    ${type === "home" ? '<div class="starfield" aria-hidden="true"></div>' : ""}
     ${type === "home" ? `<span id="starfield-keys" class="sr-only">方向键转动玫瑰，Escape 恢复姿态。</span>
     <div class="starfield-desktop-control">${motionControl}</div>` : ""}
     <div class="space-page ${type === "home" ? "observatory-home" : ""}">
@@ -198,9 +201,13 @@ export function lessonPage(lesson, rendered) {
   const sequence = [available[index - 1], available[index + 1]];
   const completed = `<button type="button" class="study-button" data-complete aria-pressed="false">${icon("check", 16)}<span>标记学完</span></button>`;
   const topic = lessonTopics(lesson.id);
+  const labs = rendered.labs.map(id=>({ id: labAnchor(id), title: labDefinitions[id].title }));
+  const labGroup = labs.length && Object.keys(labGroups).find(group=>Object.hasOwn(labGroups[group], rendered.labs[0]));
+  const sources = lessonSources[lesson.id] ?? [];
   const outline = `<nav class="lesson-outline" aria-label="本课目录"><h2>本课目录</h2><ol>${rendered.parts.map(part =>
     `<li><a href="#${part.id}">${escape(part.title)}</a></li>`
-  ).join("")}</ol></nav>`;
+  ).join("")}</ol>${labs.length ? '<h2 class="outline-lab-title">互动实验</h2>' : ""}<ol>${labs.map(lab=>`<li><a href="#${lab.id}">${escape(lab.title)}</a></li>`).join("")}
+    ${sources.length ? `<li><a href="#sources">参考来源 · ${sources.length}</a></li>` : ""}</ol></nav>`;
   const sections = rendered.parts.map(part => {
     const heading = escape(part.title);
     if (part.groups) {
@@ -218,18 +225,20 @@ export function lessonPage(lesson, rendered) {
     return `<section class="lesson-section" data-part="${part.id}"><h2 id="${part.id}">${heading}</h2>${body}</section>`;
   }).join("");
 
-  return shell({ name: lesson.title, summary: lesson.summary, url: lesson.url, id: lesson.id, type: "reader", activeModule: lesson.module, math: true, outline, body: `<main class="paper-reader-container" id="main">
+  return shell({ name: lesson.title, summary: lesson.summary, url: lesson.url, id: lesson.id, type: "reader", activeModule: lesson.module, math: true, outline, labGroup, body: `<main class="paper-reader-container" id="main">
     <article class="paper-reader-main">
       <header class="article-reading-header" data-part="lesson-intro" id="lesson-intro">
         <nav class="reader-breadcrumb" aria-label="面包屑"><a href="/#modules">课程库</a>${icon("chevron-right", 12)}<a href="${lesson.module.url}">${lesson.module.title}</a>${icon("chevron-right", 12)}<span>${lesson.id}</span></nav>
         <h1 class="article-page-title">${escape(lesson.title)}</h1>
         ${topic ? `<p class="lesson-lead">${escape(topic.lead)}</p>` : ""}
         <div class="lesson-meta"><span>${priorityLabel(lesson)} · ${hoursLabel(lesson.hours)}</span>
+        ${labs.length ? `<a class="lab-skip" href="#${labs[0].id}">${icon("sliders-horizontal",14)}动手实验</a>` : ""}
         ${rendered.intro && topic ? `<details class="intro-notes"><summary id="course-notes">课前笔记${icon("chevron-down", 13)}</summary><div class="article-prose lesson-intro">${rendered.intro}</div></details>` : ""}</div>
         ${!topic ? `<div class="article-prose lesson-intro" id="course-notes">${rendered.intro}</div>` : ""}
       </header>
-      ${lessonFigure(lesson)}
+
       ${sections}
+      ${sourceSection(lesson.id)}
       <div class="lesson-end">${completed}<a class="cosmos-link" href="${lesson.module.url}">返回模块</a></div>
       <nav aria-label="前后课文" class="lesson-sequence">${sequence.map((other, i) => other
         ? `<a href="${other.url}"><span>${i ? "下一篇" : "上一篇"}</span><strong>${other.id} ${escape(other.name)}</strong></a>`

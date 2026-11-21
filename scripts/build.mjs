@@ -3,12 +3,20 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import { available, modules, roadmap } from "./curriculum.mjs";
+import { labAnchor, labDefinitions } from "./lesson-labs.mjs";
+import { lessonSources } from "./lesson-sources.mjs";
 import { renderMarkdown, mathErrors } from "./markdown.mjs";
 import { allPaths, homePage, lessonPage, modulePage, progressPage, roadmapPage } from "./pages.mjs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
 const dist = resolve(root, "dist");
 const input = name => resolve(root, name);
+function buildLabs(group) {
+  return build({
+    stdin: { contents: `import {activateLabs} from "./web/labs/client.mjs"; import lessons from "./web/labs/${group}.mjs"; activateLabs(lessons);`, resolveDir: root },
+    outfile: resolve(dist, "labs", group + ".js"), format: "esm", target: "es2022", bundle: true, minify: true,
+  });
+}
 async function write(url, contents) {
   const destination = resolve(dist, url === "/" ? "index.html" : url.slice(1));
   await mkdir(dirname(destination), { recursive: true });
@@ -17,8 +25,9 @@ async function write(url, contents) {
 
 await mkdir(dist, { recursive: true });
 await Promise.all([
-  ...["academy.css", "theme.js", "misaya", "fonts", "assets"].map(asset =>
+  ...["academy.css", "labs.css", "theme.js", "misaya", "fonts", "assets"].map(asset =>
     cp(input(`web/${asset}`), resolve(dist, asset), { recursive: true })),
+  ...["architecture", "alignment", "systems"].map(buildLabs),
   cp(input("node_modules/katex/dist/katex.min.css"), resolve(dist, "katex/katex.min.css")),
   cp(input("node_modules/katex/dist/fonts"), resolve(dist, "katex/fonts"), { recursive: true }),
   build({
@@ -44,6 +53,15 @@ for (const lesson of available) {
       sections.push({ id: passage.id, title, start: body.length + 1 });
       body += " " + title + " " + passage.searchText;
     }
+  }
+  for (const id of rendered.labs) {
+    const lab = labDefinitions[id];
+    sections.push({ id: labAnchor(id), title: lab.title, start: body.length + 1 });
+    body += ` ${lab.title} ${lab.question} ${lab.controls.map(c=>c.label).join(" ")}`;
+  }
+  if (lessonSources[lesson.id]?.length) {
+    sections.push({ id: "sources", title: "参考来源", start: body.length + 1 });
+    body += " " + lessonSources[lesson.id].map(source=>source.label).join(" ");
   }
   index.push({
     id: lesson.id, title: lesson.title, url: lesson.url, module: lesson.module.title,

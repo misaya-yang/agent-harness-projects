@@ -1,0 +1,122 @@
+const direct = (label, url) => ({ label, url, kind: "direct" });
+const arxiv = (label, id) => direct(label, `https://arxiv.org/abs/${id}`);
+const search = (label, query) => ({
+  label, url: `https://www.google.com/search?q=${encodeURIComponent(query)}`, kind: "search",
+});
+
+const v32 = arxiv("DeepSeek-V3.2 技术报告", "2512.02556");
+const v4Preview = arxiv("DeepSeek-V4 技术报告（预览版，v1）", "2606.19348v1");
+const v4Official = direct("DeepSeek-V4-Pro-0813 模型卡（正式版）",
+  "https://huggingface.co/deepseek-ai/DeepSeek-V4-Pro-0813");
+const kimi = arxiv("Kimi K3: Open Frontier Intelligence", "2607.24653");
+const kimiCard = direct("Moonshot AI · Kimi K3 模型卡", "https://github.com/MoonshotAI/Kimi-K3");
+const hyperKimi = direct("HyperAI · Kimi K3 中文摘要", "https://hyper.ai/cn/papers/2607.24653");
+const fireworksKimi = direct("Fireworks · Kimi K3 on Fireworks: Fast RL at Frontier Scale",
+  "https://fireworks.ai/research/kimi-k3-on-fireworks-fast-rl-at-frontier-scale");
+const siglip2 = arxiv("SigLIP 2（含 NaFlex）", "2502.14786");
+const visionSurvey = direct("Jina AI · Vision Encoders in Vision-Language Models: A Survey", "https://jina.ai/vision-encoder-survey.pdf");
+
+export default {
+  "2.3": [
+    arxiv("Proximal Policy Optimization Algorithms（PPO）", "1707.06347"),
+    arxiv("High-Dimensional Continuous Control Using Generalized Advantage Estimation（GAE）", "1506.02438"),
+    search("Prime Intellect · RL algorithms for LLMs: PPO, GRPO, and variants",
+      '"Prime Intellect" "RL algorithms for LLMs" PPO GRPO'),
+    direct("The GRPO Family: A Systematic Survey of Variants, Theory, and Applications", "https://fredericvan.github.io/GRPO-Family-Survey/"),
+    v32,
+    kimi,
+    hyperKimi,
+    fireworksKimi,
+  ],
+  "2.4": [
+    arxiv("Direct Preference Optimization: Your Language Model is Secretly a Reward Model", "2305.18290"),
+    arxiv("Unintentional Unalignment: Likelihood Displacement in Direct Preference Optimization（Razin 等）", "2410.08847"),
+    arxiv("Sycophantic Agreement Transfers with Neutral Data via Contrastive Preference Optimization", "2608.31079"),
+    direct("Nathan Lambert · Reinforcement Learning from Human Feedback（RLHF Book）", "https://rlhfbook.com/"),
+    arxiv("When Data is the Algorithm: A Systematic Study and Curation of Preference Optimization Datasets", "2511.10985"),
+    arxiv("Do Post-Training Algorithms Actually Differ?（跨规模对照）", "2603.19335"),
+  ],
+  "2.5": [
+    arxiv("DeepSeekMath（提出 GRPO）", "2402.03300"),
+    arxiv("DAPO: An Open-Source LLM Reinforcement Learning System at Scale", "2503.14476"),
+    arxiv("Does Reinforcement Learning Really Incentivize Reasoning Capacity in LLMs Beyond the Base Model?", "2504.13837"),
+    arxiv("Reinforcement Learning with Verifiable Rewards Implicitly Incentivizes Correct Reasoning in Base LLMs", "2506.14245"),
+    arxiv("Understanding Diversity Collapse in RLVR via the Lens of Overtraining", "2606.15455"),
+    search("Policy Optimization for LLMs: From One Loss to Scalable Recipes（2026 年 4 月课件）",
+      '"Policy Optimization for LLMs" "From One Loss to Scalable Recipes"'),
+    arxiv("The Art of Scaling Reinforcement Learning Compute for LLMs（ScaleRL）", "2510.13786"),
+    direct("RL+LLM Wiki · ScaleRL 文献整理", "https://huggingface.co/datasets/rl-llm-wiki/knowledge-base/discussions/370"),
+    v32,
+    v4Preview,
+    v4Official,
+    kimi,
+    hyperKimi,
+  ],
+  "2.6": [
+    direct("Hugging Face · Agentic RL: Token-In, Token-Out Done Right", "https://huggingface.co/blog/huggingface/tito"),
+    direct("LMSYS · No Token Left Behind: Demystifying Token-In-Token-Out in Miles",
+      "https://www.lmsys.org/blog/2026-05-13-no-token-left-behind"),
+    arxiv("Miles v0.1: Production-Level Post-Training", "2609.08368"),
+    arxiv("Agent Lightning v1.0: Towards Harnessed Agentic RL", "2608.17528"),
+    direct("NVIDIA NeMo Gym · On-Policy Corrections",
+      "https://docs.nvidia.com/nemo/gym/main/contribute/rl-framework-integration/openai-compatible-http-server-on-policy-correction"),
+    arxiv("Laguna M.1/XS.2 Technical Report", "2605.27605"),
+    arxiv("On Effectiveness and Efficiency of Agentic Tool-calling and RL Training", "2606.00135"),
+    arxiv("A Practitioner's Guide to Multi-turn Agentic Reinforcement Learning", "2510.01132"),
+    arxiv("Reinforcing Multi-Turn Reasoning in LLM Agents via Fine-Grained Reward Structure and Credit Assignment", "2505.11821"),
+    direct("MatchTIR: Fine-Grained Supervision for Tool-Integrated Reasoning via Bipartite Matching（ACL 2026）",
+      "https://aclanthology.org/2026.acl-long.549/"),
+    arxiv("AT²PO: Agentic Turn-based Policy Optimization via Tree Search", "2601.04767"),
+    arxiv("SUPO: Scaling LLM Multi-turn RL with End-to-end Summarization-based Context Management（预印本）", "2510.06727"),
+    direct("SUPO: Beyond the Context Window: Scaling Agentic RL via End-to-end Optimized Context Compression（ACL 2026）",
+      "https://aclanthology.org/2026.acl-long.966/"),
+    arxiv("CompactionRL: Reinforcement Learning with Context Compaction for Long-Horizon Agents", "2607.05378"),
+    arxiv("Glasseek: A Transparent Recipe for Training and Trustworthy Evaluation of DeepSearch Agents", "2610.16998"),
+    v32,
+    v4Preview,
+    kimiCard,
+    kimi,
+  ],
+  "2.7": [
+    direct("On the Rollout-Training Mismatch in Modern RL Systems（TIS，NeurIPS 2025 OPT workshop）",
+      "https://neurips.cc/virtual/2025/124259"),
+    arxiv("Defeating the Training-Inference Mismatch via FP16", "2510.26788"),
+    arxiv("bf16 Rounding Silently Discards Most RL Policy Updates", "2610.41073"),
+    arxiv("Stabilizing MoE Reinforcement Learning by Aligning Training and Inference Routers（R3）", "2510.11370"),
+    arxiv("PR2: Predictive Routing Replay for MoE-Based LLM Reinforcement Learning", "2606.00395"),
+    arxiv("Stabilizing Reinforcement Learning with LLMs: Formulation and Practices", "2512.01374"),
+    arxiv("Stale but Stable: Staleness-Adaptive Trust Regions for Stabilizing Asynchronous Reinforcement Learning", "2607.18722"),
+    v4Preview,
+    fireworksKimi,
+  ],
+  "3.1": [
+    arxiv("Learning Transferable Visual Models From Natural Language Supervision（CLIP）", "2103.00020"),
+    arxiv("Emerging Properties in Self-Supervised Vision Transformers（DINO）", "2104.14294"),
+    arxiv("Masked Autoencoders Are Scalable Vision Learners（MAE）", "2111.06377"),
+    arxiv("DINOv3", "2508.10104"),
+    arxiv("UltraBench 2: Towards Robust Evaluation of Vision Foundation Models on Ultrasound", "2609.28610"),
+    siglip2,
+    visionSurvey,
+    arxiv("Black Forest Labs · Self-Supervised Flow Matching for Scalable Multi-Modal Synthesis", "2603.06507"),
+  ],
+  "3.2": [
+    arxiv("Qwen2.5-VL Technical Report", "2502.13923"),
+    arxiv("Qwen3-VL Technical Report", "2511.21631"),
+    kimiCard,
+    siglip2,
+    arxiv("LLaVA-UHD v3: Progressive Visual Compression for Efficient Native-Resolution Encoding in MLLMs", "2511.21150"),
+    arxiv("LLaVA-UHD v4: What Makes Efficient Visual Encoding in MLLMs?", "2605.08985"),
+    visionSurvey,
+  ],
+  "3.3": [
+    arxiv("Chameleon: Mixed-Modal Early-Fusion Foundation Models", "2405.09818"),
+    arxiv("Transfusion: Predict the Next Token and Diffuse Images with One Multi-Modal Model", "2408.11039"),
+    arxiv("Janus: Decoupling Visual Encoding for Unified Multimodal Understanding and Generation", "2410.13848"),
+    arxiv("BAGEL: Emerging Properties in Unified Multimodal Pretraining", "2505.14683"),
+    arxiv("Emu3.5: Native Multimodal Models are World Learners", "2510.26583"),
+    arxiv("Unified Multimodal Understanding and Generation Models: Advances, Challenges, and Opportunities（v6）", "2505.02567v6"),
+    arxiv("A Simple Baseline for Unifying Understanding, Generation, and Editing via Vanilla Next-token Prediction", "2603.04980"),
+    arxiv("Can Unified Generation and Understanding Models Maintain Semantic Equivalence Across Different Output Modalities?", "2602.23711"),
+    kimiCard,
+  ],
+};

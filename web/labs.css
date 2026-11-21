@@ -1,8 +1,8 @@
 /* Embedded, responsive textbook experiments. The SVG and its units are legible in print, too. */
 .learning-lab {
-  --lab-blue: #6478df; --lab-teal: #139c88; --lab-neutral: #a2a2a2;
-  --lab-amber: #dcb078; --lab-violet: #c498cc; --lab-grid: #292929;
-  --lab-stage: var(--reader-ground, #0e0e0e); --lab-line: #323232; --lab-empty: #262626;
+  --lab-blue: #8492df; --lab-teal: #50ac9c; --lab-neutral: #aca9a7;
+  --lab-amber: #dcb078; --lab-violet: #c498cc; --lab-grid: #3b3b40;
+  --lab-stage: var(--reader-ground, #252527); --lab-line: #48484c; --lab-empty: #343439;
   margin: clamp(24px, 4vw, 38px) 0; min-width: 0;
   color: var(--observatory-ink); font-family: var(--font-reading); font-size: 1rem; line-height: 1.55;
 }

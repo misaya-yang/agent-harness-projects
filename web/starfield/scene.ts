@@ -52,7 +52,7 @@ import { NEBULA_DEPTH, buildSky, panThrough, skyShare, skyTile } from "./sky";
 import { TurnMotion } from "./turnMotion";
 
 /** Page colours behind the field. Keep in sync with styles/starfield.css. */
-export const NIGHT_SKY = "#0e0e0e";
+export const NIGHT_SKY = "#252527";
 export const DAY_PAPER = "#f5f7fc";
 
 /** Where a page wants its figure: the box's inscribed circle is the footprint. */
@@ -399,7 +399,8 @@ export function createStarfield(
   let height = 1;
   let dpr = 1;
   let time = 0;
-  let intro = reduced ? INTRO_SECONDS : 0;
+  // Start with the petals already visible, then let them finish opening.
+  let intro = reduced ? INTRO_SECONDS : 1.4;
   let light = options.light ? 1 : 0;
   let lightTarget = light;
   let paused = false;

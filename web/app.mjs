@@ -60,22 +60,12 @@ if (root.dataset.routeKind === "home") {
   let contextLost = false;
   let paused = get("sky-paused", false);
   const rose = select("[data-rose-anchor]");
-  let roseVisible = true, maskFrame = 0;
-  function placeRoseMask() {
-    maskFrame = 0;
-    const box = rose.getBoundingClientRect();
-    const visible = box.bottom > 0 && box.top < innerHeight;
-    sky.style.setProperty("--rose-mask-x", box.left + box.width / 2 + "px");
-    sky.style.setProperty("--rose-mask-y", box.top + box.height / 2 + "px");
-    sky.style.setProperty("--rose-mask-r", visible ? box.width * .64 + "px" : "0px");
-    if (visible !== roseVisible) scene?.setPaused(paused || !visible);
-    roseVisible = visible;
-  }
-  function queueRoseMask() { if (!maskFrame) maskFrame = requestAnimationFrame(placeRoseMask); }
-  placeRoseMask();
-  addEventListener("scroll", queueRoseMask, { passive: true });
-  addEventListener("resize", queueRoseMask);
-  new ResizeObserver(queueRoseMask).observe(rose);
+  let roseVisible = true;
+  new IntersectionObserver(([entry]) => {
+    roseVisible = entry.isIntersecting;
+    sky.toggleAttribute("data-hero-away", !roseVisible);
+    scene?.setPaused(paused || !roseVisible);
+  }).observe(rose);
   function updateSkyControl() {
     root.toggleAttribute("data-static-rose", motion.matches || saveData || failed || contextLost || (!scene && paused));
     for (const control of skyButtons) {

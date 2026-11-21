@@ -33,13 +33,13 @@ a, button, summary, input, [tabindex] { outline-offset: 4px; }
   color: var(--observatory-ink);
   min-height: 100vh;
 }
-/* A single neutral paper color runs through the page, navigation and teaching figures. */
+/* The text column and diagram share one graphite ground; light is confined to the margins. */
 .public-universe, .public-universe .space-page:not(.owner-dark-scope) {
   --shell-bg: var(--reader-ground);
   --reader-paper: var(--reader-ground);
-  --observatory-ink: #ededed;
-  --observatory-muted: #b5b5b5;
-  --observatory-line: #323232;
+  --observatory-ink: #dedbd5;
+  --observatory-muted: #b5b1af;
+  --observatory-line: #414143;
   --reader-current-bg: rgb(255 255 255 / 7%);
   --surface-accent: #93a7ce;
   --cosmos-kicker: #afc1e9;
@@ -55,13 +55,52 @@ html:not(.dark) .public-universe, html:not(.dark) .public-universe .space-page:n
   --surface-accent: #617ba6;
   --cosmos-kicker: #405b93;
 }
-html[data-route-kind] { --reader-ground: #0e0e0e; background: var(--reader-ground); }
+html[data-route-kind] { --reader-ground: #252527; background: var(--reader-ground); }
 html:not(.dark)[data-route-kind] { --reader-ground: #f7f8fb; }
 body { background-color: var(--reader-ground); }
 .public-universe .starfield {
-  --rose-mask-x: 75%; --rose-mask-y: 220px; --rose-mask-r: 0px;
-  background: var(--reader-ground);
-  mask-image: radial-gradient(circle var(--rose-mask-r) at var(--rose-mask-x) var(--rose-mask-y), #000 62%, transparent);
+  mask-image: linear-gradient(105deg, rgb(0 0 0 / .44), #000 70%);
+}
+.starfield[data-hero-away] { visibility: hidden; }
+.dark .public-universe::before {
+  content: ""; position: fixed; inset: 0; z-index: -2; pointer-events: none;
+  background:
+    radial-gradient(ellipse at 96% 12%, rgb(120 97 157 / .18), transparent 37%),
+    radial-gradient(ellipse at 2% 86%, rgb(78 126 143 / .13), transparent 30%),
+    url("/assets/study-night.webp") center / cover no-repeat, var(--reader-ground);
+  background-blend-mode: screen;
+  mask-image: linear-gradient(to right, #000, #000 max(1%, calc(50% - 520px)),
+    transparent max(9%, calc(50% - 364px)), transparent min(91%, calc(50% + 364px)),
+    #000 min(99%, calc(50% + 520px)), #000);
+}
+.dark[data-route-kind="home"] .public-universe::before {
+  mask-image: linear-gradient(105deg, rgb(0 0 0 / .65), #000 72%);
+}
+.dark[data-static-rose] .rose-anchor--home { mix-blend-mode: screen; }
+@media (max-width: 850px) {
+  .dark[data-route-kind="reader"] .public-universe::before {
+    mask-image: linear-gradient(to right, #000, transparent max(18px, calc(50% - 364px)),
+      transparent min(calc(100% - 18px), calc(50% + 364px)), #000);
+  }
+  .dark .article-reading-header { position: relative; isolation: isolate; }
+  .dark .article-reading-header::before {
+    content: ""; position: absolute; z-index: -1; pointer-events: none;
+    top: -20px; right: min(-18px, calc(364px - 50vw)); width: min(85%, 420px); height: 116px;
+    background: var(--reader-ground) url("/assets/study-night.webp") 75% 23% / 160% auto no-repeat;
+    background-blend-mode: screen;
+    mask-image: radial-gradient(ellipse at 94% 6%, #000 12%, transparent 73%);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  @supports (animation-timeline: scroll()) {
+    .dark:not([data-route-kind="home"]) .public-universe::before {
+      inset-block: -18px; animation: sky-margin-travel linear both; animation-timeline: scroll(root);
+    }
+    @keyframes sky-margin-travel { from { transform: translateY(-18px); } to { transform: translateY(18px); } }
+  }
+}
+@media print {
+  .dark .public-universe::before, .dark .article-reading-header::before { display: none; }
 }
 .starfield[data-fallback] canvas { visibility: hidden; }
 html[data-static-rose] .rose-anchor--home {
@@ -73,9 +112,9 @@ html[data-static-rose]:not(.dark) .rose-anchor--home { background-image: url("/a
   .rose-anchor--home { background: url("/assets/rose-night.webp") center / contain no-repeat; mask-image: radial-gradient(closest-side, black 74%, transparent); }
 }
 .dark .public-universe {
-  --surface-card: var(--reader-ground); --surface-quote: var(--reader-ground); --surface-card-edge: #323232;
+  --surface-card: #2a2a2d; --surface-quote: #2e2e32; --surface-card-edge: #414143;
   --surface-card-shadow: none;
-  --cosmos-cta-bg: #cfd9ed; --cosmos-cta-glow: transparent; --cosmos-cta-ring: transparent;
+  --cosmos-cta-bg: #cdd4e8; --cosmos-cta-glow: rgb(149 160 216 / .19); --cosmos-cta-ring: rgb(179 190 229 / .25);
   --cosmos-glow-text: linear-gradient(100deg, #d8e0ed, #a6b9dd 50%, #bbaace);
 }
 .public-universe .cosmos-kicker-pulse { box-shadow: none; }
@@ -235,6 +274,9 @@ html[data-route-kind="reader"] { scroll-padding-top: 84px; }
 .lesson-outline ol { padding: 0; margin: 0; list-style: none; }
 .lesson-outline a { display: block; padding: 6px 10px; color: var(--observatory-muted); border-left: 1px solid var(--observatory-line); font-size: .81rem; line-height: 1.55; }
 .lesson-outline a:hover, .lesson-outline a[aria-current] { color: var(--cosmos-kicker); border-left-color: currentColor; }
+.dark .lesson-outline a[aria-current] {
+  background: linear-gradient(90deg, rgb(165 178 225 / .11), transparent 90%);
+}
 .nav-panel .lesson-outline { padding: 7px; }
 .nav-panel .lesson-outline a { min-height: 36px; }
 @media (min-width: 1180px) {
@@ -269,6 +311,7 @@ html[data-route-kind="reader"] { scroll-padding-top: 84px; }
 .study-button:hover, .study-button[aria-pressed="true"] { background: var(--reader-current-bg); color: var(--cosmos-kicker); }
 .article-prose { font-size: 1.045rem; line-height: 1.9; overflow-wrap: anywhere; }
 .article-prose :is(p, ul, ol, pre, blockquote, .technical-table-wrap, .math-block) { margin-block: 1em; }
+.dark .article-prose { color: #ceccc7; }
 .article-prose :is(h2, h3, h4) { color: var(--observatory-ink); }
 .article-prose h2 { font-size: clamp(1.34rem, 2.3vw, 1.77rem); }
 .article-prose h3 { font-size: clamp(1.13rem, 1.8vw, 1.38rem); }
@@ -335,7 +378,7 @@ html[data-route-kind="reader"] { scroll-padding-top: 84px; }
 .lesson-sequence strong { font-size: .93rem; line-height: 1.5; font-weight: 520; overflow-wrap: anywhere; }
 
 .search-dialog {
-  --dialog-bg: var(--reader-ground); --dialog-fg: #ededed; --dialog-muted: #b5b5b5; --dialog-line: #373737;
+  --dialog-bg: var(--reader-ground); --dialog-fg: #dedbd5; --dialog-muted: #b5b1af; --dialog-line: #454547;
   width: min(570px, 100% - 28px); max-height: 80svh; margin: min(9svh, 70px) auto auto;
   border: 1px solid var(--dialog-line); border-radius: 16px; padding: 20px;
   background: var(--dialog-bg); color: var(--dialog-fg); font-family: "Geist", "PingFang SC", system-ui, sans-serif;

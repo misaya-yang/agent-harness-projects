@@ -94,11 +94,11 @@ html[data-rose-dragging] * {
 
 /* --- Night: one sky ------------------------------------------------------ */
 html.dark:has(.public-universe) {
-  background: var(--reader-ground, #0e0e0e);
+  background: var(--reader-ground, #252527);
 }
 .dark .public-universe,
 .dark .public-universe .space-page:not(.owner-dark-scope) {
-  --observatory-bg: var(--reader-ground, #0e0e0e);
+  --observatory-bg: var(--reader-ground, #252527);
 }
 
 /* --- Day: a star atlas ---------------------------------------------------

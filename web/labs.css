@@ -2,7 +2,7 @@
 .learning-lab {
   --lab-blue: #8492df; --lab-teal: #50ac9c; --lab-neutral: #aca9a7;
   --lab-amber: #dcb078; --lab-violet: #c498cc; --lab-grid: #3b3b40;
-  --lab-stage: var(--reader-ground, #252527); --lab-line: #48484c; --lab-empty: #343439;
+  --lab-stage: var(--reader-ground, #181818); --lab-line: #424242; --lab-empty: #323232;
   margin: clamp(24px, 4vw, 38px) 0; min-width: 0;
   color: var(--observatory-ink); font-family: var(--font-reading); font-size: 1rem; line-height: 1.55;
 }
@@ -54,6 +54,7 @@ html:not(.dark) .learning-lab {
 .lab-node.is-active strong { color: var(--lab-teal); }
 
 .lab-controls { padding: 12px clamp(12px,2vw,20px) 9px; border-top: 1px solid var(--lab-grid); }
+.dark .lab-controls { background: var(--reader-panel); border-top-color: var(--panel-edge); }
 .lab-fields { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 12px 22px; }
 .lab-fields > * { min-inline-size: 0; flex: 1 1 175px; margin: 0; padding: 0; border: 0; }
 .lab-choice legend, .lab-choice > span, .lab-slider > span { color: var(--observatory-muted); font-size: .83rem; font-weight: 510; }

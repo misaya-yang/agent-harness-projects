@@ -52,7 +52,7 @@ import { NEBULA_DEPTH, buildSky, panThrough, skyShare, skyTile } from "./sky";
 import { TurnMotion } from "./turnMotion";
 
 /** Page colours behind the field. Keep in sync with styles/starfield.css. */
-export const NIGHT_SKY = "#252527";
+export const NIGHT_SKY = "#181818";
 export const DAY_PAPER = "#f5f7fc";
 
 /** Where a page wants its figure: the box's inscribed circle is the footprint. */

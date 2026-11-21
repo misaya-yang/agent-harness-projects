@@ -35,11 +35,11 @@ a, button, summary, input, [tabindex] { outline-offset: 4px; }
 }
 /* The text column and diagram share one graphite ground; light is confined to the margins. */
 .public-universe, .public-universe .space-page:not(.owner-dark-scope) {
-  --shell-bg: var(--reader-ground);
-  --reader-paper: var(--reader-ground);
+  --shell-bg: var(--reader-panel);
+  --reader-paper: var(--reader-panel);
   --observatory-ink: #dedbd5;
   --observatory-muted: #b5b1af;
-  --observatory-line: #414143;
+  --observatory-line: #363636;
   --reader-current-bg: rgb(255 255 255 / 7%);
   --surface-accent: #93a7ce;
   --cosmos-kicker: #afc1e9;
@@ -55,7 +55,12 @@ html:not(.dark) .public-universe, html:not(.dark) .public-universe .space-page:n
   --surface-accent: #617ba6;
   --cosmos-kicker: #405b93;
 }
-html[data-route-kind] { --reader-ground: #252527; background: var(--reader-ground); }
+html[data-route-kind] {
+  --reader-ground: #181818;
+  --reader-panel: #202020;
+  --panel-edge: #2b2b2b;
+  background: var(--reader-ground);
+}
 html:not(.dark)[data-route-kind] { --reader-ground: #f7f8fb; }
 body { background-color: var(--reader-ground); }
 .public-universe .starfield {
@@ -112,7 +117,7 @@ html[data-static-rose]:not(.dark) .rose-anchor--home { background-image: url("/a
   .rose-anchor--home { background: url("/assets/rose-night.webp") center / contain no-repeat; mask-image: radial-gradient(closest-side, black 74%, transparent); }
 }
 .dark .public-universe {
-  --surface-card: #2a2a2d; --surface-quote: #2e2e32; --surface-card-edge: #414143;
+  --surface-card: var(--reader-panel); --surface-quote: var(--reader-panel); --surface-card-edge: var(--panel-edge);
   --surface-card-shadow: none;
   --cosmos-cta-bg: #cdd4e8; --cosmos-cta-glow: rgb(149 160 216 / .19); --cosmos-cta-ring: rgb(179 190 229 / .25);
   --cosmos-glow-text: linear-gradient(100deg, #d8e0ed, #a6b9dd 50%, #bbaace);
@@ -125,6 +130,7 @@ html[data-static-rose]:not(.dark) .rose-anchor--home { background-image: url("/a
   position: sticky; top: 0; z-index: 50; isolation: isolate;
   background: var(--shell-bg); border-bottom: 1px solid var(--observatory-line);
 }
+.dark .site-header { border-bottom-color: var(--panel-edge); }
 .academy-header {
   width: min(100%, 1512px); height: 64px; margin-inline: auto; padding-inline: clamp(16px, 2.5vw, 40px);
   display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px;
@@ -268,7 +274,7 @@ html[data-route-kind="reader"] { scroll-padding-top: 84px; }
 .reader-header-outline .nav-panel {
   position: fixed; inset: var(--reader-header-height, 64px) auto 0 0; width: min(300px, calc(100% - 40px));
   max-height: none; padding: 16px; overscroll-behavior: contain;
-  border-width: 0 1px 0 0; border-radius: 0; background: var(--reader-ground);
+  border-width: 0 1px 0 0; border-radius: 0; background: var(--reader-paper);
 }
 .lesson-outline h2 { margin: 0 0 8px; color: var(--observatory-muted); font: 550 .78rem var(--font-reading); }
 .lesson-outline ol { padding: 0; margin: 0; list-style: none; }
@@ -281,6 +287,10 @@ html[data-route-kind="reader"] { scroll-padding-top: 84px; }
 .nav-panel .lesson-outline a { min-height: 36px; }
 @media (min-width: 1180px) {
   .reader-header-outline { display: none; }
+  .dark .reader-margin {
+    background: var(--reader-panel); border: 1px solid var(--panel-edge);
+    border-radius: 8px; padding: 12px;
+  }
   .paper-reader-container { width: min(100% - 48px, 1456px); display: grid; grid-template-columns: minmax(0, 1fr) 728px minmax(0, 1fr); column-gap: 36px; align-items: start; }
   .paper-reader-main { grid-area: 1 / 2; }
   .reader-margin { grid-area: 1 / 1; justify-self: end; width: min(100%, 210px); display: block; position: sticky; top: 86px; padding-top: 6px; max-height: calc(100svh - 106px); overflow-y: auto; }
@@ -378,7 +388,7 @@ html[data-route-kind="reader"] { scroll-padding-top: 84px; }
 .lesson-sequence strong { font-size: .93rem; line-height: 1.5; font-weight: 520; overflow-wrap: anywhere; }
 
 .search-dialog {
-  --dialog-bg: var(--reader-ground); --dialog-fg: #dedbd5; --dialog-muted: #b5b1af; --dialog-line: #454547;
+  --dialog-bg: var(--reader-panel); --dialog-fg: #dedbd5; --dialog-muted: #b5b1af; --dialog-line: #454547;
   width: min(570px, 100% - 28px); max-height: 80svh; margin: min(9svh, 70px) auto auto;
   border: 1px solid var(--dialog-line); border-radius: 16px; padding: 20px;
   background: var(--dialog-bg); color: var(--dialog-fg); font-family: "Geist", "PingFang SC", system-ui, sans-serif;

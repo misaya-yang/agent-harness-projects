@@ -1,0 +1,48 @@
+import { test } from "node:test";
+import assert from "node:assert/strict";
+import { labDefinitions, renderLab } from "./lesson-labs.mjs";
+import { lessonById } from "./curriculum.mjs";
+import { lessonSources } from "./lesson-sources.mjs";
+import { drawModel } from "../web/labs/graphics.mjs";
+
+for (const [id, lab] of Object.entries(labDefinitions)) {
+  test(`${id}: lesson, references, accessible static view and parameter boundaries`, () => {
+    // A lesson may hold several labs: "6.3" and "6.3-polynomial" both belong to lesson 6.3.
+    const lessonId = id.split("-")[0];
+    const lesson = lessonById.get(lessonId);
+    const markers = [...lesson.body.matchAll(/^```academy-lab\s*\n([^\n]+)\n```$/gm)].map(match=>match[1]);
+    assert.equal(markers.filter(marker=>marker === id).length, 1);
+    assert.ok(markers.every(marker=>marker === lessonId || marker.startsWith(lessonId + "-")));
+    assert.ok(lab.check?.question && lab.check.answer);
+    assert.ok(lessonSources[lessonId].some(source=>source.kind === "direct"));
+    for (const source of lessonSources[lessonId]) assert.equal(new URL(source.url).protocol, "https:");
+    const initial = Object.fromEntries(lab.controls.map(c=>[c.key,c.initial]));
+    const states = [initial];
+    for (const c of lab.controls) {
+      const values = c.options?.map(o=>o.value) ?? [c.min, c.max];
+      states.push(...values.map(value=>({ ...initial, [c.key]: value })));
+    }
+    const outputs = new Set();
+    for (const state of states) {
+      const result = lab.evaluate(state);
+      const visual = drawModel(result, 288, id);
+      assert.match(visual, /<svg/);
+      assert.ok(result.readout && result.explanation);
+      assert.doesNotMatch(visual + result.readout + result.explanation, /NaN|Infinity|undefined/);
+      outputs.add(visual + result.readout);
+    }
+    assert.ok(outputs.size > 1, "Changing the parameters must affect the teaching example");
+    assert.match(renderLab(id, lessonId), /data-readout/);
+  });
+}
+
+test("Roofline uses consistent decimal units and the smaller hardware limit", () => {
+  const lab = labDefinitions["5.1"];
+  for (const [hardware, peak] of [["h100-bf16", 989], ["h100-fp8", 1979]]) {
+    for (const intensityExponent of [-1, 2, 3, 5]) {
+      const result = lab.evaluate({ hardware, intensityExponent });
+      assert.equal(result.markers[0].x, peak / 3.35);
+      assert.equal(result.point.y, Math.min(3.35 * 10 ** intensityExponent, peak));
+    }
+  }
+});

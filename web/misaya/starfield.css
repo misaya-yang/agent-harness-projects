@@ -1,8 +1,7 @@
 /*
- * The star field's place on the page, and the palette the page shares with it.
- *
- * The canvas paints the whole page ground, so the grounds below are the same
- * colours as NIGHT_SKY and DAY_PAPER in components/starfield/scene.ts.
+ * The star field's place on the page. The canvas paints the home page ground,
+ * so NIGHT_SKY and DAY_PAPER in web/starfield/scene.ts match --ground in
+ * academy.css (#262523 by night, #f7f4ed by day).
  */
 
 /* --- The canvas ---------------------------------------------------------- */
@@ -73,7 +72,7 @@ html[data-rose-dragging] * {
   border: 0;
   border-radius: 50%;
   background: transparent;
-  color: var(--observatory-muted);
+  color: var(--muted);
   opacity: 0.72;
   cursor: pointer;
   transition:
@@ -90,51 +89,4 @@ html[data-rose-dragging] * {
   outline: 2px solid var(--reader-focus);
   outline-offset: 4px;
   opacity: 1;
-}
-
-/* --- Night: one sky ------------------------------------------------------ */
-html.dark:has(.public-universe) {
-  background: #07080b;
-}
-.dark .public-universe,
-.dark .public-universe .space-page:not(.owner-dark-scope) {
-  --observatory-bg: #07080b;
-}
-
-/* --- Day: a star atlas ---------------------------------------------------
-   A crisp, cool white with the faintest blue in it, deep-space ink for text,
-   and one electric cobalt for everything that can be followed. The sky is
-   printed in the same inks (shaders.ts): clean cobalt points with only the
-   brighter stars printed, a lilac-to-rose watercolour for the nebula, and
-   the rose running from cobalt through violet to a magenta heart, the
-   signature alone in crimson. Every ink leaves the blue channel open, so
-   nothing prints black or grey. No warm paper, no ochre: on a warm ground
-   the coloured specks read as stains. */
-html:not(.dark):has(.public-universe) {
-  --v2-paper-warm: #f5f7fc;
-  background: #f5f7fc;
-}
-html:not(.dark) .public-universe,
-html:not(.dark) .public-universe .space-page:not(.owner-dark-scope) {
-  --observatory-bg: #f5f7fc;
-  --observatory-surface: #eceff8;
-  --observatory-ink: #0b1020;
-  --observatory-muted: #4a5368;
-  --observatory-accent: #3247e0;
-  --observatory-line: #dbe0ec;
-  --v2-bg: #f5f7fc;
-  --v2-solid-reading: #f5f7fc;
-  --v2-solid-data: #eceff8;
-  --v2-accent: #3247e0;
-  --primary: #3247e0;
-  --ring: #3247e0;
-  --reader-hover-border: #8a93ab;
-  --reader-focus: #3247e0;
-  --reader-current-bg: rgb(50 71 224 / 8%);
-  --reader-card-hover: rgb(11 16 32 / 4%);
-  --reader-card-border: rgb(11 16 32 / 14%);
-  --reader-row-hover: rgb(50 71 224 / 6%);
-}
-html:not(.dark) .public-universe ::selection {
-  background: rgb(50 71 224 / 16%);
 }

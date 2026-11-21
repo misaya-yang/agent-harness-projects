@@ -1,6 +1,9 @@
 import MarkdownIt from "markdown-it";
 import texmath from "markdown-it-texmath";
 import katex from "katex";
+import { renderLab, labDefinitions } from "./lesson-labs.mjs";
+import { renderFigure } from "./static-figures.mjs";
+import { lessonSources } from "./lesson-sources.mjs";
 import { lessonTopics } from "./lesson-topics.mjs";
 import hljs from "highlight.js/lib/core";
 import python from "highlight.js/lib/languages/python";
@@ -41,8 +44,10 @@ function sectionInfo(title, topic) {
   return { title: name, kind: "text" };
 }
 
-md.renderer.rules.fence = (tokens, index) => {
+md.renderer.rules.fence = (tokens, index, options, env) => {
   const { info, content } = tokens[index];
+  if (info.trim() === "academy-lab") return renderLab(content.trim(), env.lesson);
+  if (info.trim() === "academy-figure") return renderFigure(content.trim());
   const highlighted = info === "python" ? hljs.highlight(content, { language: "python" }).value : escape(content);
   const pre = `<pre tabindex="0"><code>${highlighted}</code></pre>`;
   if (!info) return pre + "\n";
@@ -56,12 +61,20 @@ md.renderer.rules.text = (tokens, index, options, env, self) => {
   if (env.roadmap) return originalText(tokens, index, options, env, self);
   let result = "";
   let offset = 0;
-  for (const match of value.matchAll(/→\s*(\d+\.\d+)(?:\s*§\s*(\d+))?/g)) {
-    const lesson = lessonById.get(match[1]);
-    if (!lesson?.url) continue;
+  const references = /→\s*(\d+\.\d+)(?:\s*§\s*(\d+))?|arXiv[：:\s]+(\d{4}\.\d{4,5}(?:v\d+)?)/gi;
+  for (const match of value.matchAll(references)) {
+    let url, citation;
+    if (match[3]) {
+      citation = env.arxiv.get(match[3]);
+      url = citation?.url;
+    } else {
+      const lesson = lessonById.get(match[1]);
+      if (lesson?.url) url = lesson.url + (match[2] ? "#section-" + match[2] : "");
+    }
+    if (!url) continue;
     result += escape(value.slice(offset, match.index));
-    const anchor = match[2] ? `#section-${match[2]}` : "";
-    result += `<a href="${lesson.url}${anchor}">${escape(match[0])}</a>`;
+    const attrs = citation ? ` class="inline-source" title="${escape(citation.label)}" target="_blank" rel="noreferrer"` : "";
+    result += `<a href="${escape(url)}"${attrs}>${escape(match[0])}</a>`;
     offset = match.index + match[0].length;
   }
   return result + escape(value.slice(offset));
@@ -92,9 +105,11 @@ function prepareTokens(tokens, env) {
       token.meta = { question };
     }
     if (token.type === "inline") {
-      const linked = token.children.some(part => part.type === "link_open");
-      if (linked) for (const part of token.children) {
-        if (part.type === "text") part.type = "literal_text";
+      let linked = false;
+      for (const part of token.children) {
+        if (part.type === "link_open") linked = true;
+        if (part.type === "link_close") linked = false;
+        if (linked && part.type === "text") part.type = "literal_text";
       }
     }
   }
@@ -109,10 +124,21 @@ md.renderer.rules.list_item_open = (tokens, index) => {
 };
 
 export function renderMarkdown(markdown, { isRoadmap = false, id } = {}) {
-  const env = { roadmap: isRoadmap, lesson: id, topic: lessonTopics(id), outline: [] };
+  const arxiv = new Map();
+  for (const source of lessonSources[id] ?? []) {
+    const match = source.url.match(/^https:\/\/arxiv\.org\/(?:abs|pdf|html)\/(\d{4}\.\d{4,5})(v\d+)?(?:\.pdf)?(?:$|[#?])/i);
+    if (!match || source.kind !== "direct") continue;
+    if (match[2]) arxiv.set(match[1]+match[2], source);
+    if (!arxiv.has(match[1]) || !match[2]) arxiv.set(match[1], source);
+  }
+  const env = { roadmap: isRoadmap, lesson: id, topic: lessonTopics(id), outline: [], arxiv };
   // The opening quote contains the core intuition and a separate set of recall cues.
   const source = markdown.replace(/^(> [^\n]+\n)(> \*\*唤醒标签\*\*)/, "$1>\n$2");
-  const tokens = md.parse(source, env);
+  // The structured bibliography replaces the trailing source paragraph. Keep other notes.
+  const bodySource = !isRoadmap && lessonSources[id]?.length ? source.replace(/(?:^|\n)> \*\*前沿数据来源\*\*[：:][^\n]*\s*$/, "") : source;
+  const tokens = md.parse(bodySource, env);
+  const labs = tokens.filter(t => t.type === "fence" && t.info.trim() === "academy-lab").map(t=>t.content.trim());
+  if (new Set(labs).size !== labs.length) throw Error("Duplicate lab in "+id);
   prepareTokens(tokens, env);
   const plain = tokens.filter(token => token.type === "inline" && token.level < 3).map(token => text(token.children)).join(" ");
   const render = group => md.renderer.render(group, md.options, env);
@@ -123,7 +149,7 @@ export function renderMarkdown(markdown, { isRoadmap = false, id } = {}) {
   const opening = tokens.slice(0, starts[0] ?? tokens.length);
   const intro = render(opening);
   const searchable = group => group.filter(token => token.type === "inline" || token.type === "fence")
-    .map(token => token.type === "fence" ? token.content : text(token.children)).join(" ").replace(/\s+/g, " ");
+    .map(token => token.type === "fence" ? (token.info.trim() === "academy-lab" ? labDefinitions[token.content.trim()]?.title : token.content) : text(token.children)).join(" ").replace(/\s+/g, " ");
   const parts = starts.map((start, i) => {
     const body = tokens.slice(start + 3, starts[i + 1] ?? tokens.length);
     if (body.at(-1)?.type === "hr") body.pop();
@@ -145,5 +171,5 @@ export function renderMarkdown(markdown, { isRoadmap = false, id } = {}) {
     }
     return { ...section, html: groups ? "" : render(body), groups, searchText: searchable(body) };
   });
-  return { intro, introText: searchable(opening), parts, outline: env.outline, plain };
+  return { intro, introText: searchable(opening), labs, parts, outline: env.outline, plain };
 }

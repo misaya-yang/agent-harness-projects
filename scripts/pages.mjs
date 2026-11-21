@@ -1,7 +1,9 @@
 import { readFileSync } from "node:fs";
 import { lessonTopics } from "./lesson-topics.mjs";
-import { lessonFigure } from "./lesson-figures.mjs";
+import { labAnchor, labGroups, labDefinitions } from "./lesson-labs.mjs";
+import { lessonSources, sourceSection } from "./lesson-sources.mjs";
 import { available, lessons, modules, learningOrder, stages } from "./curriculum.mjs";
+import { techMapSection } from "./tech-map.mjs";
 
 const title = "Misaya Academy";
 const description = "从大模型架构到后训练、多模态、生成模型与训练工程，沿着讲义、推导、代码和自测系统学习 AI 算法。";
@@ -33,7 +35,7 @@ function studyNav(current) {
 const themeControl = `<button class="nav-icon-button nav-theme-toggle" data-theme-toggle type="button" aria-label="切换浅色模式" aria-pressed="true"><span data-sun>${icon("sun", 17)}</span><span data-moon hidden>${icon("moon", 17)}</span></button>`;
 const motionControl = `<button class="starfield-toggle" type="button" data-sky-toggle aria-pressed="false" aria-label="暂停星场动画" aria-describedby="starfield-keys" hidden><span data-pause>${icon("pause", 14)}</span><span data-play hidden>${icon("play", 14)}</span><span class="starfield-toggle-label">暂停星场动画</span></button>`;
 
-function shell({ name, summary = description, url, type = "public", activeModule, body, id, outline = "", math = false }) {
+function shell({ name, summary = description, url, type = "public", activeModule, body, id, outline = "", labGroup, math = false }) {
   const canonicalOrigin = process.env.SITE_URL || "https://ai-algorithm-academy.lvy-u.chatgpt.site";
   const pageTitle = name ? `${name} · ${title}` : `${title} · AI 算法研习`;
   return `<!doctype html>
@@ -47,25 +49,34 @@ function shell({ name, summary = description, url, type = "public", activeModule
   <link rel="canonical" href="${escape(canonicalOrigin + url)}">
   <link rel="icon" href="/assets/academy.svg" type="image/svg+xml">
   <link rel="stylesheet" href="/misaya/typefaces.css">
-  <link rel="stylesheet" href="/misaya/frame.css">
   <link rel="stylesheet" href="/misaya/starfield.css">
-  <link rel="stylesheet" href="/misaya/cosmos.css">
-  <link rel="stylesheet" href="/misaya/surfaces.css">
   ${math ? '<link rel="stylesheet" href="/katex/katex.min.css">' : ""}
   <link rel="stylesheet" href="/academy.css">
+  ${id ? '<link rel="stylesheet" href="/labs.css">' : ""}
+  ${type === "roadmap" ? '<link rel="stylesheet" href="/tech-map.css">' : ""}
+  ${labGroup ? `<script type="module" src="/labs/${labGroup}.js"></script>` : ""}
   <script src="/theme.js"></script>
   <script type="module" src="/app.js"></script>
 </head>
 <body data-study-order="${learningOrder.map(lesson => lesson.id).join(" ")}"${id ? ` data-lesson="${id}"` : ""}>
   <a class="skip-link" href="#main">跳到正文</a>
   <div class="public-universe">
-    <div class="starfield" aria-hidden="true"></div>
+    ${type === "home" ? '<div class="starfield" aria-hidden="true"></div>' : ""}
     ${type === "home" ? `<span id="starfield-keys" class="sr-only">方向键转动玫瑰，Escape 恢复姿态。</span>
     <div class="starfield-desktop-control">${motionControl}</div>` : ""}
     <div class="space-page ${type === "home" ? "observatory-home" : ""}">
       <header class="site-header">
         <div class="academy-header">
-          <a href="/" class="brand-wordmark" lang="en" aria-label="Misaya Academy 首页"><img src="/assets/academy.svg" width="32" height="32" alt="">${title}</a>
+          <div class="academy-brand">
+            ${outline ? `<details class="nav-disclosure reader-header-outline">
+              <summary class="nav-icon-button" aria-label="本课目录" title="本课目录">${icon("panel-left", 19)}</summary>
+              <div class="nav-panel">
+                ${outline}
+                <nav class="reader-mobile-navigation" aria-label="移动学习导航">${studyNav(url)}${courseLinks(activeModule, false)}</nav>
+              </div>
+            </details>` : ""}
+            <a href="/" class="brand-wordmark" lang="en" aria-label="Misaya Academy 首页"><img src="/assets/academy.svg" width="32" height="32" alt="">${title}</a>
+          </div>
           <nav aria-label="学习导航" class="academy-primary-nav">
             <details class="course-switcher nav-disclosure">
               <summary class="nav-link${activeModule ? " is-current" : ""}">${icon("library-big", 16)}课程库${icon("chevron-down", 13)}</summary>
@@ -74,17 +85,15 @@ function shell({ name, summary = description, url, type = "public", activeModule
             ${studyNav(url)}
           </nav>
           <div class="nav-tools">
-            ${outline ? `<details class="nav-disclosure reader-header-outline"><summary class="nav-link">${icon("list", 16)}本课目录</summary><div class="nav-panel">${outline}</div></details>` : ""}
             <button class="search-trigger" type="button" data-search aria-label="搜索课程">${icon("search", 16)}<span>搜索课程</span><kbd data-search-key>⌘ K</kbd></button>
             ${themeControl}
-            <details class="academy-menu nav-disclosure">
-              <summary class="nav-icon-button" aria-label="${outline ? "课文目录与学习导航" : "学习导航"}">${icon(outline ? "list" : "menu", 19)}</summary>
+            ${!outline ? `<details class="academy-menu nav-disclosure">
+              <summary class="nav-icon-button" aria-label="学习导航">${icon("menu", 19)}</summary>
               <div class="nav-panel">
-                ${outline}
                 <nav aria-label="移动学习导航">${studyNav(url)}${courseLinks(activeModule, !id)}</nav>
                 ${type === "home" ? `<div class="starfield-menu-control">${motionControl}</div>` : ""}
               </div>
-            </details>
+            </details>` : ""}
           </div>
         </div>
       </header>
@@ -121,7 +130,7 @@ function lessonList(items, { questions = false, study = false } = {}) {
   return `<ol class="lesson-list">${items.map(lesson => {
     const prompt = questions && lesson.url ? lessonTopics(lesson.id)?.problem : "";
     const detail = `<span class="row-id">${lesson.id}</span><span class="row-content"><strong>${escape(lesson.name)}</strong>${prompt ? `<small>${escape(prompt)}</small>` : ""}</span>`;
-    if (!lesson.url) return `<li><div class="lesson-pending">${detail}<span class="row-meta">待补充</span></div></li>`;
+    if (!lesson.url) return `<li><div class="lesson-pending">${detail}<span class="row-meta">规划中</span></div></li>`;
     const info = study ? `<span data-lesson-status="${lesson.id}">未开始</span>` : `<span>${priorityLabel(lesson)}</span>`;
     return `<li><a href="${lesson.url}">${detail}<span class="row-meta">${info}<span>${hoursLabel(lesson.hours)}</span>${status(lesson)}</span></a></li>`;
   }).join("")}</ol>`;
@@ -129,7 +138,7 @@ function lessonList(items, { questions = false, study = false } = {}) {
 
 function collection(items, { title, label, open = false, study = false }) {
   const live = liveLessons(items);
-  const count = live.length ? `${live.length} 篇课文` : "待补充";
+  const count = live.length ? `${live.length} 篇课文` : "规划中";
   return `<details class="study-collection" data-collection="${lessonIds(live)}"${open ? " open" : ""}>
     <summary><span class="collection-label">${escape(label)}</span><span class="collection-title">${escape(title)}</span><span class="collection-meta" data-collection-count>${count}</span>${icon("chevron-down", 16)}</summary>
     ${lessonList(items, { study })}
@@ -165,7 +174,7 @@ export function modulePage(module) {
     body: `<main class="academy-page" id="main">
       ${breadcrumb()}
       ${pageHeading(module.title, module.description)}
-      <div class="module-study-bar"><p class="study-facts">${module.id} · ${items.length} 篇课文 · 约 ${studyHours(items)} 小时${pending ? ` · ${pending} 篇待补充` : ""}</p>
+      <div class="module-study-bar"><p class="study-facts">${module.id} · ${items.length} 篇课文 · 约 ${studyHours(items)} 小时${pending ? ` · ${pending} 篇规划中` : ""}</p>
       ${items.length ? start(items[0].url, "开始本模块", `data-resume data-scope="${lessonIds(items)}"`) : ""}</div>
       ${lessonList(module.lessons, { questions: true })}
     </main>` });
@@ -175,7 +184,11 @@ export function roadmapPage(rendered) {
   return shell({ name: "学习路线", url: "/roadmap.html", type: "roadmap", math: true, body: `<main class="academy-page" id="main">
     ${pageHeading("学习路线", "先从推理成本切入，再看后训练的目标。每个阶段围绕一个问题，课文按建议顺序排列。")}
     <div class="study-actions">${start(learningOrder[0].url, "开始学习", "data-resume")}${softLink("/#modules", "按模块浏览")}</div>
-    <section class="collection-list" aria-label="学习阶段">${stages.map((stage, i) => collection(stage.lessons, { title: stage.title, label: stage.label, open: !i })).join("")}</section>
+    ${techMapSection({ labTitles: Object.entries(labDefinitions).reduce((titles, [labId, lab]) => {
+      (titles[labId.split("-")[0]] ??= []).push(lab.title);
+      return titles;
+    }, {}) })}
+    <section class="collection-list" aria-label="学习阶段">${stages.map((stage, i) => collection(stage.lessons, { title: stage.title, label: stage.label, open: i === stages.findIndex(item => item.lessons.some(lesson => lesson.url)) })).join("")}</section>
     <details class="roadmap-original"><summary>完整路线图与术语约定</summary><div class="article-prose">${rendered.html}</div></details>
   </main>` });
 }
@@ -198,9 +211,13 @@ export function lessonPage(lesson, rendered) {
   const sequence = [available[index - 1], available[index + 1]];
   const completed = `<button type="button" class="study-button" data-complete aria-pressed="false">${icon("check", 16)}<span>标记学完</span></button>`;
   const topic = lessonTopics(lesson.id);
+  const labs = rendered.labs.map(id=>({ id: labAnchor(id), title: labDefinitions[id].title }));
+  const labGroup = labs.length && Object.keys(labGroups).find(group=>Object.hasOwn(labGroups[group], rendered.labs[0]));
+  const sources = lessonSources[lesson.id] ?? [];
   const outline = `<nav class="lesson-outline" aria-label="本课目录"><h2>本课目录</h2><ol>${rendered.parts.map(part =>
     `<li><a href="#${part.id}">${escape(part.title)}</a></li>`
-  ).join("")}</ol></nav>`;
+  ).join("")}</ol>${labs.length ? '<h2 class="outline-lab-title">互动实验</h2>' : ""}<ol>${labs.map(lab=>`<li><a href="#${lab.id}">${escape(lab.title)}</a></li>`).join("")}
+    ${sources.length ? `<li><a href="#sources">参考来源 · ${sources.length}</a></li>` : ""}</ol></nav>`;
   const sections = rendered.parts.map(part => {
     const heading = escape(part.title);
     if (part.groups) {
@@ -218,24 +235,26 @@ export function lessonPage(lesson, rendered) {
     return `<section class="lesson-section" data-part="${part.id}"><h2 id="${part.id}">${heading}</h2>${body}</section>`;
   }).join("");
 
-  return shell({ name: lesson.title, summary: lesson.summary, url: lesson.url, id: lesson.id, type: "reader", activeModule: lesson.module, math: true, outline, body: `<main class="paper-reader-container" id="main">
+  return shell({ name: lesson.title, summary: lesson.summary, url: lesson.url, id: lesson.id, type: "reader", activeModule: lesson.module, math: true, outline, labGroup, body: `<main class="paper-reader-container" id="main">
+    <aside class="reader-margin">${outline}</aside>
     <article class="paper-reader-main">
       <header class="article-reading-header" data-part="lesson-intro" id="lesson-intro">
         <nav class="reader-breadcrumb" aria-label="面包屑"><a href="/#modules">课程库</a>${icon("chevron-right", 12)}<a href="${lesson.module.url}">${lesson.module.title}</a>${icon("chevron-right", 12)}<span>${lesson.id}</span></nav>
         <h1 class="article-page-title">${escape(lesson.title)}</h1>
         ${topic ? `<p class="lesson-lead">${escape(topic.lead)}</p>` : ""}
         <div class="lesson-meta"><span>${priorityLabel(lesson)} · ${hoursLabel(lesson.hours)}</span>
+        ${labs.length ? `<a class="lab-skip" href="#${labs[0].id}">${icon("sliders-horizontal",14)}动手实验</a>` : ""}
         ${rendered.intro && topic ? `<details class="intro-notes"><summary id="course-notes">课前笔记${icon("chevron-down", 13)}</summary><div class="article-prose lesson-intro">${rendered.intro}</div></details>` : ""}</div>
         ${!topic ? `<div class="article-prose lesson-intro" id="course-notes">${rendered.intro}</div>` : ""}
       </header>
-      ${lessonFigure(lesson)}
+
       ${sections}
+      ${sourceSection(lesson.id)}
       <div class="lesson-end">${completed}<a class="cosmos-link" href="${lesson.module.url}">返回模块</a></div>
       <nav aria-label="前后课文" class="lesson-sequence">${sequence.map((other, i) => other
         ? `<a href="${other.url}"><span>${i ? "下一篇" : "上一篇"}</span><strong>${other.id} ${escape(other.name)}</strong></a>`
         : "<span></span>").join("")}</nav>
     </article>
-    <aside class="reader-margin">${outline}</aside>
   </main>` });
 }
 

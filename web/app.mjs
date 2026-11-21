@@ -1,4 +1,5 @@
 import { setupLessonReader } from "./lesson-reader.mjs";
+import { setupTechMap } from "./tech-map.mjs";
 
 const root = document.documentElement;
 const prefix = "misaya-academy:";
@@ -59,6 +60,13 @@ if (root.dataset.routeKind === "home") {
   let failed = false;
   let contextLost = false;
   let paused = get("sky-paused", false);
+  const rose = select("[data-rose-anchor]");
+  let roseVisible = true;
+  new IntersectionObserver(([entry]) => {
+    roseVisible = entry.isIntersecting;
+    sky.toggleAttribute("data-hero-away", !roseVisible);
+    scene?.setPaused(paused || !roseVisible);
+  }).observe(rose);
   function updateSkyControl() {
     root.toggleAttribute("data-static-rose", motion.matches || saveData || failed || contextLost || (!scene && paused));
     for (const control of skyButtons) {
@@ -82,6 +90,7 @@ if (root.dataset.routeKind === "home") {
       const { createStarfield } = await import("./sky.js");
       if (motion.matches || paused || scene) return;
       scene = createStarfield(sky, { light: !root.classList.contains("dark"), reducedMotion: false, page: location.pathname });
+      scene.setPaused(paused || !roseVisible);
       failed = false;
       contextLost = false;
       delete sky.dataset.fallback;
@@ -108,7 +117,7 @@ if (root.dataset.routeKind === "home") {
   for (const control of skyButtons) {
     control.addEventListener("click", () => {
       paused = !paused;
-      if (scene) scene.setPaused(paused);
+      if (scene) scene.setPaused(paused || !roseVisible);
       else if (!paused) setupSky();
       set("sky-paused", paused);
       updateSkyControl();
@@ -219,6 +228,8 @@ window.addEventListener("storage", refreshStudy);
 window.addEventListener("pageshow", refreshStudy);
 
 if (lessonId) setupLessonReader(record, writeLesson);
+const techMap = select("[data-tech-map]");
+if (techMap) setupTechMap(techMap);
 
 for (const button of selectAll("[data-copy]")) {
   button.addEventListener("click", async () => {

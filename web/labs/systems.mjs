@@ -1,3 +1,4 @@
+import studies from "./systems-studies.mjs";
 import inference from "./systems-inference.mjs";
 const diffusionSchedule = [1];
 for (let t = 0; t < 1000; t++) {
@@ -25,6 +26,7 @@ const decimal = (value, places = 1) => value.toLocaleString("zh-CN", {
 });
 
 export default {
+  ...studies,
   "4.1": {
     title: "DDIM 的步数和随机项怎样改变方差？",
     question: "把步数保持在 20，比较 η=0 和 η=1 的终点标准差。增加步数后，哪条曲线更接近理论边际？",

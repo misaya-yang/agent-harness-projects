@@ -1,3 +1,4 @@
+import studies from "./alignment-studies.mjs";
 import basics from "./alignment-basics.mjs";
 const imageSizes = {
   document: [1920, 1080],
@@ -10,6 +11,7 @@ const fixed = (value, digits = 2) => value.toFixed(digits);
 const integer = value => value.toLocaleString("en-US");
 
 export default {
+  ...studies,
   "2.3": {
     title: "PPO 的哪一侧会变平？",
     question: "先把概率比 ρ 移到裁剪带右侧，再把优势 A 从正切换为负。原来的平坦区会移到哪里？",

@@ -93,8 +93,10 @@ function prepareTokens(tokens, env) {
         env.outline.push({ id, ...sectionInfo(title, env.topic) });
         quizSection = !env.roadmap && /自测/.test(title);
       } else if (token.tag === "h3") {
-        const subsection = text(tokens[i + 1].children).match(/^(\d+\.\d+)/)?.[1];
+        const heading = text(tokens[i + 1].children);
+        const subsection = heading.match(/^(\d+\.\d+)/)?.[1];
         if (subsection) token.attrSet("id", `section-${subsection.replace(".", "-")}`);
+        else if (heading.startsWith("数值复算 · ")) token.attrSet("id", "worked-example");
       }
     }
     if (quizSection && token.type === "ordered_list_open" && token.level === 0) {

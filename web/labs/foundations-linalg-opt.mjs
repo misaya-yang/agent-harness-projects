@@ -303,8 +303,8 @@ function decayRun(scale, lambda, decoupled) {
   for (let t = 1; t <= DECAY_STEPS; t++) {
     const g = scale * Math.cos(OMEGA * t) + (decoupled ? 0 : lambda * w);
     m = 0.9 * m + 0.1 * g; v = 0.999 * v + 0.001 * g * g;
+    if (decoupled) w *= 1 - LR * lambda;
     w -= LR * (m / (1 - 0.9 ** t)) / (Math.sqrt(v / (1 - 0.999 ** t)) + 1e-8);
-    if (decoupled) w -= LR * lambda * w;
     if (t % 20 === 0) points.push([t, w]);
   }
   return points;

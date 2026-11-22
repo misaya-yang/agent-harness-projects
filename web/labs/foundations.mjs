@@ -492,7 +492,12 @@ const langevin = {
 const RARE = 2.5, I_RARE = normSf(RARE);
 function isSecondMoment(m, s) {
   const a = 1 - 1 / (2 * s * s);
-  if (a <= 1e-9) return Infinity;
+  if (Math.abs(a) < 1e-12 && m > 0) {
+    // At s²=1/2 the quadratic term vanishes. The full moment diverges,
+    // but on the right half-line exp(-2mx) is integrable for m>0.
+    return { tail: s / Math.sqrt(2 * Math.PI) * Math.exp(m*m - 2*m*RARE) / (2*m), all: Infinity };
+  }
+  if (a <= 1e-12) return { tail: Infinity, all: Infinity };
   const c = -m / (s * s), e = m * m / (2 * s * s), x0 = c / (2 * a);
   const scale = s / Math.sqrt(2 * a) * Math.exp(c * c / (4 * a) + e);
   return { tail: scale * normSf((RARE - x0) * Math.sqrt(2 * a)), all: scale };
@@ -511,13 +516,13 @@ const importance = {
   ],
   check: {
     question: "提议分布 q 挪到了稀有区，为什么 σ_q 太小反而会让估计彻底失效？",
-    answer: "估计量的方差取决于 E_q[(f·p/q)²] = ∫ f²p²/q dx。q 的尾巴比 p 细时，远处 p/q 无界增长；对两个高斯，σ_q² ≤ σ_p²/2 时这个积分发散，方差无穷大。少数样本带着巨大权重主宰结果。PPO 对概率比做 clip，就是在给重要性权重设上限（→ 2.3）。",
+    answer: "估计量的方差取决于 E_q[(f·p/q)²] = ∫ f²p²/q dx。q 的尾巴比 p 细时，远处 p/q 无界增长；对两个高斯，σ_q² < σ_p²/2 时这个积分发散；恰好相等时须检查积分区间与均值，方差无穷大。少数样本带着巨大权重主宰结果。PPO 对概率比做 clip，就是在给重要性权重设上限（→ 2.3）。",
   },
   evaluate({ mu, sigma }) {
     const moments = isSecondMoment(mu, sigma), xs = grid(-4, 7, 331);
     const q = xs.map(x => [x, normalPdf(x, mu, sigma)]);
     const top = Math.max(0.42, ...q.map(v => v[1]));
-    const finite = moments !== Infinity && Number.isFinite(moments.tail) && Number.isFinite(moments.all);
+    const finite = Number.isFinite(moments.tail);
     let readout, explanation;
     if (!finite) {
       readout = "方差无穷大：q 的尾巴比 p 细太多，权重 p/q 无界";

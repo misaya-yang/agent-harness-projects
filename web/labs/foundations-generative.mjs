@@ -297,8 +297,13 @@ const brownian = {
       if (k < DRAWN) drawn.push(pts);
     }
     const mean = ends.reduce((a, b) => a + b, 0) / PATHS, variance = ends.reduce((a, b) => a + (b - mean) ** 2, 0) / (PATHS - 1);
-    const theoryVar = t => vp ? (scaling === "sqrt" ? 1 - Math.exp(-4 * t) : (1 - Math.exp(-4 * t)) * dt) : scaling === "sqrt" ? t : t * dt;
-    const theoryMean = t => vp ? x0 * Math.exp(-2 * t) : 0;
+    // Compare sampled Euler paths to the same finite-step Gaussian recurrence.
+    const retention = 1 - 2 * dt;
+    const kickVariance = scaling === "sqrt" ? dt : dt * dt;
+    const theoryVar = t => vp
+      ? 4 * kickVariance * (1 - retention ** (2 * n * t)) / (1 - retention ** 2)
+      : n * t * kickVariance;
+    const theoryMean = t => vp ? x0 * retention ** (n * t) : 0;
     const X0 = 34, X1 = 440, Y0 = 34, Y1 = 290, lo = -3.4, hi = 3.4;
     const sx = t => xy(X0 + t * (X1 - X0)), sy = v => xy(Y1 - (clamp(v, lo - 0.5, hi + 0.5) - lo) / (hi - lo) * (Y1 - Y0));
     const ts = grid(0, 1, 81);
@@ -320,13 +325,13 @@ const brownian = {
       ${text(H0, 22, "t = 1 的分布", "lab-fig-title")}${hist}${curve ? `<path d="${curve}" class="lab-fig-target"/>` : ""}
       ${text(H0, Y1 + 16, `样本方差 ${f2(variance)}（理论 ${sci(theoryVar(1))}）`, "lab-fig-note")}
       ${text(X0, Y1 + 34, "琥珀虚线：理论均值 ± 2 个标准差", "lab-fig-note")}`;
-    const vpNote = vp ? `前向加噪 SDE 的漂移项 −2x 把所有路径往 0 拉，噪声项 2dW 不断补充方差：均值从 1.5 衰减到 ${f2(theoryMean(1))}，方差趋向 1。不管从哪个数据点出发，t = 1 时都接近 N(0, 1)，这就是扩散模型的先验。` : "";
+    const varianceNote = vp
+      ? `每一步的均值乘 1−2Δt，方差先乘 (1−2Δt)²，再加 4 × ${scaling === "sqrt" ? "Δt" : "Δt²"}。黄线按图中有限步长计算；终点均值为 ${f2(theoryMean(1))}。`
+      : `独立增量的方差相加。每步方差为 ${scaling === "sqrt" ? "Δt" : "Δt²"}，${n} 步之后为 ${sci(theoryVar(1))}。`;
     return {
       type: "svg", svg: figure(640, 340, "随机游走路径、理论方差包络与 t = 1 的分布", body),
       readout: `n = ${n}：t = 1 时样本方差 ${f2(variance)}，理论值 ${sci(theoryVar(1))}`,
-      explanation: scaling === "linear"
-        ? `每步增量按 Δt 缩放，每段方差 Δt²，总方差只有 ${vp ? "(1 − e⁻⁴)·" : ""}Δt = ${sci(theoryVar(1))}：n 越大噪声越少，极限是一条确定的曲线。随机微分方程的噪声项必须按 √Δt 缩放。${vpNote}`
-        : `每步增量方差 Δt，n 步加起来是 nΔt = t：无论切多细，${vp ? "噪声注入的总量都一样" : "t = 1 时方差都是 1"}。${n < 10 ? "n 很小时路径只是几段折线，但终点分布已经是正确的高斯。" : "n 越大，路径越像布朗运动：处处连续、处处不可导。"}${vpNote}`,
+      explanation: varianceNote + (scaling === "linear" ? "把噪声按 Δt 缩小，加密网格后随机波动消失。" : "按 √Δt 缩放噪声，网格加密后仍保留有限的随机波动。"),
     };
   },
 };

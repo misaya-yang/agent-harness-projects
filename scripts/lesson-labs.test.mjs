@@ -46,3 +46,49 @@ test("Roofline uses consistent decimal units and the smaller hardware limit", ()
     }
   }
 });
+
+test("worked examples match the interactive curves at the same parameter settings", () => {
+  // Ordered as in each figure's legend. Expected values come from the lesson's
+  // independent Python calculation. Allow half a unit in its last printed digit.
+  const examples = [
+    ["1.1-correlation", -0.25, [1, 1.118]],
+    ["1.2-phase", 4, [0.878, 0.071]],
+    ["1.3-absorb", 1, [0.670, 0.670, 0.500]],
+    ["1.4-capacity", 6, [2, 6]],
+    ["1.5-traffic", 4, [128, 0]],
+    ["2.1-gradient", 50, [-0.347, 0]],
+    ["2.2-votes", 0, [0.500, 0.750]],
+    ["2.3-credit", 0.5, [0.400, 0.400, 0.400]],
+    ["2.4-curvature", 2, [0.119, 0.094]],
+    ["2.5-groups", 10, [0.344, 0.570]],
+    ["2.6-mask", 6, [2, 0.500]],
+    ["1.6-retention", 7, [0.478, 0.932]],
+    ["2.7-ess", 8, [0.396, 0.920]],
+    ["3.1-mask", 64, [0.0625, 0.25]],
+    ["3.2-context", 256, [0.160, 0.400]],
+    ["3.3-conflict", 1, [0.500, 0.500]],
+    ["4.1-noise-error", 20, [0.200, 0.100]],
+    ["4.2-euler", 4, [1.895, 2]],
+    ["4.3-guidance-error", 4, [0.700, 0.100]],
+    ["5.1-batch-bytes", 8, [57.500, 40]],
+    ["5.2-pipeline", 8, [0.467, 0.273]],
+    ["5.3-qk-clip", 200, [100, 200]],
+    ["5.4-pass-k", 5, [0.806, 0.763]],
+  ];
+  for (const [id, x, expected] of examples) {
+    const lab = labDefinitions[id];
+    const key = lab.controls[0].key;
+    const model = lab.evaluate({ [key]: x });
+    assert.equal(model.series.length, expected.length, id);
+    for (const [i, series] of model.series.entries()) {
+      const sample = series.points.find(([at]) => Math.abs(at - x) < 1e-8);
+      assert.ok(sample && Math.abs(sample[1] - expected[i]) <= 0.000501,
+        `${id}: ${series.label} at ${x}, expected ${expected[i]}, got ${sample?.[1]}`);
+    }
+    assert.ok(Math.abs(model.point.y - expected[0]) < 0.000501, id);
+    const control = lab.controls[0];
+    const readouts = [control.min, control.initial, control.max].map(value =>
+      lab.evaluate({ [key]: value }).readout);
+    assert.ok(new Set(readouts).size > 1, id);
+  }
+});

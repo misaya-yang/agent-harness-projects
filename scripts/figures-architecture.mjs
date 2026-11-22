@@ -30,10 +30,10 @@ const figures = {
     type: "bars",
     title: "最忙专家的负载相当于平均值的多少倍",
     rows: [
-      { label: "没有均衡", value: 7.11, display: "7.11 倍" },
-      { label: "偏置调节后", value: 1.79, display: "1.79 倍" },
+      { label: "没有均衡", value: 2.94, display: "2.94 倍" },
+      { label: "偏置调节后", value: 1.15, display: "1.15 倍" },
     ],
-    note: "讲义 §1 的路由模拟，偏置调节持续 300 步。倍数以同一设置下的平均专家负载为基准。",
+    note: "讲义 §1 的路由模拟，偏置调节持续 20 步。倍数以同一设置下的平均专家负载为基准。",
   },
   "1.5": {
     type: "bars",

@@ -1,3 +1,5 @@
+import studies from "./architecture-studies.mjs";
+import { distillationGradient, preferenceVotes } from "./preference-studies.mjs";
 import core from "./architecture-core.mjs";
 
 const formatInteger = new Intl.NumberFormat("en-US");
@@ -66,10 +68,12 @@ const ropeSpectrum = {
     let untrained = 0;
     let fastestAngle = 0;
 
+    const pairIndex = turns => pairCount * Math.log(trainLength / (2 * Math.PI * turns)) / Math.log(Number(base));
+    const fast = Math.floor(pairIndex(32)), slow = Math.ceil(pairIndex(1));
     for (let i = 0; i < pairCount; i++) {
       const angle = Number(base) ** (-i / pairCount);
       const trainTurns = trainLength * angle / (2 * Math.PI);
-      const yarnRamp = Math.max(0, Math.min(1, (trainTurns - 1) / 31));
+      const yarnRamp = Math.max(0, Math.min(1, (slow - i) / (slow - fast)));
       const frequencyRatio = {
         original: 1,
         pi: 1 / stretch,
@@ -501,4 +505,7 @@ export default {
   "2.1": distillationDivergences,
   "2.2": rewardOveroptimization,
   ...core,
+  ...studies,
+  "2.1-gradient": distillationGradient,
+  "2.2-votes": preferenceVotes,
 };

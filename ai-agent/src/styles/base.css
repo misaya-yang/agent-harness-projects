@@ -109,23 +109,15 @@ kbd {
   border: 0;
 }
 
-/* ============================================================
-   渐进增强的进场：
-   仅当 JS 可用且未开启减弱动效时才预隐藏；
-   JS 失败或 prefers-reduced-motion 下内容完整可见。
-   ============================================================ */
-html.js:not(.rm) [data-reveal] {
-  opacity: 0;
-  transform: translateY(16px);
-}
-
-html.js [data-reveal].is-in {
-  opacity: 1;
-  transform: none;
-  transition:
-    opacity var(--dur-slow) var(--ease-out),
-    transform var(--dur-slow) var(--ease-emph);
-  transition-delay: var(--d, 0ms);
+/* Reading content stays visible when the interactive bundle cannot load. */
+@media (prefers-reduced-motion: no-preference) {
+  [data-reveal].is-in {
+    animation: enter-reading-surface var(--dur-base) var(--ease-out) var(--d, 0ms) backwards;
+  }
+  @keyframes enter-reading-surface {
+    from { opacity: .82; transform: translateY(4px); }
+    to { opacity: 1; transform: none; }
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -24,9 +24,9 @@ Sandbox 提供 `read-only`、`workspace-write` 和 `danger-full-access` 三种�
 
 本地 runner 按平台选取。Linux 依次 probe bwrap、Landlock；macOS 使用 Seatbelt；Windows 使用 restricted-token/ACL。Linux 链全失败或平台无链时，受限执行报 `SANDBOX_UNAVAILABLE`。当前单候选的加载路径直接选 runner；Windows 和较旧 Landlock ABI 可报告 partial，Landlock 实际能力以功能探测为准。源码见 `packages/sandbox/sandbox-local/src/index.ts::PLATFORM_CHAINS`、同包 README，以及 `native/system/docs/support-matrix.md`。
 
-Approval 是一次性渠道。`ask` 交给已组合的 answerer，可返回 `allowed-once`、`rejected`、`cancelled` 或 `unavailable`；`never` 在交互派发之前拒绝。受限 FS 的普通越界写返回 `FS_SANDBOX_DENIED`，工具可以另发显式提权调用；获批的策略仅用于这次调用。权限 preset 将文件模式和审批策略组合成一个选择，默认 `workspace-write` 搭配 `ask`，`danger-full-access` 搭配 `never`。源码见 `packages/fs/tool-fs/src/sandbox.ts`、`packages/interaction/user-approval/src/index.ts::ApprovalService` 和 `packages/interaction/permission-presets/README.md`。
+一次性批准只对当前调用生效。普通权限检查由实际文件后端负责。`ask` 交给已组合的 answerer，可返回 `allowed-once`、`rejected`、`cancelled` 或 `unavailable`；`never` 在交互派发之前拒绝，但已有审批服务仍记录 `approval/asked`、`approval/decided`。缺少审批服务或没有负责当前调用的 Agent 时，升级在产生审计对之前就失败；服务已安装但无人答复时，服务记录 `unavailable`。受限 FS 的普通越界写返回 `FS_SANDBOX_DENIED`，工具可以另发显式提权调用；获批的策略仅用于这次调用。权限 preset 将文件模式和审批策略组合成一个选择，默认 `workspace-write` 搭配 `ask`，`danger-full-access` 搭配 `never`。源码见 `packages/fs/tool-fs/src/sandbox.ts`、`packages/sandbox/sandbox/src/escalation.ts::approveEscalation`、`packages/interaction/user-approval/src/index.ts::ApprovalService` 和 `packages/interaction/permission-presets/README.md`。
 
-**练习**：进入 worktree 前后对同一个目标路径评估 `workspace-write`。分别走普通调用、明确获批的单次提权、没有 answerer 和 `never` 四种路径，标出文件授权、审批结论和审计记录。
+**练习**：进入 worktree 前后对同一个目标路径评估 `workspace-write`。分别试普通调用、显式获批、无答复端、无审批服务及 `never`，标出文件策略、审批结果，以及实际留下的审计记录。
 
 ## 4. Profile、Bundle 与 Agent Preset
 
@@ -40,12 +40,12 @@ Skills 从 registry/catalog 发现后按需加载。Web 通过 `ctx.web` 选择 
 
 Web 的 Standard 与 Creator 给模型 `cordis_inspect`，可发现 Host/Client 只读查询以及 live Loader 配置；Client 查询依赖已连接页面。持久安装与启用 bundle 由 Plugin Manager 管理。从旧接口迁移时，把多个检查命令换成一个 `cordis_inspect` 并用 `query` 选择 provider 与 method。`cordis-host-runner` 仍为程序及浏览器控制提供进程内临时 Package 生命周期，Client half 经浏览器审批，Host half 在 `node:vm` realm 求值。VM 只提供执行作用域，安全判断取决于宿主权限与进程边界。源码见 `packages/extensions/tool-cordis/README.md`、`packages/boot/plugin-manager/README.md`、`packages/extensions/cordis-host-runner/README.md` 和 `docs/upgrade-guide/v0.2.2-rc.3/cordis-inspect-tool/guide.md`。
 
-Agent Team 默认关闭，启用后在根 Session 管理共享任务板。任务更新用预期 revision 做比较并交换，更新会记录 `team/task` 并等待 flush。发现成员、`send_message` 与冷恢复都归 subagent runtime，`messageId` 只确认入箱。历史 mailbox 记录可以解码，当前运行时不会为它们重投或确认。源码见 `packages/team/agent-team/README.md`、`packages/subagent/tool-subagent-control/README.md`。
+Agent Team 默认关闭，启用后在根 Session 管理共享任务板。任务更新用预期 revision 做比较并交换，更新会记录 `team/task` 并等待 flush。发现成员、`send_message` 与冷恢复都归子代理运行时。`list_agents` 的 `inactive` 只说当前没有 Turn 在运行。`send_message` 对未驻留且可续联的目标先尝试恢复；`messageId` 只确认入箱，送达时不等待对方处理或 flush。历史 mailbox 记录可以解码，当前运行时不会为它们重投或确认。源码见 `packages/team/agent-team/README.md`、`packages/subagent/tool-subagent-control/README.md`。
 
 **练习**：想知道运行版本与生效的工具，选择只读检查；想给下一次启动加入一个 MCP bundle，选择 Profile 与 Plugin Manager。解释哪条路径需要改文件、哪条路径需要已连接的 Client。
 
 ## 6. 运行表面
 
-Web 和 Electron Desktop 共用 Web app，Desktop 通过自己的 carrier 连接打包的 Host。Headless 发送一条任务输入、等待 idle 后输出末条有效助手文本。ACP 是 automation-only 的 JSON-RPC stdio 入口；其交互由协议适配器处理。TypeScript SDK 驱动同版本 `dsh` 子进程的逐行 JSON-RPC，Python SDK 驱动 runtime wheel 携带的同一 CLI，默认选择 `sdk`。源码见 `apps/desktop/README.md`、`packages/bundle/headless/README.md`、`packages/acp/README.md`、`packages/sdk/client/README.md` 和 `python/README.md`。
+Web 和 Electron Desktop 共用 Web app，Desktop 通过自己的 carrier 连接打包的 Host。Headless 发送一条任务输入，等待活跃子代理工作并重新确认父代理安静，flush 会话后输出本次运行段的末条非空助手文本。退出时可另用错误码或 JSON 终态判断结果。ACP 是 automation-only 的 JSON-RPC stdio 入口；其交互由协议适配器处理。TypeScript SDK 驱动同版本 `dsh` 子进程的逐行 JSON-RPC，Python SDK 驱动 runtime wheel 携带的同一 CLI，默认选择 `sdk`。源码见 `apps/desktop/README.md`、`packages/bundle/headless/README.md`、`packages/acp/README.md`、`packages/sdk/client/README.md` 和 `python/README.md`。
 
 课堂验证采用源码和合成输入。实际平台 confinement、远端清理和模型调用需要各自环境中的验收。

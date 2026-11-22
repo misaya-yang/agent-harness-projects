@@ -48,11 +48,11 @@ Source: `packages/coding-agent/src/core/sdk.ts` (`CreateAgentSessionOptions`, `c
 
 **Inference**：持有旧 session 或旧 extension context 的调用方不能假设替换后仍有效；应在 replacement callback 中使用新 context。SDK 的 `SessionManager.inMemory()` 是无文件实验的最小安全起点。
 
-## 第 2 章：会话管理——JSONL 不是日志，而是一棵可回退的树
+## 第 2 章：追加式 JSONL 如何形成可回退的会话树
 
 ### 2.1 文件与版本
 
-**Implemented fact**：持久会话位于 `~/.pi/agent/sessions/--<cwd>--/`（也可由 `PI_CODING_AGENT_SESSION_DIR` 或 `--session-dir` 覆盖），首行是 `SessionHeader`，当前 `CURRENT_SESSION_VERSION = 3`。除 header 外，entry 都有短 `id` 和 `parentId`；新 entry 追加到当前 leaf，`branch()` 只移动 leaf，不修改或删除历史。
+**Implemented fact**：持久会话位于 `~/.pi/agent/sessions/--<cwd>--/`（也可由 `PI_CODING_AGENT_SESSION_DIR` 或 `--session-dir` 覆盖），首行是 `SessionHeader`，当前 `CURRENT_SESSION_VERSION = 3`。除 header 外，entry 都有短 `id` 和 `parentId`；新 entry 追加到当前 leaf。`branch()` 只移动当前指针，随后追加新消息才写入另一条分支。若只移动指针后直接退出，重新打开会从文件最后一个条目恢复。初次启动的模型、档位和 prompt 设置可以只在内存，写入首条用户或助手消息时才创建文件。
 
 Source: `packages/coding-agent/src/core/session-manager.ts` (`CURRENT_SESSION_VERSION`, `SessionHeader`, `SessionEntryBase`, `SessionManager.newSession`, `SessionManager._appendEntry`, `SessionManager.branch`), `packages/coding-agent/docs/session-format.md`（File Location、Session Version、Tree Structure）。
 
@@ -60,7 +60,7 @@ Source: `packages/coding-agent/src/core/session-manager.ts` (`CURRENT_SESSION_VE
 
 **Implemented fact**：entry 类型包括 `message`、`model_change`、`thinking_level_change`、`compaction`、`context_edit`、`branch_summary`、`custom`、`custom_message`、`label` 和 `session_info`。`custom` 只持久化扩展状态，不进入 LLM context；`custom_message` 会进入 context，可用 `display` 控制 TUI 是否显示；`model_change` 和 thinking entry 影响当前 session 设置。
 
-`getBranch()` 返回从根到当前 leaf 的路径。`buildSessionProjection()` 选中路径与压缩保留段，按目标 ID 应用最新的 `context_edit`，同时保留模型消息的来源；`replacement: null` 让目标消息从模型视图省略，原 entry 仍可回读。首条 `system` 消息声明 prompt sections 与工具。后续 `sections` 变更和 `toolsAdded` / `toolsRemoved` 随上下文重放。
+`getBranch()` 返回从根到当前 leaf 的路径。`buildSessionProjection()` 先选路径与最近一次压缩的保留段，再按目标 ID 应用选中记录里的最新 `context_edit`，同时保留模型消息的来源；`replacement: null` 让目标消息从模型视图省略，原 entry 仍可回读。首条 `system` 消息声明 prompt sections 与工具。后续 `sections` 变更和 `toolsAdded` / `toolsRemoved` 随上下文重放。
 
 Source: `packages/coding-agent/src/core/session-manager.ts` (`SessionEntry`, `CustomEntry`, `CustomMessageEntry`, `getBranch`, `buildContextEntries`, `buildSessionProjection`, `buildSessionContext`, `sessionEntryToContextMessages`), `packages/coding-agent/docs/session-format.md`（Entry Types、Context Building）。
 
@@ -79,7 +79,7 @@ Source: `packages/coding-agent/src/core/session-manager.ts` (`branchWithSummary`
 
 ### 2.4 Compaction 与 branch summary
 
-**Implemented fact**：auto-compaction 默认开启，触发条件是 `contextTokens > contextWindow - reserveTokens`；默认 `reserveTokens=16384`、`keepRecentTokens=20000`。`findCutPoint()` 从后向前按估算 token 选择 cut point，不在 tool result 上切断；如果一个 turn 过大，会生成 split-turn 的前缀摘要。自动检查可发生在 prompt 前及工具结果落定后的 `prepareNextTurn`，可恢复的 overflow 或早期 `length` 走一次 compact-and-retry。含 tool call 的截断响应先记录合成失败结果。摘要请求省略工具声明、使用 `cacheRetention: "none"`，沿用传入的 routing/session ID 或生成新 ID，并遵守重试策略。
+**Implemented fact**：auto-compaction 默认开启，触发条件是 `contextTokens > contextWindow - reserveTokens`；默认 `reserveTokens=16384`、`keepRecentTokens=20000`。实际准备压缩时，`prepareCompaction()` 对当前投影而非原始条目估算开销。它从后向前选合法切点；如果结果本身已超过保留预算，会回到提出该调用的助手消息。超长 turn 切在助手消息处时，可以为该 turn 的前缀另写摘要。自动检查可发生在 prompt 前及工具结果落定后的 `prepareNextTurn`，常规阈值压缩后继续使用正常调度。可恢复的最终 overflow 或早期 `length` 可试一次 compact-and-retry。恢复前用 `context_edit` 同时省略失败助手消息和配对结果。含 tool call 的截断响应先记录合成失败结果并遵循普通工具调度。摘要请求省略工具声明、使用 `cacheRetention: "none"`，沿用传入的 routing/session ID 或生成新 ID，并遵守重试策略。
 
 `CompactionEntry` 保存 summary、`firstKeptEntryId`、`tokensBefore`、可选的 `systemMessage` 检查点及 usage/details/fromHook；默认 details 累积 read/modified 文件。`BranchSummaryEntry` 保存 `fromId` 和摘要，同样可保存 usage/details。
 
@@ -107,7 +107,7 @@ Source: `packages/coding-agent/src/core/tools/index.ts` (`ToolName`, `allToolNam
 
 **Implemented fact**：扩展是由 jiti 加载的 TypeScript module，default factory 接收 `ExtensionAPI`。它可以：
 
-- `pi.registerTool()` 注册带 TypeBox schema、进度更新、`renderCall`/`renderResult` 的 LLM 工具；抛异常才会将结果标记为 `isError`。
+- `pi.registerTool()` 注册带 TypeBox schema、进度更新、`renderCall`/`renderResult` 的 LLM 工具；抛异常会将工具结果标记为 `isError`，参数校验、阻断或结果钩子也可以产生错误结果。
 - `pi.on()` 订阅 `project_trust`、session、agent、turn、message、provider、tool、user_bash、input 等事件。
 - `tool_call` 可在执行前修改参数或返回 `{ block, reason, terminate }`；`tool_result` 可 middleware 式改写 content/details/isError/usage。
 - `before_agent_start` 可注入 persistent custom message 或改本轮 system prompt；`context` 可非破坏性过滤/重排 context。
@@ -142,12 +142,12 @@ MCP 从 stdio 或 Streamable HTTP server 发现工具，注册成 `mcp__<server>
 
 | Exposure | 模型如何调用 |
 |---|---|
-| `codemode`（默认） | 通过 QuickJS 脚本发现与调用。该工具不直接声明给模型 |
-| `deferred` | `tool_search` 用 BM25 排序并激活匹配项，下一次模型请求可直接调用 |
+| `codemode`（默认） | 启用 Codemode 后可在脚本中发现和调用。已启用的 Tool Search 也可以激活 |
+| `deferred` | 启用 Tool Search 后可搜索并激活，下一次模型请求即可直接调用。若 Codemode 已启用，脚本也可访问 |
 | `direct` | server 就绪时直接声明给模型，脚本也可调用 |
 | `hidden` | 在工具库中注册，模型和脚本均不可调用 |
 
-`toolExposure` 可为工具名指定覆盖规则。延迟激活的工具随 system 消息的 tool loadout 写进当前分支，后续请求和恢复按该分支读取。Codemode 脚本可通过 `tools` 获取结构化结果、过滤多次调用的输出，成功脚本也能把小型 JSON 存为分支内的 `codemode-store` 状态。QuickJS 不提供 Node 文件或网络 API；授权的宿主工具仍执行真实操作，嵌套调用带 `parentToolCallId` 并经过工具 hooks。MCP 工具调用不会自动重试，因为 server 可能已经执行了操作。
+`toolExposure` 可为工具名指定覆盖规则。服务器 exposure 影响默认启用哪个发现入口。激活的工具随 system 消息的 tool loadout 写进当前分支，恢复时按分支读取。以一个低频的只读搜索工具为例，需要它时再激活可省去平时每次携带的 schema；若用 Codemode 串两次搜索，可只把合并结果返回模型。Codemode 脚本可通过 `tools` 获取结构化结果、过滤多次调用的输出，成功脚本也能把小型 JSON 存为分支内的 `codemode-store` 状态。QuickJS 不提供 Node 文件或网络 API；授权的宿主工具仍执行真实操作，嵌套调用带 `parentToolCallId` 并经过工具 hooks。MCP 工具调用不会自动重试，因为 server 可能已经执行了操作。
 
 Source: `packages/coding-agent/src/extensions/mcp/index.ts`（`createMcpExtension`）、`extensions/mcp/tools.ts`（`createMcpToolDefinition`）、`extensions/tool-search/tool.ts`（`Bm25Ranker`、`createToolSearchToolDefinition`）、`extensions/codemode/execute.ts`（`readCodemodeStore`）、`packages/coding-agent/docs/mcp.md`、`codemode.md`、`packages/coding-agent/test/suite/agent-session-mcp.test.ts`。
 
@@ -191,11 +191,11 @@ Source: `packages/coding-agent/src/modes/rpc/jsonl.ts` (`serializeJsonLine`, `at
 
 Source: `packages/coding-agent/src/modes/json-event.ts` (`toJsonEvent`), `packages/coding-agent/src/modes/rpc/rpc-mode.ts` (`createExtensionUIContext`), `packages/coding-agent/docs/json.md`、`rpc.md`。
 
-成功响应表示命令已处理。低层 `agent_end` 后还能有重试、压缩或续跑。调用方先订阅事件再发 prompt，等待 `agent_settled` 后读取终态；`handled` 表示扩展处理了请求且未开启 run。Pi 按 stdout backpressure 写协议记录，stderr 供诊断。通过关闭 stdin 请求正常退出。
+成功响应表示命令已处理。低层 `agent_end` 后还能有重试、压缩或续跑。调用方先订阅事件再发 prompt，等待 `agent_settled` 后读取终态。`handled` 表示这条输入已被扩展消费，无需为该请求等新的结算。扩展自己另行发起的工作有自己的生命周期。Pi 按 stdout backpressure 写协议记录，stderr 供诊断。通过关闭 stdin 请求正常退出。
 
 ### 5.2 Pi Durable 的任务恢复
 
-`Harness.open()` 打开持久存储。一次 `conversation.commit()` 可原子追加 transcript、修改 JSON 文档并创建任务。模型请求作为 `pi.generation` 任务执行，它拥有工具调用的子 `pi.tool` 任务。工具可持久化 checkpoint 或 park 等待任务、计时器或信号。进程重启后打开同一存储并调用 `resume()`；同一 conversation 的重复 `requestId` 返回原 submission。checkpoint 写入与外部服务效果各有提交点，外部效果要使用自己的幂等键。
+`Harness.open()` 打开持久存储。一次 `conversation.commit()` 可原子追加 transcript、修改 JSON 文档并创建任务。模型请求作为 `pi.generation` 任务执行，它拥有工具调用的子 `pi.tool` 任务。工具可持久化 checkpoint 或 park 等待任务、计时器或信号。进程重启后打开同一存储并调用 `resume()`，同一 conversation 的重复 `requestId` 返回原提交。已 park 的工具在收到唤醒事件前无需执行进程。进程若在工具体执行期间意外停止，只有显式标记 `replay: "safe"` 的工具可以自动重做，否则返回 interrupted。外部效果要使用独立的幂等键。
 
 Source: `packages/durable/README.md`（Persist and Resume、Tools that park、Failures and Recovery）、`packages/durable/src/harness/harness.ts`（`HarnessImpl.resume`）、`packages/durable/src/harness/submissions.ts`（`Submissions.submit`）、`packages/durable/test/harness-tasks-recovery.test.ts`、`packages/durable/test/harness-tool-parks.test.ts`。
 
@@ -273,9 +273,9 @@ Source: `packages/coding-agent/docs/containerization.md`（Choose a pattern、Go
 
 1. 用 SDK 创建 `SessionManager.inMemory()`，追加 user/assistant/toolResult，记录 `getEntries()`、`getBranch()` 和 `buildSessionProjection()`。
 2. 调 `branch(entryId)` 后追加另一条 user/assistant，比较 `getTree()`：原分支仍在，leaf 已移动。
-3. 用假的 summary callback 走 `findCutPoint()`/`appendCompaction()`，比较 `getEntries()`（全历史）与 `buildSessionProjection()`。追加指向一条普通消息的 `context_edit`，分别检查原始内容与投影中的省略。
+3. 用假的 summary callback 走 `prepareCompaction()`/`appendCompaction()`，比较 `getEntries()`（全历史）与 `buildSessionProjection()`。追加指向一条普通消息的 `context_edit`，分别检查原始内容与投影中的省略。
 
-**预期观察**：compaction 是上下文投影，不是擦除；`toolResult` 不是合法 cut point；当前 coding-agent entry shape 以 `firstKeptEntryId` 为准。证据：`SessionManager`、`findCutPoint`、`buildContextEntries`。
+**预期观察**：compaction 是上下文投影，不是擦除；`toolResult` 不是合法 cut point；当前 coding-agent entry shape 以 `firstKeptEntryId` 为准。证据见 `SessionManager`、`prepareCompaction`、`buildContextEntries`。
 
 ### 实验 3：扩展 hook 做显式危险操作 gate
 
@@ -301,7 +301,7 @@ Source: `packages/coding-agent/docs/containerization.md`（Choose a pattern、Go
 
 ### 实验 6：重开 Durable 存储
 
-在测试 storage 上用固定 `requestId` 提交任务。提交一次 checkpoint 后关闭 harness，重新打开并调用 `resume()`。比较重提获得的 submission ID 和任务 checkpoint；stub 外部服务以任务 ID 做幂等键，确认重做时只落一个效果。
+在测试 storage 上用固定 `requestId` 提交任务。提交一次 checkpoint 后关闭 harness，重开并调用 `resume()`。比较重提的 submission ID 与任务 checkpoint。再对照两个工具，一个声明 `replay: "safe"`，另一个保持默认，模拟工具执行到一半的进程中断。前者可重做，但 stub 服务按幂等键只记录一次效果。后者应返回 interrupted。
 
 来源：[Durable 恢复测试](https://github.com/earendil-works/pi/blob/9c4652688590abb836b40ebd1e4725ecf9a7c7d1/packages/durable/test/harness-tasks-recovery.test.ts)。
 

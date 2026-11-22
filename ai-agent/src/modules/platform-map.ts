@@ -23,12 +23,12 @@ const LAYERS: Record<string, { name: string; en: string; role: string }> = {
   "turn": {
     name: "Turn 与 step 循环",
     en: "turn loop",
-    role: "冻结本步输入后请求模型；只要还有工具结果、排队输入或明确跟进，就进入下一个 step，直到收束。",
+    role: "捕获本步设置并调用模型。模型需跟进或排队输入未消费时，Turn 可以继续采样。",
   },
   "tool": {
     name: "工具路由与回执",
     en: "tool router",
-    role: "按本步快照生成可见工具，校验调用、执行并把结果与 call id 配对；工具失败通常回给模型自纠。",
+    role: "按本步设置公布工具定义、路由调用，并用 call ID 关联结果。可纠正的失败返回给模型。",
   },
   "sandbox": {
     name: "审批与执行边界",
@@ -38,23 +38,23 @@ const LAYERS: Record<string, { name: string; en: string; role: string }> = {
   "history": {
     name: "历史与重放",
     en: "rollout history",
-    role: "记录已提交的输入、模型输出、工具调用和回执；resume 与在线运行共用重放语义，compaction 只改变模型工作视图。",
+    role: "持久线程保存已记录的输入、模型输出和工具回执。Core 可用检查点和后续记录重建工作集，客户端通过查询取得可展示历史。",
   },
   "config": {
     name: "本步有效配置",
     en: "step context",
-    role: "模型、基础指令、项目规则、环境事实、工具面与权限在 step 开始时被冻结；中途变化到下一个边界再生效。",
+    role: "采样准备捕获该步的模型、环境和工具设置。环境更新按入口作用于当前 Turn 的后续步骤或未来 Turn。",
   },
 };
 
 const JOURNEY: Array<{ label: string; layers: string[]; story: string }> = [
-  { label: "① 输入", layers: ["client", "appserver", "session"], story: "客户端提交请求；协议层把它变成会话操作，提交队列保证同一会话只有一个权威写入顺序。" },
-  { label: "② 步快照", layers: ["session", "turn", "config", "tool"], story: "Turn 开始一个 step，冻结本步模型、指令、环境与可见工具；中途更新留到下一个边界。" },
+  { label: "① 输入", layers: ["client", "appserver", "session"], story: "客户端提交请求；协议层把它变成会话操作，提交队列保证同一会话由 Core 调度输入。" },
+  { label: "② 步快照", layers: ["session", "turn", "config", "tool"], story: "Turn 开始一个 step，捕获本步模型、环境和工具等设置。已发出的请求仍使用原来的设置。" },
   { label: "③ 模型", layers: ["turn", "history"], story: "模型基于重放出的工作历史返回文本或工具调用；流式片段可展示，完整输出项才进入可重放历史。" },
   { label: "④ 工具", layers: ["turn", "tool", "sandbox"], story: "调用先校验和裁决，再在执行边界内运行；成功、失败、取消都要生成与原调用配对的回执。" },
   { label: "⑤ 回注", layers: ["tool", "history", "turn"], story: "工具回执写入历史并进入下一次模型请求。模型此时才知道操作实际发生了什么。" },
-  { label: "⑥ 收束", layers: ["turn", "session", "history"], story: "没有待处理工具、排队输入或跟进条件时 Turn 收束；中断也必须写下明确终态，而不是丢掉半轮。" },
-  { label: "⑦ 持久化", layers: ["history", "appserver", "client"], story: "已提交事实可用于 resume、fork 与 UI 重建；客户端收到终态事件后再把本轮显示为完成。" },
+  { label: "⑥ 收束", layers: ["turn", "session", "history"], story: "在示例的正常路径中，无需再采样且没有排队输入，Turn 进入收尾。客户端读取最终状态。" },
+  { label: "⑦ 持久化", layers: ["history", "appserver", "client"], story: "持久线程可以用已保存记录恢复或分叉。客户端重连时可查询历史，并用 Item ID 对齐实时通知。" },
 ];
 
 export function initPlatformMap(root: HTMLElement | null): void {

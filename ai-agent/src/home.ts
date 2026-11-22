@@ -9,7 +9,7 @@ initSeriesNav();
 const topics = Array.from(document.querySelectorAll<HTMLDetailsElement>(".atlas-topic"));
 const indexLinks = Array.from(document.querySelectorAll<HTMLAnchorElement>(".atlas-topic-index a"));
 
-function highlightTopic(id: string): void {
+function highlightTopic(id: string | undefined): void {
   indexLinks.forEach((link) => {
     if (link.hash === `#${id}`) link.setAttribute("aria-current", "location");
     else link.removeAttribute("aria-current");
@@ -25,7 +25,7 @@ function openTopic(id: string): void {
 
 topics.forEach((topic) => {
   topic.addEventListener("toggle", () => {
-    if (topic.open) highlightTopic(topic.id);
+    highlightTopic(topics.find(item => item.open)?.id);
   });
 });
 
@@ -37,9 +37,9 @@ window.addEventListener("hashchange", () => openTopic(location.hash.slice(1)));
 openTopic(location.hash.slice(1) || "topic-loop");
 
 const traceNotes: Record<string, string> = {
-  model: "宿主将用户输入和可用工具一起交给模型。",
-  tools: "工具执行完毕，结果与调用编号配对，进入下一次模型请求。",
-  finish: "宿主确认没有待处理的工具工作，再把本轮结果写入会话。",
+  model: "用户请求运行测试。宿主准备可用工具，模型据此提出一条测试命令。",
+  tools: "测试退出码为 0。宿主用调用编号配对结果，再让模型根据这次结果作答。",
+  finish: "模型给出最终答复，宿主检查停止条件并结束本回合。工具成功完成只是其中一步。",
 };
 const figure = document.querySelector<HTMLElement>("[data-run-figure]");
 figure?.addEventListener("click", (event) => {

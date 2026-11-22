@@ -4,7 +4,7 @@ const LABELS: Record<ThreadState, string> = {
   new: "尚未初始化",
   active: "turn inProgress",
   idle: "thread idle",
-  interrupted: "turn interrupted",
+  interrupted: "thread idle · last turn interrupted",
   archived: "thread archived",
 };
 
@@ -15,6 +15,7 @@ export function initStateModel(root: HTMLElement | null): void {
   let thread = 0;
   let turn = 0;
   let item = 0;
+  let pendingSteers = 0;
   const stateEl = root.querySelector<HTMLElement>("[data-state]");
   const threadEl = root.querySelector<HTMLElement>("[data-thread-id]");
   const turnEl = root.querySelector<HTMLElement>("[data-turn-count]");
@@ -62,7 +63,7 @@ export function initStateModel(root: HTMLElement | null): void {
         item += 1;
         append("k-user", `turn/start → turn/started · turn_${turn}`);
         append("k-sys", "item/completed · userMessage");
-        render("已开始一轮。首次 Start 同时创建 Thread，后续 Start 沿用当前 Thread。");
+        render("已开始一轮。实验的首次 Start 合并演示 thread/start 和 turn/start。");
         break;
       case "item":
         if (state !== "active") {
@@ -71,18 +72,33 @@ export function initStateModel(root: HTMLElement | null): void {
         }
         item += 1;
         append("k-model", `item/started → item/completed · item_${item}`);
-        render("Item 是最小输入/输出单元：消息、命令、文件变更、工具调用都属于 Item。 ");
+        render("Item 是客户端可识别的记录，例如消息、命令、文件变更或工具调用。");
         break;
       case "steer":
         if (state !== "active") {
           render("turn/steer 只能追加到正在进行的 Turn。 ");
           return;
         }
+        pendingSteers += 1;
         append("k-user", `turn/steer · expectedTurnId=turn_${turn}`);
-        render("输入已受理，等后续采样采用。回合与 Item 数量暂时保持不变。");
+        render(`已有 ${pendingSteers} 条插话待采样。Turn 与 Item 计数暂时保持不变。`);
+        break;
+      case "sample":
+        if (state !== "active" || pendingSteers === 0) {
+          render("用 Steer 提交一条插话，再模拟在后续采样中采用它。");
+          return;
+        }
+        item += pendingSteers;
+        append("k-model", `示例采样 · 采用 ${pendingSteers} 条插话`);
+        pendingSteers = 0;
+        render("模型现在可以看到新约束。Thread ID 和 Turn 计数保持不变。");
         break;
       case "complete":
         if (state !== "active") return;
+        if (pendingSteers > 0) {
+          render("本例仍有插话待处理。先推进到下一次采样，或中断当前 Turn。");
+          return;
+        }
         state = "idle";
         append("k-sys", "turn/completed · turn.status=completed");
         render("Turn 完成，Thread 保留历史并回到 idle，可继续下一轮或归档。 ");
@@ -90,6 +106,7 @@ export function initStateModel(root: HTMLElement | null): void {
       case "interrupt":
         if (state !== "active") return;
         state = "interrupted";
+        pendingSteers = 0;
         append("k-warn", "turn/interrupt → turn/completed · interrupted");
         render("Interrupt 请求取消在途工作；最终仍以 turn/completed 通知收尾。 ");
         break;
@@ -103,7 +120,7 @@ export function initStateModel(root: HTMLElement | null): void {
           return;
         }
         append("k-sys", `thread/resume · thread_${thread}`);
-        render("Resume 读取已有 Thread；需要继续工作时显式发起下一轮。");
+        render("Resume 重新连接已有 Thread。查看当前是否仍有活动 Turn，再决定是否发起下一轮。");
         break;
       case "fork":
         if (state === "new" || state === "active" || state === "archived") {
@@ -129,6 +146,7 @@ export function initStateModel(root: HTMLElement | null): void {
         thread = 0;
         turn = 0;
         item = 0;
+        pendingSteers = 0;
         log?.replaceChildren();
         render("握手已完成。用 Start 建立 Thread 并开始首轮。");
         break;

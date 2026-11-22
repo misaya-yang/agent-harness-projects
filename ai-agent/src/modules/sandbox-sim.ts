@@ -5,9 +5,7 @@
 
 type Op = {
   id: string;
-  label: string;
-  cmd: string;
-  reads: boolean;
+    cmd: string;
   writeIn: boolean;
   writeOut: boolean;
   net: boolean;
@@ -18,17 +16,18 @@ type Sandbox = "ro" | "ww" | "dfa";
 type Approval = "untrusted" | "on-request" | "never";
 
 const OPS: Op[] = [
-  { id: "read", label: "读取项目文件", cmd: "read project-file", reads: true, writeIn: false, writeOut: false, net: false, riskNote: "纯读操作" },
-  { id: "test", label: "跑测试", cmd: "run test-suite", reads: true, writeIn: true, writeOut: false, net: false, riskNote: "写入工作区内构建缓存" },
-  { id: "patch", label: "改工作区文件", cmd: "patch workspace-file", reads: true, writeIn: true, writeOut: false, net: false, riskNote: "写入工作区内文件" },
-  { id: "net", label: "访问网络", cmd: "fetch external-api", reads: true, writeIn: false, writeOut: false, net: true, riskNote: "出站网络请求" },
-  { id: "outside", label: "写工作区之外", cmd: "write outside-workspace", reads: true, writeIn: false, writeOut: true, net: false, riskNote: "越出工作区边界" },
-  { id: "purge", label: "删除构建产物", cmd: "delete build-output", reads: true, writeIn: true, writeOut: false, net: false, riskNote: "破坏性写（工作区内）" },
+  { id: "read", cmd: "read project-file", writeIn: false, writeOut: false, net: false, riskNote: "纯读操作" },
+  { id: "test", cmd: "run test-suite", writeIn: true, writeOut: false, net: false, riskNote: "写入工作区内构建缓存" },
+  { id: "patch", cmd: "patch workspace-file", writeIn: true, writeOut: false, net: false, riskNote: "写入工作区内文件" },
+  { id: "net", cmd: "fetch external-api", writeIn: false, writeOut: false, net: true, riskNote: "出站网络请求" },
+  { id: "outside", cmd: "write outside-workspace", writeIn: false, writeOut: true, net: false, riskNote: "越出工作区边界" },
+  { id: "purge", cmd: "delete build-output", writeIn: true, writeOut: false, net: false, riskNote: "破坏性写（工作区内）" },
 ];
 
 const VERDICTS = {
   allow: { tag: "当前权限放行", cls: "ok", desc: "示例操作在当前权限内。执行后读取工具结果和命令退出状态。" },
   ask: { tag: "可请示", cls: "ask", desc: "请查看判定路径。命令规则可以要求执行前确认；按需审批也可由模型另行发起明确的权限申请。" },
+  request: { tag: "本次越界失败 · 可另行申请", cls: "ask", desc: "这次执行的失败先返回给模型。明确请求其他权限才会进入审批决策，是否获批另行判断。" },
   deny: { tag: "越界失败", cls: "deny", desc: "当前权限不足，普通升级审批已关闭。失败结果回到模型。" },
 } as const;
 
@@ -55,15 +54,15 @@ function decide(op: Op, sbx: Sandbox, apr: Approval): { key: VerdictKey; trace: 
 
   const reason =
     sbx === "ro"
-      ? "ReadOnly 沙箱拒绝一切写入/网络"
+      ? "本实验的 ReadOnly 不允许写入或出站网络"
       : op.net
-        ? "WorkspaceWrite 默认断网"
+        ? "本实验的 WorkspaceWrite 关闭出站网络"
         : "WorkspaceWrite 拒绝工作区外写入";
   trace.push(reason);
 
   if (apr === "on-request") {
     trace.push("普通越界失败先返回模型。模型可另行发起显式权限请求");
-    return { key: "ask", trace };
+    return { key: "request", trace };
   }
   trace.push("当前策略与示例规则未提供升级路径");
   return { key: "deny", trace };
@@ -132,7 +131,7 @@ export function initSandboxSim(root: HTMLElement | null): void {
       const span = document.createElement("span");
       span.className = "ev";
       const k = document.createElement("span");
-      k.className = res.key === "allow" ? "k-tool" : res.key === "ask" ? "k-warn" : "k-sys";
+      k.className = res.key === "allow" ? "k-tool" : res.key === "deny" ? "k-sys" : "k-warn";
       k.textContent = `[${op.cmd}] × [${sbx} · ${apr}] → ${v.tag}`;
       span.append(k);
       log.append(span);

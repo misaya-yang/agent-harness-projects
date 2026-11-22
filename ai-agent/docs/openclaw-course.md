@@ -1,6 +1,6 @@
 # OpenClaw 系统课 · 源码讲义
 
-本课程以本地 OpenClaw HEAD `3c8c7bf781fbf3e2c614a446eee0ad3a87b400fd` 为基线，包版本为 `2026.11.6`，许可证为 MIT。Node 支持范围是 24.16.0 至 25 之前，或 26.1.0 及以上。以下源码入口与文档固定到该快照，数值是该快照的默认值或代码上限。部署的有效配置需从部署本身读取。 [本次提交][commit] · [包信息][package] · [Node 引擎约束][node]
+本课程以本地 OpenClaw HEAD `3c8c7bf781fbf3e2c614a446eee0ad3a87b400fd` 为基线，包版本为 `2026.11.6`，许可证为 MIT。Node 支持范围是 24.16.0 至 25 之前，或 26.1.0 及以上。这个值来自提交内的包清单。以下源码入口与文档均固定到这个提交，默认值和代码上限按各自的配置范围讲解。部署的有效配置需从部署本身读取。 [本次提交][commit] · [包信息][package] · [Node 引擎约束][node]
 
 教学主线是用事件定位执行所有者。Gateway 持有会话、策略和投递状态，输入按会话准入，模型执行可以在不同 harness 或位置运行。已经提交的转录、运行标记、自动化定义和投递回执让工作能跨进程和跨天延续。
 
@@ -14,11 +14,11 @@
 
 ## 01 · 三层循环
 
-在内置 `openclaw` runtime 路径，`runPreparedEmbeddedLoop` 管 attempt 重试、凭证轮换与模型回退。一次 attempt 内，`runAgentPrompt` 管一条逻辑请求的 prompt 和 continue。再往内，`runLoop` 的内圈消费工具调用与待注入输入，外圈也检查 follow-up 队列。打开三层循环步进器时，先认出内核事件 `agent_start`、`turn_start`、`turn_end`、`agent_end`，再用会话事件定位结束分支。实验中的中间站名用于标出教学步骤。 [外层 run][run] · [会话续跑][prompt] · [内置内核][loop]
+在内置 `openclaw` runtime 路径，`runPreparedEmbeddedLoop` 管 attempt 重试、凭证轮换与模型回退。一次 attempt 内，`runAgentPrompt` 管一条逻辑请求的 prompt 和 continue。再往内，`runLoop` 的内圈消费工具调用与待注入输入，外圈也检查 follow-up 队列。打开三层循环步进器时，先认出内核事件 `agent_start`、`turn_start`、`turn_end`、`agent_end`，再用会话事件定位结束分支。把三层都当成一种重试，会将已执行的工具和未完成的提供方请求混成一个故障，难以判断哪里可以续跑。实验中的中间站名用于标出教学步骤。 [外层 run][run] · [会话续跑][prompt] · [内置内核][loop]
 
 ## 02 · 插话与收束
 
-Steering 在检查点进入活跃回合。顺序批允许首个可执行调用先启动，其余尚未开始的调用可被 steering 跳过，并记录配对结果。已启动调用走完其生命周期，并行批不会因 steering 跳过调用。Follow-up 在自然停点处理，另起请求仍由会话准入决定。 [队列语义][queue] · [工具批检查点][tool-groups]
+Steering 在检查点进入活跃回合。顺序批允许首个可执行调用先启动，其余尚未开始的调用可被 steering 跳过，并记录配对结果。已启动调用走完其生命周期，并行批不会因 steering 跳过调用。Follow-up 在自然停点处理，另起请求仍由会话准入决定。顺序批牺牲一部分吞吐，给插话留下跳过后续动作的机会。并行批在完成后、停止钩子之前消费插话。 [队列语义][queue] · [工具批检查点][tool-groups]
 
 会话层在 `agent_end` 后依次检查 handoff、中止或缺少消息、自动重试、重试结束、压缩和排队消息。成功响应后的排队输入可以续跑，仍为错误的响应由执行所有者处理。会话结束时发出 `agent_settled`，移交出口发出 `agent_handoff`。会话层的 `retryCount` 与外层 attempt 预算各自维护，`prepareRetry` 应用指数退避，并尊重短期限流响应的等待建议。 [收束裁决][post-run] · [重试处理][session-retry]
 
@@ -33,21 +33,21 @@ Steering 在检查点进入活跃回合。顺序批允许首个可执行调用�
 状态图里的 leaf 表示被选中的转录分支。压缩替换模型读取的上下文投影，历史由归档与保留策略治理。重启需要另查持久执行事实。 [数据库注册表][db-engines] · [共享库路径][state-path] · [代理库路径][agent-path] · [存储布局][db-layout] · [PostgreSQL 运行手册][pg-guide]
 
 - 正常关停为运行中的合格根会话写标记，保留本次关停捕获的已接收排队消息身份。恢复时重新核验当前权限，随后按 FIFO 重新投递这些输入。 [关停写标记][restart-persist] · [会话文档][session-doc]
-- 崩溃或 SIGKILL 可能没有关停标记。启动流程查找缺失运行所有者的持久非终态身份，为可恢复根会话送入一条检查现有文件、任务和外部动作的系统输入。子会话、Cron 和 ACP 各由自己的生命周期负责。 [孤立运行判定][restart-orphan] · [恢复入口][restart-resume]
-- 输出已送达但回执未知时保留不确定性。状态投影台中保留的计数仅代表教学示例的已提交事实。 [恢复后保留项][restart-doc]
+- 崩溃或 SIGKILL 无法写关停标记。启动流程通过启动账本定位尚未恢复的崩溃时间窗，再检查持久非终态身份有无活动执行者、恢复范围是否匹配，以及当前权限。合格根会话收到一条恢复输入，用于核对文件、任务和外部动作。查不到对应启动历史的旧孤立运行不进入这条恢复路径。子会话、Cron 和 ACP 各由自己的生命周期负责。 [孤立运行判定][restart-orphan] · [恢复入口][restart-resume]
+- 输出已送达但回执未知时保留不确定性。状态投影台中保留的计数仅代表教学示例的已提交事实。恢复输入给新执行者检查现场的机会，减少自动重放未知外部动作的风险。 [恢复后保留项][restart-doc]
 
 ## 04 · Cache、Compaction、Replay 与 Memory
 
 | 机制 | 查什么 |
 | --- | --- |
-| Cache | 对比相邻请求的稳定前缀，用 provider 的缓存使用量确认命中。 |
+| Cache | 对比相邻请求的稳定前缀，在支持该缓存的提供方用其报告的使用量确认命中。 |
 | Compaction | 查新摘要边界、保留尾部与下一次请求估算。 |
 | Replay | 查被选中的转录分支、已接收入参以及还未确认的外部效果。 |
 | Memory | 查长期事实来自哪个文件或索引，随后按需使用 `memory_search` / `memory_get`。 |
 
-Memory Core 使用全文与向量混合检索，SQLite 和合格 PostgreSQL 都可承载索引。两种引擎的文本排名实现不同。启动日记预载的默认示例为近 2 天，每份 1,200 字符、总计 2,800 字符，均可配置。 [稳定请求前缀][cache] · [检索工具][memory-tools] · [PostgreSQL 搜索][memory-pg] · [日记预载][startup-context]
+Memory Core 使用全文与向量混合检索，SQLite 和合格 PostgreSQL 都可承载索引。两种引擎的文本排名实现不同。课程实验让读者选择要追踪的证据，单次请求仍可同时读取会话转录和工作区记忆。启动日记预载的默认示例为近 2 天，每份 1,200 字符、总计 2,800 字符，均可配置。 [稳定请求前缀][cache] · [检索工具][memory-tools] · [PostgreSQL 搜索][memory-pg] · [日记预载][startup-context]
 
-内置 Dreaming 默认开启，调度表达式默认 `0 3 * * *`。Light、REM 和 Deep 组织来源、提炼及晋升，定时整理与请求中的检索各有入口。启用状态、调度器和 ambient owner 共同决定是否能建立作业。 [Dreaming 默认配置][dreaming-code] · [阶段和调度][dreaming-doc]
+内置 Dreaming 默认开启，调度表达式默认 `0 3 * * *`。显式多代理部署需要系统作业的归属明确，才能建立对应作业。Light、REM 和 Deep 组织来源、提炼及晋升，定时整理与请求中的检索各有入口。启用状态、调度器和 ambient owner 共同决定是否能建立作业。 [Dreaming 默认配置][dreaming-code] · [阶段和调度][dreaming-doc]
 
 ## 05 · 唤醒与自动化
 
@@ -59,27 +59,27 @@ Memory Core 使用全文与向量混合检索，SQLite 和合格 PostgreSQL 都�
 
 ## 06 · 重试预算与重放条件
 
-外层 attempt 配额是 `clamp(24 + 8 × max(1, profileCandidateCount), 32, 160)`。`beginRunAttempt` 增加派发与计入数，`recordRunRetry` 对 `progress_continuation` 退回一个已计入 attempt。完成的模型响应将计入数重置为 1，保留当前 attempt 的失败尾部。部分输出和纯工具续跑不足以重置这本账。 [预算公式][run-budget-max] · [预算记账][run-budget] · [完成响应信号][run-progress]
+外层 attempt 配额在运行开始时按 `clamp(24 + 8 × max(1, profileCandidateCount), 32, 160)` 确定。实验换候选数会开新一轮。`beginRunAttempt` 增加派发与计入数，`recordRunRetry` 对 `progress_continuation` 退回一个已计入 attempt。完成的模型响应将计入数重置为 1，保留当前 attempt 的失败尾部。部分输出和纯工具续跑不足以重置这本账。 [配额初始化][run-budget-init] · [预算公式][run-budget-max] · [预算记账][run-budget] · [完成响应信号][run-progress]
 
-同模型瞬时重试采用有抖动的指数退避。限流常规默认上限为 16 次 attempt 含首次，在 provider 限时、共享 TPM 回退窗口、预留 fallback 机会和重放安全约束下可以更早停。分类、等待、凭证轮换和 fallback 都是显式分支。重放前按状态和回执查已发送、已启动或可能完成的动作。 [同模型失败恢复][run-failover] · [运行预算检查][run]
+同模型瞬时重试采用有抖动的指数退避。限流常规默认上限为 16 次 attempt 含首次，在 provider 限时、共享 TPM 回退窗口、预留 fallback 机会和重放安全约束下可以更早停。采用 `Retry-After` 时，应使用退避延迟与服务端建议中的较大值。等候时间超出本层剩余预算时可以提前结束该恢复分支。重放前按状态和回执查已发送、已启动或可能完成的动作。 [同模型失败恢复][run-failover] · [运行预算检查][run]
 
 48 小时是默认 agent 墙钟，`0` 使用无限时长哨兵值。首个有效输出前连续空闲超时断路器的阈值是 5。作业墙钟、会话重试次数与 attempt 配额独立。 [墙钟解析][agent-timeout] · [空闲断路器][idle-breaker]
 
 ## 07 · 上下文压缩
 
-内置路径可在请求前预检，也可以在超阈值后维护，或对 overflow 做压缩再试。会话拥有溢出恢复时上限为 3，外层恢复路径可接手。阈值式维护用摘要和近期尾部准备将来的模型调用。原子切点须保留 tool call/result 的配对，文件修改状态可从结构化工具结果提取。 [会话压缩][compact] · [外层溢出恢复][outer-compact] · [压缩细节][compact-doc]
+内置路径可在请求前预检，也可以在超阈值后维护，或对 overflow 做压缩再试。会话拥有溢出恢复时上限为 3，外层恢复路径可接手。阈值式维护用摘要和近期尾部准备将来的模型调用。切点须保留 tool call/result 的配对。文件读取和修改状态可从结构化工具结果提取，未完成意图仍需写进摘要。压缩换来窗口空间，也会损失旧消息细节，因此应核对摘要和保留范围。 [会话压缩][compact] · [外层溢出恢复][outer-compact] · [压缩细节][compact-doc]
 
 Context engine 通过 bootstrap、assemble-before-prompt、after-turn、maintain、compact 等宿主能力插入不同生命周期。Codex app-server 的主线程与原生压缩由 Codex 拥有，Gateway 负责相应投影与维护。 [宿主能力枚举][context-types] · [运行时归属][runtime-owner]
 
 ## 08 · 工具执行与重复守卫
 
-`executeToolCalls` 解析工具声明并确定并行或串行，工具开始前执行策略与 hook，失败可转成模型可以读的工具结果。工具目录可以保持稳定，入口仍按当前回合权限执行检查。符合条件的异步工具在模型流的 `toolcall_end` 后就可派发，先等待相应转录片段提交。 [工具派发][tools] · [工具入口守卫][tool-policy] · [流式异步工具][stream-tools]
+`executeToolCalls` 解析工具声明并确定并行或串行。逐调用经过准入，普通策略阻断可转成有配对 ID 的工具结果。已启动的并行动作仍需结算。文件队列只保护接入该队列的内置工具，按实际文件协调读写冲突。工具目录保持稳定有利于缓存，执行入口仍按当前回合的权限判断。符合条件的异步工具在模型流的 `toolcall_end` 后可派发，先等待相应转录片段提交。这样可以减少等待时间，也要求持久记录先于副作用。 [工具派发][tools] · [文件操作队列][file-queue] · [工具入口守卫][tool-policy] · [流式异步工具][stream-tools]
 
 现行重复守卫默认开启。它以连续的工具名称与规范化参数为键，第 3 次执行并提示，第 20 次在执行前拦截并以 `tool_repeat_limit` 停止回合。换调用或新用户输入会重置；未注册工具按名称计数，声明 `repeatable` 的轮询可以豁免。旧的 10/20/30 阈值、结果比较与独立压缩后守卫已从现行配置退役。 [守卫实现][repeat] · [宿主开关][repeat-default] · [重复守卫配置与诊断][repeat-doc]
 
 ## 09 · Gateway、运行时与执行位置
 
-Gateway 持有会话与通道状态。WebSocket 客户端在 connect 阶段提供角色和作用域，设备节点声明能力与命令。Gateway 连接默认回环地址 `127.0.0.1:18789`，TUI 也有进程内后端。内置、CLI 和 Codex 经同一物理会话 mailbox 序列化，再争取并发容量。 [Gateway 架构][gateway] · [连接握手][handshake] · [会话 mailbox][mailbox]
+Gateway 持有会话与通道状态。WebSocket 客户端在 connect 阶段提供角色和作用域，设备节点声明能力与命令。Gateway 连接默认回环地址 `127.0.0.1:18789`，TUI 也有进程内后端。内置、CLI 和 Codex 经同一物理会话 mailbox 串行准入，再争取全局执行容量。这种顺序让同一会话有清楚的转录写入次序，也意味着一个活跃回合可能挡住该会话的后续输入。另一个会话可以在剩余全局容量内同时执行。 [Gateway 架构][gateway] · [连接握手][handshake] · [会话 mailbox][mailbox] · [TUI 模式][tui-doc]
 
 模型级 `agentRuntime.id` 覆盖 provider 级，内置 id `openclaw` 仍接受旧别名 `pi`。插件可注册 `codex` 等 harness，`auto` 按有效路由决定。隐式 Codex 选择要求精确官方 HTTPS Responses 路由且没有自定义请求行为。Gateway 发布所需的模型运行时快照，执行中的嵌套工作固定同一代选择。 [模型运行时策略][runtime-policy] · [运行时快照与选择][runtime-architecture]
 
@@ -87,15 +87,17 @@ Gateway 持有会话与通道状态。WebSocket 客户端在 connect 阶段提�
 
 ## 10 · 工具阻断与宿主审批
 
-`tools.exec.mode` 支持 deny、allowlist、ask、auto、full，宿主按执行位置及生效策略裁决。需要审批时由 Gateway 持有审批对象，配置允许的 Control UI、伴生应用或通道集成可送达请求。缺少决议或无法抵达时默认拒绝。批准后仍由执行所有者复核当前策略和请求参数绑定。启用严格内联检查时，解释器调用受单独策略约束。 [exec 策略与审批流程][approval-doc] · [审批管理器][approval-manager] · [Telegram 审批适配][telegram-approval]
+`tools.exec.mode` 支持 deny、allowlist、ask、auto、full，宿主按执行位置及生效策略裁决。需要审批时由 Gateway 持有审批对象。交互请求可按配置送达 Control UI、伴生应用或支持的通道集成。Gateway 宿主的自动化审批仅发到在线且具备审批能力的客户端，没有审批面时立即拒绝。普通宿主询问无响应时由 `askFallback` 裁决，缺省为 deny，明确审批的要求仍适用。批准后仍由执行所有者复核当前策略和请求参数绑定。启用严格内联检查时，解释器调用受单独策略约束。 [exec 策略与审批流程][approval-doc] · [审批管理器][approval-manager] · [Telegram 审批适配][telegram-approval]
 
-教学闸门链展示已配置且有可达审批人的情形。工具层 hook 的阻断与宿主 exec 审批异常各有结果路径。需要收集用户答案的 `ask_user` 有独立的问答生命周期。 [工具钩子合同][tool-hooks] · [问答工具][ask-user]
+教学审批链使用已配置 Telegram 的交互请求，分别展示批准待复核、明确拒绝及默认策略下的超时。工具入口钩子和宿主审批故障各走自己的结果路径。 [普通询问回退][ask-fallback] · [自动化审批入口][scheduled-approvals]需要收集用户答案的 `ask_user` 有独立的问答生命周期。 [工具钩子合同][tool-hooks] · [问答工具][ask-user]
+
+容器配置校验、文件边界、宿主命令审批与受管 Fetch 各自保护不同入口。先查实际执行位置和工具实现，再判断对应控制是否生效。例如 DNS 固定适用于启用该保护的连接路径。 [容器配置校验][sandbox-validation] · [受管 Fetch][fetch-guard]
 
 ## 11 · 子代理与组织能力
 
 `accepted` 表示子会话启动请求被接收。父会话可能在准备或运行，也可能已让渡。交付由子代理终态触发，父转录提交结果时会持久记录 `requesterDelivery.state = "consumed"`。等待接收的结果可在恢复后再安排，已提交的材料可被下一次 turn 读取。若对用户仍欠公开回复，出站送达拥有单独的结果或歧义状态。 [结果送达与接收确认][announce]
 
-默认最大深度 5、每父会话活跃子代理上限 5、普通子 run 并发 8。操作子任务前核验当前控制权与实际执行实例。插件提供能力，Skill 描述工作流，`SOUL.md` 提供人格指令。 [配额常量][child-limits] · [嵌套与配额][nesting] · [子代理控制所有者][subagent-control] · [工作区资源][workspace]
+默认最大深度 5、每父会话活跃子代理上限 5、普通子 run 并发 8。深度和活跃数限制扇出规模，并发限制同时执行的工作。估算费用还要读取单个子会话的用量与重试。操作子任务前核验当前控制权与实际执行实例。插件提供能力，Skill 描述工作流，`SOUL.md` 提供人格指令。 [配额常量][child-limits] · [嵌套与配额][nesting] · [子代理控制所有者][subagent-control] · [工作区资源][workspace]
 
 ## 12 · 从症状到可观察证据
 
@@ -174,3 +176,11 @@ Gateway 持有会话与通道状态。WebSocket 客户端在 connect 阶段提�
 [release]: https://github.com/openclaw/openclaw/blob/3c8c7bf781fbf3e2c614a446eee0ad3a87b400fd/docs/releases/2026.11.6.md
 [stream-tools]: https://github.com/openclaw/openclaw/blob/3c8c7bf781fbf3e2c614a446eee0ad3a87b400fd/packages/agent-core/src/agent-stream-response.ts#L451-L490
 [child-limits]: https://github.com/openclaw/openclaw/blob/3c8c7bf781fbf3e2c614a446eee0ad3a87b400fd/src/config/agent-limits.ts#L20-L24
+
+[file-queue]: https://github.com/openclaw/openclaw/blob/3c8c7bf781fbf3e2c614a446eee0ad3a87b400fd/src/agents/sessions/tools/file-mutation-queue.ts#L43
+[tui-doc]: https://github.com/openclaw/openclaw/blob/3c8c7bf781fbf3e2c614a446eee0ad3a87b400fd/docs/web/tui.md#local-mode
+[ask-fallback]: https://github.com/openclaw/openclaw/blob/3c8c7bf781fbf3e2c614a446eee0ad3a87b400fd/docs/tools/exec-approvals.md#askfallback
+[scheduled-approvals]: https://github.com/openclaw/openclaw/blob/3c8c7bf781fbf3e2c614a446eee0ad3a87b400fd/docs/tools/exec-approvals.md#standing-grants-for-automations
+[run-budget-init]: https://github.com/openclaw/openclaw/blob/3c8c7bf781fbf3e2c614a446eee0ad3a87b400fd/src/agents/embedded-agent-runner/run-loop.ts#L147
+[sandbox-validation]: https://github.com/openclaw/openclaw/blob/3c8c7bf781fbf3e2c614a446eee0ad3a87b400fd/src/agents/sandbox/validate-sandbox-security.ts#L355
+[fetch-guard]: https://github.com/openclaw/openclaw/blob/3c8c7bf781fbf3e2c614a446eee0ad3a87b400fd/src/infra/net/fetch-guard.ts#L591

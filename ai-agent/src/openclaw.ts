@@ -64,7 +64,7 @@ function initLoopStepper(): void {
     led?.classList.toggle("is-run", index >= 0 && index < steps.length - 1);
     led?.classList.toggle("is-done", index === steps.length - 1);
   };
-  const reset = () => { clearInterval(timer); index = -1; if (log) log.innerHTML = ""; if (note) note.textContent = "逐步观察一条 Telegram 消息怎样穿过三层循环再回到睡眠。"; draw(); };
+  const reset = () => { clearInterval(timer); index = -1; if (log) log.innerHTML = ""; if (note) note.textContent = "逐步观察一条 Telegram 消息怎样穿过三层循环，并结束这轮任务。"; draw(); };
   const step = () => { if (index < steps.length - 1) { index += 1; draw(); } else clearInterval(timer); };
   qs<HTMLButtonElement>(root, "[data-step]")?.addEventListener("click", step);
   qs<HTMLButtonElement>(root, "[data-run]")?.addEventListener("click", () => { clearInterval(timer); if (index === steps.length - 1) reset(); step(); timer = window.setInterval(step, 560); });
@@ -105,7 +105,7 @@ function initDecisionMatrix(): void {
         { rule: 2, hit: true, text: "R3 ✓ isRetryableError && prepareRetry→ 指数退避后续跑", kind: "tool" },
       ],
       verdict: "continue",
-      tail: "退避会尊重 provider 的 Retry-After 下界，再由本层预算决定是否续跑。",
+      tail: "本例使用会话级退避。服务端若给出可接受的短期等待建议，会取建议与退避延迟中的较长值。",
     },
     exhausted: {
       intro: "输入：错误且 retryCount ≥ maxRetries",
@@ -143,7 +143,7 @@ function initDecisionMatrix(): void {
         { rule: 5, hit: true, text: "R6 ✓ 仍有排队消息 → agent.continue()", kind: "tool" },
       ],
       verdict: "continue",
-      tail: "本例响应成功，来自 agent_end 处理器的排队消息会触发会话续跑。",
+      tail: "本例响应成功。内核结束后新排入的消息由会话层续跑。",
     },
   };
   let timer = 0;
@@ -214,13 +214,13 @@ function initStateProjection(): void {
     }
     if (type === "intent") {
       if (state.fires >= 3) { render("standing intent 命中", "示例意图已到默认 3 次上限，本次不再注入", "warn"); return; }
-      state.fires += 1; render("standing intent 命中", "fires+1（24h cooldown / 90 天过期）", "model"); return;
+      state.fires += 1; render("standing intent 命中", "假定这次命中已满足冷却与有效期条件，持久触发数加 1。", "model"); return;
     }
     if (type === "crash") {
       state.retry = 0; state.budget = 0; state.overflow = 0;
       render("进程崩溃", "进程计数丢失，已提交的转录事件和意图状态可读。未决工具的外部结果还需确认。", "warn"); return;
     }
-    if (type === "restart") { render("重启读账本", "符合条件的孤立运行可从持久 run 标记恢复，Gateway 发出一条恢复输入，先核实未决动作。", "sys"); return; }
+    if (type === "restart") { render("重启读账本", "本例假定运行落在崩溃时间窗内、无活动执行者，并通过范围和权限检查。Gateway 投递恢复输入，助手先核实未决动作。", "sys"); return; }
   }));
 }
 
@@ -257,16 +257,29 @@ function initBudgetBreaker(): void {
       render("run 重试预算耗尽：有 fallback 就切换模型；没有可用候选则向用户显形失败", "warn");
     }
   };
-  const blocked = () => { if (halted) { render("断路器已跳闸：先重置再模拟下一局", "warn"); return true; } return false; };
+  const reset = (message?: string) => {
+    used = 0;
+    rlStreak = 0;
+    idleStreak = 0;
+    halted = false;
+    log?.replaceChildren();
+    render(message);
+  };
   qsa<HTMLButtonElement>(root, "[data-evt]").forEach((button) => button.addEventListener("click", () => {
     const evt = button.dataset.evt;
-    if (evt === "reset") { used = 0; rlStreak = 0; idleStreak = 0; halted = false; if (log) log.innerHTML = ""; render(); return; }
-    if (blocked()) return;
+    if (evt === "reset") {
+      reset();
+      return;
+    }
+    if (halted) {
+      render("本次运行已停止，请重置后再试。", "warn");
+      return;
+    }
     if (evt === "ok") { used = 1; rlStreak = 0; idleStreak = 0; render("已完成的模型响应：外层连续计数重置为 1，限流与空闲连击清零", "model"); return; }
     if (evt === "rate") {
       rlStreak += 1;
       if (rlStreak < 16) {
-        charge(`第 ${rlStreak} 次限流失败。若允许同模型重试，指数退避加抖动，并以 Retry-After 为下界。`);
+        charge(`第 ${rlStreak} 次限流失败。若允许同模型重试，按带抖动的退避等待。采纳 Retry-After 时还须检查剩余时间。`);
         return;
       }
       charge("原地限流分支已到示例上限。策略可轮换凭证、切候选模型或返回错误。");
@@ -285,10 +298,11 @@ function initBudgetBreaker(): void {
     if (evt === "wall") { halted = true; render("此模拟启用 48 小时默认墙钟。到达时结束 run。", "warn"); return; }
   }));
   qsa<HTMLButtonElement>(root, "[data-profile] [data-v]").forEach((button) => button.addEventListener("click", () => {
-    profiles = Number(button.dataset.v) || 1;
+    const selected = Number(button.dataset.v);
+    if (profiles === selected) return;
+    profiles = selected;
     qsa<HTMLButtonElement>(root, "[data-profile] [data-v]").forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === button)));
-    render(`按候选 profile 重算本次 run 预算：max = ${maxOf(profiles)}`, "model");
-    if (!halted && used >= maxOf(profiles)) { halted = true; render("新预算低于已耗 → 预算闸门立即终止后续 recovery", "warn"); }
+    reset(`开始新的模拟运行，候选凭证数 ${profiles}，尝试上限 ${maxOf(profiles)}。`);
   }));
   render();
 }
@@ -333,7 +347,7 @@ function initWakeSources(): void {
       rows: [
         ["是不是唤醒", "对符合条件的用户触发回合做关键词匹配，命中后把提示放入当前上下文。"],
         ["进入哪条 lane", "与当前回合共用会话和执行位置。"],
-        ["怎么计预算", "不另开 run，因此不领取新预算；它有自己的冷却、触发次数与过期限制"],
+        ["怎么计预算", "用当前回合的执行预算，匹配另有冷却、触发次数与过期限制。"],
       ],
     },
     tick: {
@@ -341,7 +355,7 @@ function initWakeSources(): void {
       status: "Gateway 广播 · 客户端订阅",
       rows: [
         ["是不是唤醒", "Gateway 定期广播 <code>tick</code>，客户端用它观察连接活性。"],
-        ["进入哪条 lane", "走 WebSocket 事件流。"],
+        ["送到哪里", "走 WebSocket 事件流。"],
         ["run 预算", "连接维护没有 agent attempt 预算。"],
       ],
     },
@@ -363,16 +377,33 @@ function initApprovalGates(): void {
   const note = qs<HTMLElement>(root, "[data-note]");
   const status = qs<HTMLElement>(root, "[data-status]");
   const led = qs<HTMLElement>(root, "[data-led]");
+  const resolutions = {
+    allow: {
+      trace: "授权人批准。宿主仍需按当前策略和请求绑定复核，再尝试执行。",
+      note: "批准结束了人工等待。命令是否执行，以宿主校验和执行回执为准。",
+      status: "已批准，待宿主复核",
+    },
+    deny: {
+      trace: "授权人拒绝。宿主拒绝执行，工具结果携带原因。",
+      note: "模型收到拒绝结果，可以改用其他路径或停下。",
+      status: "已拒绝",
+    },
+    timeout: {
+      trace: "等待超时。本例的 askFallback 为 deny，工具返回拒绝结果。",
+      note: "无人给出决议，宿主按本例的默认回退策略拒绝执行。",
+      status: "超时，默认拒绝",
+    },
+  };
   const gates = [
     { ev: "telegram inbound", kind: "user", text: "已获通道访问权限的发送者发来消息。会话路由定位目标会话，再准入 run。" },
-    { ev: "agent → dangerous exec proposal", kind: "model", text: "模型只提出动作；真正进入实现体前必须通过统一工具策略壳。" },
+    { ev: "agent → exec proposal", kind: "model", text: "模型提出命令。工具执行入口先按本轮权限检查，并运行相关钩子。" },
     { ev: "approval policy evaluates", kind: "sys", text: "此例的宿主 exec 策略要求人审，审批管理器登记请求。若超时，默认拒绝。" },
     { ev: "forward → user channel", kind: "sys", text: "此例已配置 Telegram 审批目标，并有授权审批人。" },
-    { ev: "await authorized decision", kind: "warn", text: "请模拟授权人在 Telegram 批复，选择「✓ 批复执行」或「✗ 批复拒绝」。" },
+    { ev: "await authorized decision", kind: "warn", text: "现在可以模拟批准、拒绝或等待超时。" },
     { ev: "resolution → execute / block", kind: "sys", text: "决议回注，闸门开或关。" },
   ];
   let cursor = 0;
-  let decided: string | null = null;
+  let decided: keyof typeof resolutions | null = null;
   const draw = () => {
     steps.forEach((item, i) => { item.classList.toggle("is-now", i === cursor); item.classList.toggle("is-done", i < cursor); });
   };
@@ -385,24 +416,23 @@ function initApprovalGates(): void {
     if (cursor >= gates.length - 2) { log?.insertAdjacentHTML("beforeend", `<span class="ev"><span class="k-warn">停在 G5：批复未回，链不会自己走完。</span></span>`); return; }
     emit(cursor, gates[cursor].text);
     cursor += 1;
-    if (cursor === 4) { emit(4, gates[4].text); cursor = 4; }
+    if (cursor === 4) emit(4, gates[4].text);
     draw();
-    if (note) note.textContent = cursor === 4 ? "审批待授权人决定。点 ✓ 或 ✗ 给出批复。" : gates[Math.min(cursor, 3)].text;
+    if (note) note.textContent = cursor === 4 ? "等待授权人决议。请选择批准、拒绝或超时。" : gates[Math.min(cursor, 3)].text;
     if (status) status.textContent = `闸门 ${Math.min(cursor + 1, 6)}/6 · ${cursor === 4 ? "等待批复" : "推进中"}`;
     led?.classList.add("is-run");
     led?.classList.remove("is-done", "is-halt");
   };
-  const verdict = (kind: "allow" | "deny") => {
+  const verdict = (kind: keyof typeof resolutions) => {
     if (decided !== null) return;
     if (cursor < 4) { log?.insertAdjacentHTML("beforeend", `<span class="ev"><span class="k-warn">链还没走到 G5（审批转发进频道），先点「下一闸门」。</span></span>`); return; }
     decided = kind;
     cursor = 5;
-    emit(5, kind === "allow"
-      ? "批复 ✓：按当前策略和请求绑定复核后尝试执行，实际结果记进转录。"
-      : "批复 ✗：宿主拒绝执行，工具结果携带失败原因。");
+    const resolution = resolutions[kind];
+    emit(5, resolution.trace);
     steps.forEach((item, i) => { item.classList.toggle("is-done", i <= 4); item.classList.toggle("is-now", i === 5); });
-    if (note) note.textContent = kind === "allow" ? "闸门全开：危险的不是 shell 本身，是没有裁决的 shell。" : "闸门落下：拒绝也是回注进 loop 的一等公民，模型会换路或认输。";
-    if (status) status.textContent = kind === "allow" ? "闸门 6/6 · 已放行" : "闸门 6/6 · 已拒绝";
+    if (note) note.textContent = resolution.note;
+    if (status) status.textContent = `闸门 6/6 · ${resolution.status}`;
     led?.classList.remove("is-run");
     led?.classList.add(kind === "allow" ? "is-done" : "is-halt");
     qsa<HTMLButtonElement>(root, "[data-verdict]").forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate.dataset.verdict === kind)));
@@ -411,7 +441,7 @@ function initApprovalGates(): void {
     cursor = 0; decided = null;
     if (log) log.innerHTML = "";
     steps.forEach((item) => item.classList.remove("is-now", "is-done"));
-    if (note) note.textContent = "一条危险命令提案，逐闸门点过去，看它在哪一步被谁裁决。";
+    if (note) note.textContent = "本例使用 Telegram 互动审批和默认拒绝回退。推进到等待决议后，比较批准、拒绝和超时。";
     if (status) status.textContent = "闸门 0/6 · idle";
     led?.classList.remove("is-run", "is-done", "is-halt");
     // 不碰 [data-reset]：它自己的 150ms 脉冲会被这里的同步清除杀掉
@@ -423,7 +453,10 @@ function initApprovalGates(): void {
     window.setTimeout(() => button.setAttribute("aria-pressed", "false"), 150);
     advance();
   });
-  qsa<HTMLButtonElement>(root, "[data-verdict]").forEach((button) => button.addEventListener("click", () => verdict(button.dataset.verdict === "deny" ? "deny" : "allow")));
+  qsa<HTMLButtonElement>(root, "[data-verdict]").forEach((button) => button.addEventListener("click", () => {
+    const decision = button.dataset.verdict;
+    if (decision === "allow" || decision === "deny" || decision === "timeout") verdict(decision);
+  }));
   qs<HTMLButtonElement>(root, "[data-reset]")?.addEventListener("click", (event) => {
     const button = event.currentTarget as HTMLButtonElement;
     button.setAttribute("aria-pressed", "true");
@@ -433,57 +466,40 @@ function initApprovalGates(): void {
   draw();
 }
 
-type MemoryProjection = { title: string; status: string; rows: Array<[string, string]>; parts: number; tables: number; chars: string };
 function initMemoryResume(): void {
   const root = document.querySelector("#oclaw-memory");
   if (!root) return;
   const detail = qs<HTMLElement>(root, "[data-detail]");
   const status = qs<HTMLElement>(root, "[data-status]");
+  const eventLabels: Record<string, string> = {
+    chat: "通道新消息",
+    heartbeat: "巡检作业",
+    dream: "记忆整理后的新消息",
+  };
+  const eventNotes: Record<string, string> = {
+    chat: "新通道消息在空闲会话开启一轮。常驻意图只在符合条件且命中时才注入。",
+    heartbeat: "启用的默认巡检使用自己的作业 prompt，等主会话空闲后执行。",
+    dream: "本轮由新消息触发，检索可以找到已晋升且完成索引的内容。",
+  };
   let carrier = "";
   let wake = "";
-  const wakeRow: Record<string, [string, string]> = {
-    chat: ["本次点火", "用户消息开启 run；standing intent 只有匹配成功才追加到当前 prompt"],
-    heartbeat: ["本次点火", "启用的 Proactive check 读取作业 prompt 与 scratch，满足空闲条件后执行。"],
-    dream: ["本次点火", "夜间记忆晋升完成后的第一次醒来：检索语料已包含新晋升的耐久事实"],
-  };
+
   const render = () => {
     if (!carrier || !wake || !detail) return;
-    const rows: Array<[string, string]> = [
-      ["人格与规则", "工作区规则、用户偏好与长期记忆在预算内装配；超限时会给出截断提示"],
-    ];
-    let tables = 0;
-    let chars = "";
-    if (carrier === "sqlite") {
-      rows.push(
-        ["账本事实", "会话记录和已提交的转录事件提供事实。重启还要检查持久 run 身份与未决副作用。"],
-        ["检索索引", "全文与向量索引共同提供候选，再经去冗余和时间衰减排序"],
-        ["常驻意图", "意图记录自带冷却、触发次数和过期状态，避免永久反复插入"],
-        ["全局审计", "关键控制动作进入独立审计事件面，不依赖聊天文字猜测"],
-      );
-      tables = 5;
-      chars = "注入按需";
-    } else {
-      rows.push(
-        ["文件上下文", "工作区规则与记忆按启动策略装配。示例日记预载默认近 2 天。"],
-        ["字符预算", "默认日记预载每份 1,200 字符、总计 2,800 字符，完整文件可按需读取。"],
-        ["边界", "日记文件提供提示词材料，会话进度由持久转录记录。"],
-      );
-      tables = 0;
-      chars = "≤2800 字符";
-    }
-    rows.push(wakeRow[wake]);
-    const projection: MemoryProjection = {
-      title: `${carrier === "sqlite" ? "会话账本（SQLite 示例）" : "文件记忆"} × ${wake === "chat" ? "通道消息" : wake === "heartbeat" ? "Proactive check" : "dreaming 之后"}`,
-      status: "唤醒 = 新 run：旧预算零消耗",
-      rows, parts: rows.length, tables, chars,
-    };
-    detail.innerHTML = `<span class="label-mono">RESUME PROJECTION</span><h3>${projection.title}</h3><div class="stage-note">${projection.rows.map(([term, value]) => `<span><strong>${term}</strong>　${value}</span>`).join("")}</div>`;
-    if (status) status.textContent = projection.status;
-    const set = (selector: string, value: string | number) => { const el = qs<HTMLElement>(root, selector); if (el) el.textContent = String(value); };
-    set("[data-parts]", projection.parts);
-    set("[data-tables]", projection.tables);
-    set("[data-chars]", projection.chars);
-    set("[data-budget]", 0);
+    const transcript = carrier === "sqlite";
+    const rows = transcript
+      ? [
+          ["进度", "从已提交的转录事件还原选中的会话分支。"],
+          ["恢复", "崩溃后还要检查持久运行标记、恢复范围和缺失回执。"],
+        ]
+      : [
+          ["日记预载", "此例采用近 2 天，每份最多 1,200 字符，总计 2,800 字符。"],
+          ["按需检索", "用关键词和向量查找长期记忆，再读取真正相关的段落。"],
+        ];
+    rows.push(["本轮输入", eventNotes[wake]]);
+    const title = transcript ? "会话转录" : "工作区记忆";
+    detail.innerHTML = `<span class="label-mono">输入与证据</span><h3>${title}</h3><div class="stage-note">${rows.map(([term, value]) => `<span><strong>${term}</strong>　${value}</span>`).join("")}</div>`;
+    if (status) status.textContent = eventLabels[wake];
   };
   qsa<HTMLButtonElement>(root, "[data-carrier] [data-v]").forEach((button) => button.addEventListener("click", () => {
     carrier = button.dataset.v ?? "";
@@ -526,15 +542,15 @@ function boot(): void {
   initApprovalGates();
   initMemoryResume();
   initSurface("#oclaw-surface", {
-    telegram: [["协议角色", "Gateway 宿主侧通道扩展（grammY）"], ["消息进出", "inbound debounce → 会话路由 → run；outbound 走通道插件"], ["审批与交互", "已配置的审批目标可由授权人批复"], ["断线语义", "Gateway 在则助理在“睡”，run 仍由唤醒驱动"]],
-    discord: [["协议角色", "Gateway 通道扩展"], ["消息进出", "会话路由与通道输出使用对应集成"], ["审批与交互", "在支持且按配置可达的审批面批复"], ["断线语义", "同左：断的是通道，不是内核"]],
+    telegram: [["协议角色", "Gateway 宿主侧通道扩展（grammY）"], ["消息进出", "inbound debounce → 会话路由 → run；outbound 走通道插件"], ["审批与交互", "已配置的审批目标可由授权人批复"], ["断线语义", "Telegram 连接中断会影响这条通道的收发，可从 Gateway 核对会话状态。"]],
+    discord: [["协议角色", "Gateway 通道扩展"], ["消息进出", "会话路由与通道输出使用对应集成"], ["审批与交互", "在支持且按配置可达的审批面批复"], ["断线语义", "查看 Discord 入站与出站状态，再查 Gateway 中的会话。"]],
     ui: [["协议角色", "Gateway 的 WebSocket 客户端"], ["消息进出", "聊天与历史通过统一协议读写"], ["审批与交互", "审批面板 + ask_user 回答框"], ["断线语义", "纯客户端，断线不应删除 Gateway 持久状态"]],
-    cli: [["协议角色", "WS 客户端"], ["消息进出", "同左，TUI 渲染器复用会话工具"], ["审批与交互", "交互式提示"], ["断线语义", "同左：持久会话可在 Gateway 重连后继续查看"]],
+    cli: [["协议角色", "可连接 Gateway，或用本地内置后端"], ["消息进出", "Gateway 模式读取目标会话，回发聊天通道需单独开启"], ["审批与交互", "查看待审批需相应 operator 作用域"], ["断线语义", "重连后核对 Gateway 身份、会话 ID 和历史"]],
     macos: [["协议角色", "WS 客户端（control-plane）"], ["消息进出", "同左 + canvas.* 部件命令"], ["审批与交互", "系统通知 + 审批"], ["断线语义", "node 配对重连（device pairing store）"]],
   });
   initChoiceDetail("#oclaw-atlas", {
-    silent: { title: "先分清死亡与长眠", body: "跨天存活本来就靠“不跑”实现：有界 run 结束后落盘等待。先验证 Gateway 是否在线、精确定时是否进入待执行队列，再看 Proactive check 作业是否启用，是否进入允许时段或在等会话空闲。", status: "先查唤醒" },
-    expensive: { title: "先找正在计费的预算主人", body: "区分单请求重试、run 内 recovery、跨 run 探测与凭证冷却；再检查副作用证据。外层连续计数遇到完整模型响应会回到 1。", status: "先分账" },
+    silent: { title: "核对 Gateway 和到期作业", body: "确认 Gateway 在线，再查作业是否启用、是否已经到期，以及是否在等主会话空闲。上一次运行的结果与下一次调度分别核对。", status: "先查唤醒" },
+    expensive: { title: "确认哪些重试消耗了预算", body: "区分单请求重试、run 内 recovery、跨 run 探测与凭证冷却；再检查副作用证据。外层连续计数遇到完整模型响应会回到 1。", status: "先分账" },
     dreaming: { title: "记忆晋升与手工内容要分开看", body: "夜间任务会把满足分数、召回次数、查询多样性和时效门槛的碎片晋升；回收器只删除能确认由系统生成的自动分节。", status: "先看来源" },
     loopy: { title: "检查同名同参是否连续重复", body: "重复守卫默认开启。连续同名同参第 3 次提示，第 20 次执行前拦截。换调用或新用户输入重置连击，声明可重复的轮询豁免。", status: "查看 tool_repeat_limit" },
   });

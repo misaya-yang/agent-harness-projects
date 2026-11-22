@@ -42,7 +42,7 @@ function boot(): void {
 }
 
 /* ------------------------------------------------------------------
- * 以下三台教学机器（cx-*）为本页专属，接线保留在入口文件、不进共享模块。
+ * 以下四个 cx-* 实验由 Codex 课程初始化。
  * 全部纯点击驱动，不使用任何定时器。
  * ------------------------------------------------------------------ */
 
@@ -69,31 +69,31 @@ function syncPressed(scope: Element | null | undefined, current: string): void {
 const CX_PROMPT_LAYERS: Record<string, { title: string; role: string; wire: string; boundary: string }> = {
   base: {
     title: "Base Instructions",
-    role: "会话级行为基线与模型指令。它独立于普通对话历史，不应被误画成一条用户消息。",
+    role: "会话级行为基线。通常作为请求的基础指令提供；启用增量目录时，请求采用另一种布局。",
     wire: "request.instructions / BaseInstructions",
     boundary: "会话配置或明确的模型设置改变；普通 compaction 不把它折进摘要。",
   },
   dynamic: {
     title: "Dynamic Context",
-    role: "AGENTS.md、环境、权限、时间与扩展贡献的具名 World State 区块，按 Known / Unknown 前态做差分或全量重注入。",
+    role: "将项目指令、环境、权限和扩展状态按区块组装。若知道上次模型看到了什么，可只注入变化。",
     wire: "request.input[] · contextual fragments",
-    boundary: "每个 step 重新捕获；本 step 中途变化到下一 step 才生效。",
+    boundary: "看更新入口的作用域。已开始的采样可沿用捕获时的环境选择。",
   },
   history: {
     title: "Active History",
     role: "用户消息、模型输出、工具调用与回执的当前工作集，由完整 transcript 或最新 compaction checkpoint 派生。",
     wire: "request.input[] · normalized history",
-    boundary: "工具回注、steer、rollback 或 compaction 会改变；不是完整 rollout 的逐轮重放。",
+    boundary: "已消费的 steer、工具回注和新压缩检查点会更新工作集；分页线程 revert 后按保留历史重建。",
   },
   tools: {
     title: "Tool Specs",
-    role: "本 step 可见工具的结构化 schema；MCP 与延迟发现工具按 exposure 进入，不属于保留用户消息预算。",
+    role: "本步工具定义作为结构化字段。延迟工具先登记，发现后才向模型公布；启用增量目录时也可能通过输入更新。",
     wire: "request.tools[]",
-    boundary: "ToolRouter 随 step 重建；工具注册变化不会改写旧历史。",
+    boundary: "以本步工具路由暴露的定义为准。旧调用依然保留原调用事实。",
   },
   schema: {
     title: "Output Schema",
-    role: "需要结构化结果时约束本次模型输出；它控制出口形状，不是长期记忆或安全策略。",
+    role: "需要结构化结果时，指定本次模型响应应返回的形状。",
     wire: "request.text.format / output_schema",
     boundary: "只作用于对应请求；Guardian 等专用会话可能选择自由文本或不同 schema。",
   },
@@ -135,8 +135,8 @@ interface ToolStage {
 const CX_TOOL_STAGES: ToolStage[] = [
   {
     title: "发现",
-    note: "注册表保存全部能力，但模型只看到当前 step 的可见集。直接、延迟、仅模型、仅 code mode 与隐藏等暴露档决定工具何时、以何种方式出现。",
-    trace: "发现：内建 + MCP + 动态工具 → 按 exposure 生成本 step 可见集",
+    note: "注册表可包含未向当前模型公布的工具。定义可能直接发出、在搜索后公布、仅供 Code Mode 嵌套调用或留作内部派发。",
+    trace: "从已注册工具中形成本步可见定义",
     log: ["k-sys", "step snapshot → 已生成当前可见工具集"],
   },
   {
@@ -147,13 +147,13 @@ const CX_TOOL_STAGES: ToolStage[] = [
   },
   {
     title: "授权",
-    note: "命令规则先分类，再结合审批策略和权限画像决定放行、请示或拒绝。Granular 中被关闭的询问类别会自动拒绝，不再打扰用户。",
+    note: "命令规则先分类，再结合审批策略和有效权限判断。此处选择在工作区内跑离线测试，规则允许在当前沙箱里尝试。",
     trace: "授权：规则分类 → 审批策略 → 权限画像 → 放行 / 请示 / 拒绝",
-    log: ["k-user", "approval decision → 需要明确授权"],
+    log: ["k-user", "示例规则未要求请示 → 在现有权限内运行"],
   },
   {
     title: "执行",
-    note: "命令进入实际执行宿主的系统沙箱；本地、云端与远程环境的强制者不同，但都要采集标准输出、标准错误与退出状态。",
+    note: "执行宿主按有效权限选择执行方式，并记录输出和退出状态。离线测试示例以退出 0 结束。",
     trace: "执行：宿主应用权限边界 → 启动 → 采集输出与退出状态",
     log: ["k-tool", "execution boundary applied → exit 0"],
   },
@@ -172,7 +172,7 @@ const CX_TOOL_STAGES: ToolStage[] = [
 ];
 
 const CX_TOOLS_IDLE_NOTE =
-  "以一次 cargo test 调用为例：沿六个检查点逐段前进，右侧同步留下该段 trace。";
+  "逐步检查一次工作区内的离线测试。对照命令输出、客户端 Item 和模型收到的工具结果。";
 
 function initCxToolPipeline(root: HTMLElement | null): void {
   if (!root) return;
@@ -272,32 +272,33 @@ function initCxMultiAgent(root: HTMLElement | null): void {
       verdict = { tag: "留在主线", cls: "ask", desc: "这项工作阻塞下一步判断，委派只会增加等待与交接成本。" };
       steps.push("任务依赖主线当前结论 → 不 spawn");
     } else if (task === "shared-write") {
-      verdict = { tag: "写集冲突", cls: "deny", desc: "并行代理共享文件系统；没有明确所有权时不要同时修改同一写集。" };
+      verdict = { tag: "写集冲突", cls: "deny", desc: "本例的代理共享同一工作目录。分配文件所有权，或拆为只读调查和单人写入，才能避免相互覆盖。" };
       steps.push("共享写集没有唯一 owner → 拒绝并行编辑");
     } else {
       verdict = { tag: "适合委派", cls: "ok", desc: "独立、有界、可用一段最终答案回传的任务适合子代理。" };
       steps.push("独立子问题 → spawn_agent");
     }
-    steps.push(
-      fork === "none"
-        ? "fork_turns=none → 任务描述必须自包含"
-        : fork === "2"
-          ? "兼容旧值 fork_turns=2 → 按 all 处理，继承筛选后的全部父历史"
-          : "fork_turns=all → 继承筛选后的全部父历史",
-    );
-    steps.push(
-      delivery === "wake"
-        ? "followup_task → 消息排队，目标空闲时触发新 Turn"
-        : "send_message → 只排队，不主动唤醒目标",
-    );
-    steps.push(
-      target === "busy"
-        ? "目标 busy → 在消息边界或当前工具完成后接收"
-        : target === "evicted"
-          ? "目标 evicted → 校验属主与权限后从 rollout 重载"
-          : "目标 idle → 是否启动由 delivery mode 决定",
-    );
-
+    if (task === "independent") {
+      steps.push(
+        fork === "none"
+          ? "fork_turns=none。为子任务提供自包含的说明。"
+          : fork === "2"
+            ? "旧值 fork_turns=2 按 all 处理，继承经过筛选的父历史。"
+            : "fork_turns=all。继承经过筛选的父历史。",
+      );
+      steps.push(delivery === "wake"
+        ? "followup_task 请求目标执行后续任务。"
+        : "send_message 将消息排队。");
+      if (target === "evicted") {
+        steps.push(delivery === "wake"
+          ? "目标已从本地卸载。唤醒路径先尝试按属主及权限恢复，再交付任务。"
+          : "目标已从本地卸载。此路径可以保留来信，等下一次加载再处理。");
+      } else if (target === "busy") {
+        steps.push("目标有活动 Turn。输入在运行中的可交付边界被处理。");
+      } else {
+        steps.push(delivery === "wake" ? "目标空闲，可启动新 Turn。" : "目标空闲，消息等后续工作时处理。");
+      }
+    }
     if (status) status.textContent = `${task} · fork ${fork} · ${delivery} · ${target}`;
     if (cmdLine)
       cmdLine.textContent = task === "independent" ? `spawn_agent({ fork_turns: "${fork}" })` : "continue locally";
@@ -383,7 +384,7 @@ const CX_SCENARIOS: CxScenario[] = [
       "用户配置层 → User · 20",
       "MDM 下发偏好 → Mdm · 0",
     ],
-    why: "普通 Mdm 层（0）压不过用户与项目层——它只是偏好下发通道；合规锁在 managed config（40 / 50）。",
+    why: "题设中的 MDM 是普通偏好层，可信项目在这三层中优先级最高。另有受管配置和单独校验的企业 requirements。",
   },
   {
     conflict: "approval_policy = ?　共享受管机器",
@@ -399,7 +400,7 @@ const CX_SCENARIOS: CxScenario[] = [
       "托管配置文件 → LegacyManagedConfigTomlFromFile · 40",
       "-c approval_policy=never → SessionFlags · 30",
     ],
-    why: "企业合规层在阶梯顶端，50 > 40 > 30。共享机器上命令行赢不过推送的合规配置——把个人机的 -c 直觉搬过去，就是最常见的误判。",
+    why: "题设三个普通层里，旧式 MDM 托管配置的优先级最高。实际可选值还受企业 requirements 的独立约束。",
   },
   {
     conflict: "AGENTS.md　模型看到的是哪几层？",

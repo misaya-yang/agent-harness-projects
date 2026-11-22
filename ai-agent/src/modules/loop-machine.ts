@@ -33,7 +33,7 @@ const STAGES: Stage[] = [
     node: "context",
     edge: "submit-context",
     title: "组装上下文",
-    note: "内核拼接 base instructions、环境信息、AGENTS.md 与历史记录，构造本轮请求负载。",
+    note: "内核根据基础指令、环境、项目规则和活跃历史构造本步模型请求。",
     log: [
       ["k-sys", "prompt: instructions + world state + history + tools"],
       ["k-warn", "context: 已组装示例请求"],
@@ -43,7 +43,7 @@ const STAGES: Stage[] = [
     node: "model",
     edge: "context-model",
     title: "模型流式响应",
-    note: "模型传输可使用 HTTP 流或 WebSocket。App Server 将可见文本增量映射为 item/agentMessage/delta。",
+    note: "模型侧可以用 HTTP 流或 WebSocket。本例用 HTTP 流，App Server 把可见文本增量映射到客户端 Item。",
     log: [
       ["k-sys", "POST /responses (stream=true)"],
       ["k-model", "◂ 模型返回响应项"],
@@ -66,7 +66,7 @@ const STAGES: Stage[] = [
     title: "审批判定",
     note: "命令规则、审批策略与有效权限共同决定这次调用。示例在工作区内离线测试，规则未要求升级。",
     log: [
-      ["k-warn", "approval=on-request · permissions=:workspace"],
+      ["k-warn", "approval=on-request · 示例工作区写权限"],
       ["k-warn", "该命令未命中请示规则"],
       ["k-user", "在当前边界内启动"],
     ],

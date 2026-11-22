@@ -22,40 +22,40 @@ const courseGroups: Record<string, ModuleGroup[]> = {
     { title: "运行内核", note: "循环、状态与工具如何推进一次任务。", ids: ["loop", "protocol", "tools"] },
     { title: "控制与上下文", note: "副作用、模型输入与平台职责如何分层。", ids: ["safety", "context", "platform"] },
     { title: "连续性系统", note: "恢复、记忆与扩展如何跨时间工作。", ids: ["state", "extensions", "customization"] },
-    { title: "生产治理", note: "多代理、客户端与失败收口。", ids: ["environments", "surfaces", "practice"] },
+    { title: "生产治理", note: "子任务在哪里运行，客户端如何确认成功、取消或失败？", ids: ["environments", "surfaces", "practice"] },
   ],
   grok: [
-    { title: "内核运行", note: "拥有者、循环与协议结束边界。", ids: ["architecture", "turn", "protocol"] },
-    { title: "工具与副作用", note: "工具闸门、工作区和实际权限。", ids: ["tools", "workspace", "safety"] },
+    { title: "内核运行", note: "谁保存会话状态，谁决定继续或停止？", ids: ["architecture", "turn", "protocol"] },
+    { title: "工具与副作用", note: "从一次工具请求追到工作区的实际改动。", ids: ["tools", "workspace", "safety"] },
     { title: "连续性", note: "会话持久化、上下文与记忆。", ids: ["sessions", "context"] },
-    { title: "扩展与协作", note: "能力信任、子任务与结果回流。", ids: ["extensions", "agents"] },
-    { title: "产品化", note: "多承载接入与综合故障判断。", ids: ["surfaces", "practice"] },
+    { title: "扩展与协作", note: "谁可以注册新工具，子任务怎样把结果交回父任务？", ids: ["extensions", "agents"] },
+    { title: "产品化", note: "客户端如何接入，进程中断后从哪里排查？", ids: ["surfaces", "practice"] },
   ],
   deepseek: [
-    { title: "组合与控制", note: "有效插件树决定循环行为。", ids: ["composition", "loop"] },
-    { title: "事实与请求", note: "日志投影与模型请求装配。", ids: ["session", "prompt"] },
-    { title: "工具与执行", note: "派发、能力缝与安全门。", ids: ["tools", "capabilities", "safety"] },
+    { title: "组合与控制", note: "启用的插件如何决定宿主可以执行哪些步骤？", ids: ["composition", "loop"] },
+    { title: "事实与请求", note: "同一段运行记录如何变成下一次模型请求？", ids: ["session", "prompt"] },
+    { title: "工具与执行", note: "工具由哪个组件执行，执行前在哪里检查权限？", ids: ["tools", "capabilities", "safety"] },
     { title: "配置与窗口", note: "作用域、预算和压缩事务。", ids: ["profiles", "context"] },
-    { title: "协作与恢复", note: "子代理、运行表面与实战。", ids: ["extensions", "surfaces", "practice"] },
+    { title: "协作与恢复", note: "子任务、终端和服务端如何共享一次执行？", ids: ["extensions", "surfaces", "practice"] },
   ],
   pi: [
-    { title: "最小内核", note: "状态折叠与回合控制。", ids: ["layers", "state", "loop"] },
-    { title: "输入与工具", note: "队列、Provider 和源序回填。", ids: ["queues", "providers", "tools"] },
+    { title: "最小内核", note: "如何从事件还原状态，并决定下一步是否请求模型？", ids: ["layers", "state", "loop"] },
+    { title: "输入与工具", note: "新输入何时送达，工具结果怎样按调用顺序写回？", ids: ["queues", "providers", "tools"] },
     { title: "持久上下文", note: "分支会话与模型窗口。", ids: ["sessions", "compaction"] },
     { title: "扩展与表面", note: "扩展权限、TUI 与协议接入。", ids: ["extensions", "tui", "protocol"] },
     { title: "工程判断", note: "从事故反推实现边界。", ids: ["practice"] },
   ],
   opencode: [
-    { title: "循环与宿主", note: "退出判据、共享服务与状态投影。", ids: ["loop", "server", "projection"] },
+    { title: "循环与宿主", note: "从请求入队追到模型步骤完成，再看状态如何留存。", ids: ["loop", "server", "projection"] },
     { title: "工具与指令", note: "工具视图、审批和提示词。", ids: ["tools", "permission", "system"] },
     { title: "长会话与协作", note: "压缩和子会话的取舍。", ids: ["compaction", "subagent"] },
     { title: "资源治理", note: "模型、扩展和预算控制。", ids: ["models", "extensions", "governance"] },
     { title: "工程判断", note: "从持久状态定位失败。", ids: ["practice"] },
   ],
   openclaw: [
-    { title: "控制与状态", note: "循环所有权、插话和进程恢复。", ids: ["loop-stack", "settle", "state"] },
+    { title: "控制与状态", note: "运行中插话和进程重启时，同一会话由谁接手？", ids: ["loop-stack", "settle", "state"] },
     { title: "长期运行", note: "记忆、唤醒和重试预算。", ids: ["memory", "wake", "budget"] },
-    { title: "上下文与工具", note: "压缩和副作用提交边界。", ids: ["compaction", "tools"] },
+    { title: "上下文与工具", note: "历史何时压缩，工具的实际效果何时可以确认？", ids: ["compaction", "tools"] },
     { title: "网关与防线", note: "多客户端接入与权限分层。", ids: ["gateway", "approval"] },
     { title: "协作与诊断", note: "异步子任务与综合排障。", ids: ["soul", "practice"] },
   ],
@@ -64,7 +64,7 @@ const courseGroups: Record<string, ModuleGroup[]> = {
     { title: "执行与状态", note: "后端、转录与学习闭环。", ids: ["environments", "state", "learning"] },
     { title: "扩展与窗口", note: "扩展权力、缓存和压缩。", ids: ["skills", "compaction"] },
     { title: "宿主与投递", note: "多客户端和后台消息回流。", ids: ["gateway", "cron", "surfaces"] },
-    { title: "工程判断", note: "按失败拥有者选择恢复动作。", ids: ["practice"] },
+    { title: "工程判断", note: "从已保存的回合状态判断由谁恢复、何时可以重试。", ids: ["practice"] },
   ],
 };
 
@@ -97,8 +97,8 @@ function buildCourseMap(chapters: Chapter[], courseId: string): HTMLElement {
   map.innerHTML = `
     <header class="reader-map-head">
       <span class="label-mono">PROJECT CASE · ${structure}</span>
-      <h2 id="reader-map-title">选择一个模块，带着工程问题读源码设计。</h2>
-      <p>按顺序建立系统模型，或从当前遇到的故障进入。每个模块都要能解释机制、验证状态，并迁移到自己的 Agent。</p>
+      <h2 id="reader-map-title">本课学习目录</h2>
+      <p>可以按顺序阅读，也可以从最接近当前问题的一章开始。</p>
     </header>`;
   groups.forEach((group) => {
     const members = group.ids.map((id) => chapters.find((chapter) => chapter.id === id)).filter((chapter): chapter is Chapter => Boolean(chapter));
@@ -199,7 +199,12 @@ export function initChapterReader(): void {
   });
 
   const indexFromHash = (): { index: number; target?: HTMLElement } => {
-    const requestedId = decodeURIComponent(location.hash.slice(1)) || "top";
+    let requestedId: string;
+    try {
+      requestedId = decodeURIComponent(location.hash.slice(1)) || "top";
+    } catch {
+      return { index: 0 };
+    }
     const id = requestedId === "kernel-atlas" ? "reader-map" : requestedId;
     const direct = chapters.findIndex((chapter) => chapter.id === id);
     if (direct >= 0) return { index: direct };
@@ -279,6 +284,7 @@ export function initChapterReader(): void {
   };
 
   document.addEventListener("click", (event) => {
+    if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
     const link = (event.target as Element | null)?.closest<HTMLAnchorElement>('a[href^="#"]');
     if (!link) return;
     const requestedId = link.getAttribute("href")?.slice(1);

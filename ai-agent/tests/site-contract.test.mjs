@@ -1,5 +1,8 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import os from "node:os";
+import { execFileSync } from "node:child_process";
+import { pathToFileURL } from "node:url";
 import path from "node:path";
 import { describe, it } from "node:test";
 
@@ -138,5 +141,40 @@ describe("independent Agent site", () => {
       assert.ok(revision && read(page).includes(revision), page);
     }
     assert.equal((home.match(/data-step-key=/g) ?? []).length, 3);
+  });
+});
+
+describe("reviewed teaching paths", () => {
+  it("links from every named comparison to its project chapter", () => {
+    const names = { Codex: "codex", Grok: "grok", DeepSeek: "deepseek", Pi: "pi", OpenCode: "opencode", OpenClaw: "openclaw", Hermes: "hermes" };
+    const topics = [...read("index.html").matchAll(/<details class="atlas-topic" id="([^"]+)"[\s\S]*?<p class="topic-contrast">([\s\S]*?)<\/p>[\s\S]*?<div class="topic-links">([\s\S]*?)<\/div>/g)];
+    assert.equal(topics.length, 10);
+    for (const [, topic, contrast, links] of topics) {
+      for (const [name, route] of Object.entries(names)) {
+        if (contrast.includes(name)) assert.ok(links.includes(`href="/${route}#`), `${topic} needs its ${name} evidence`);
+      }
+    }
+  });
+
+  it("resolves shared Sites course URLs with trailing slashes", async (t) => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "atlas-route-"));
+    t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+    fs.mkdirSync(path.join(dir, "scripts"));
+    fs.mkdirSync(path.join(dir, "dist/server"), { recursive: true });
+    const script = path.join(dir, "scripts/embed-worker.mjs");
+    fs.copyFileSync(path.join(root, "scripts/embed-worker.mjs"), script);
+    fs.writeFileSync(path.join(dir, "package.json"), '{"type":"module"}');
+    for (const page of pages) fs.writeFileSync(path.join(dir, "dist", page), page);
+    execFileSync(process.execPath, [script]);
+    const { default: worker } = await import(pathToFileURL(path.join(dir, "dist/server/index.js")).href);
+    for (const page of pages) {
+      const canonical = "https://example.org/" + page.replace(".html", "") + "?from=course";
+      const request = canonical.replace("?", "/?");
+      const redirect = await worker.fetch(new Request(request));
+      assert.equal(redirect.status, 308);
+      assert.equal(redirect.headers.get("location"), canonical);
+      assert.equal(await (await worker.fetch(new Request(canonical))).text(), page);
+    }
+    assert.equal((await worker.fetch(new Request("https://example.org/unknown/"))).status, 404);
   });
 });

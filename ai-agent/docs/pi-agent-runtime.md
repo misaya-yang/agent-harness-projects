@@ -76,7 +76,7 @@ agentLoop.runLoop ── transformContext ── convertToLlm
 
 用 faux provider 返回一个固定文本；在 `Agent.state.messages` 中插入一条 `review_status`，在 `convertToLlm` 内记录收到的消息角色。
 
-预期观察：Agent state/transcript 仍包含 status；provider context 只收到标准 Message 角色。若可在 `transformContext` 返回新数组做裁剪，或在 `convertToLlm` 过滤 UI-only 角色；避免原地改动消息对象。
+预期观察：Agent state/transcript 仍包含 status；provider context 只收到标准 Message 角色。用 `transformContext` 返回新的裁剪列表，或在 `convertToLlm` 中过滤 UI-only 角色，保留原始消息作为对照。
 
 ### 推断与简化
 
@@ -101,9 +101,9 @@ agentLoop.runLoop ── transformContext ── convertToLlm
 
 | 状态 | 谁写入 | 何时可观察 |
 |---|---|---|
-| `messages` | `processEvents(message_end)` 追加 | 消息完成事件之后 |
+| `messages` | `processEvents(message_end)` 追加 | Agent 开始通知 `message_end` 监听器时 |
 | `streamingMessage` | `message_start/update` 设置，`message_end/agent_end` 清理 | provider stream 期间 |
-| `pendingToolCalls` | `tool_execution_start/end` 增删 | 工具执行期间 |
+| `pendingToolCalls` | `tool_execution_start/end` 增删 | 参数校验到结果确定之间。工具体可能尚未运行 |
 | `errorMessage` | `processEvents(turn_end)` 读取 assistant `errorMessage` | 最近失败回合后 |
 | queues | `steer/followUp` 入队，loop 的 getter drain | 下一次 queue drain point |
 
@@ -115,7 +115,7 @@ agentLoop.runLoop ── transformContext ── convertToLlm
 
 ### 推断
 
-`Agent` 是 runtime ownership 层：low-level loop 产生事件和返回 `newMessages`，但只有 `Agent.processEvents` 同时维护 public state、listener barrier 和 abort signal。不要在应用层另造一份“当前 assistant message”作为事实来源。
+如果你在 `message_end` 监听器里读到最终助手消息，Agent 内存已更新。Coding Agent 的会话壳先转发该事件，之后才追加 JSONL 会话条目。若刚收到事件就查文件，可能读得太早。源码见 `packages/coding-agent/src/core/agent-session.ts::_handleAgentEvent`。
 
 ## 第三章：prompt、continue、steer、follow-up、abort
 
@@ -133,12 +133,12 @@ agentLoop.runLoop ── transformContext ── convertToLlm
 
 - steer() 入 steering queue；followUp() 入 follow-up queue：packages/agent/src/agent.ts:steer, followUp。
 - runLoop 在起始和每个完成 turn 后调用 getSteeringMessages；只有工具全部处理完后才会进入该 drain point：packages/agent/src/agent-loop.ts:runLoop（pendingMessages, getSteeringMessages）。
-- 当没有更多 tool call/steering 时，外层 loop 才调用 getFollowUpMessages；follow-up 存在就作为下一 turn 的 pending message：packages/agent/src/agent-loop.ts:runLoop（follow-up branch）。
+- 当循环已经无需根据工具结果续跑且没有 steering，才调用 getFollowUpMessages。非空工具批次默认要求再向模型请求，整批要求 terminate 或宿主显式决定结束时另行处理：packages/agent/src/agent-loop.ts:runLoop（follow-up branch）。
 - queue mode 是 all 或 one-at-a-time，由 PendingMessageQueue.drain 实现：packages/agent/src/types.ts:QueueMode, packages/agent/src/agent.ts:PendingMessageQueue。
 
 ### 实现事实：abort 与失败
 
-- Agent.abort() 只 pull 当前 AbortController；tool/provider 是否及时停止取决于它们是否尊重 signal：packages/agent/src/agent.ts:abort。
+- Agent.abort() 触发当前 AbortController。工具和模型 Provider 负责及时响应 signal，外部效果可能已经发生：packages/agent/src/agent.ts:abort。
 - streamAssistantResponse 把 provider stream 的 error/aborted assistant 返回给 loop；loop 发 turn_end 和 agent_end 后结束，不自动继续：packages/agent/src/agent-loop.ts:streamAssistantResponse, runLoop。
 - 如果 loop 本身抛异常，runWithLifecycle 的 handleRunFailure 构造一个空 assistant failure message，并发出 message_start/end → turn_end → agent_end：packages/agent/src/agent.ts:handleRunFailure。这与正常 provider error event 是两条不同路径。
 
@@ -146,11 +146,11 @@ agentLoop.runLoop ── transformContext ── convertToLlm
 
 让 faux provider 第一个响应请求一个短工具，并让工具延迟；工具开始后调用 steer("缩小范围")，同时调用 followUp("最后再给摘要")。
 
-预期顺序：当前 tool 仍完成；steer message 在下一次 assistant 请求前注入；若 steer 产生的回合最终无 tool，才检查 follow-up。把两条队列各入多条消息，先用 all，再改用 one-at-a-time，比较一次 drain 的消息数量。
+预期是工具先结算，下一次模型请求带入 steer，follow-up 仍排队。重做时只排 follow-up，工具批次结算后仍会先请求模型解释结果。等模型给出无需继续的答复，再观察 follow-up 出队。把两条队列各入多条消息，比较 all 与 one-at-a-time 的出队数量。
 
 ### 教学简化
 
-调用 `agent.abort()` 后等待 `waitForIdle()`。若末条已提交消息是 assistant，低层 `continue()` 要求新用户输入等合法入口；它从当前内存 transcript 发起新 run。
+调用 `agent.abort()` 后等待 `waitForIdle()`。若末条已提交消息是 assistant，低层继续入口拒绝直接重发。公开 `Agent.continue()` 可先取已经排队的 steering 或 follow-up，把它当作新输入开始 run。
 
 ## 第四章：stream events 是跨层协议
 
@@ -200,7 +200,7 @@ provider 事件不保证 text、thinking、toolcall block 连续；消费者必�
 
 不用打印完整内容，只记录 { type, contentIndex, toolCallId }。用 faux provider 生成“thinking + tool call + text”的混合 assistant message，断言：
 
-- provider stream 首尾是 start 与 done/error；
+- 成功脚本的流以 start 开始，以 done 结束。启动失败可能直接以 error 收口，随后 Agent 会发一对 message_start/end 表示最终错误消息；
 - agent 在 tool call assistant message_end 后才发 tool execution start；
 - tool result 的 message_start/end 出现在 tool_execution_end 之后；
 - 每个 message_update 都能由 assistantMessageEvent.partial 重建当前 partial。
@@ -221,8 +221,8 @@ provider 事件不保证 text、thinking、toolcall block 连续；消费者必�
 
 ### 并行语义
 
-- parallel 模式先按 source order 完成 preflight，再并发执行工具并处理各自的结果钩子：packages/agent/src/agent-loop.ts:executeToolCallsParallel。
-- tool_execution_end 在各 tool 完成后立即发出；之后 Promise.all 按 source order 生成/发出 toolResult messages：同一 symbol。
+- parallel 模式先按 source order 完成 preflight。参数无效或被阻断的调用可以立即发 end；其余工具体及对应结果钩子并发执行：packages/agent/src/agent-loop.ts:executeToolCallsParallel。
+- 通过预备的工具完成且结果钩子结算后发 tool_execution_end。全部结算后，Promise.all 返回原调用顺序，按该顺序生成并发出 toolResult 消息：同一 symbol。
 - shouldTerminateToolBatch 只有在 batch 非空且每个 finalized result 都 terminate === true 时才关闭工具驱动的自动继续；随后仍检查待处理的队列：packages/agent/src/agent-loop.ts:shouldTerminateToolBatch。
 
 ### 截断与中止安全
@@ -234,7 +234,7 @@ provider 事件不保证 text、thinking、toolcall block 连续；消费者必�
 
 准备 slow_read（延迟长）和 fast_read（延迟短），让 faux provider 一次返回两个 tool calls。记录三种序列：tool_execution_start、tool_execution_end、toolResult message_end。
 
-预期：两个 start 按 assistant source order；end 可能 fast 在前；toolResult message 仍按 source order。把其中一个工具设 executionMode: sequential，应观察整批退化为串行。
+预期是 fast 较早完成，slow 的 toolResult 仍先写入。把其中一个工具设为 sequential，观察整批逐个预备、运行和写入。再让 faux provider 用 length 结束，给两个工具体各加计数器，检查 start/end 事件仍发出、错误结果完整配对，而两个计数器都保持零。
 
 ## 第六章：context transform、tool schemas 与消息重放
 
@@ -246,7 +246,7 @@ provider 事件不保证 text、thinking、toolcall block 连续；消费者必�
 
 - Agent 的 transformContext 合同是输入/输出 AgentMessage[]，用于 prune 或外部上下文注入；不得依赖 provider-specific Message：packages/agent/src/types.ts:AgentLoopConfig.transformContext。
 - convertToLlm 合同是 AgentMessage[] → Message[]，需要过滤或转换 custom messages；实现异常会中断 low-level loop，因此应返回安全 fallback：packages/agent/src/types.ts:AgentLoopConfig.convertToLlm。
-- Pi AI 的 transformMessages 做模型相关的 replay normalization：降级不支持的 image、规范化 tool-call id、跨模型时移除旧模型 thinking，并为孤立 tool calls 补 synthetic tool results：packages/ai/src/api/transform-messages.ts:transformMessages。
+- Pi AI 的 transformMessages 做模型相关的 replay normalization：降级不支持的 image、规范化 tool-call id、跨模型时丢弃原模型的 thinking 块，保留可见的回复文本，并为孤立 tool calls 补 synthetic tool results：packages/ai/src/api/transform-messages.ts:transformMessages。
 - provider adapter 再把统一消息转为 wire format。例如 OpenAI convertMessages 处理 system/developer role、image data URL、tool call id 与 thinking；Anthropic buildParams/convertMessages 处理 system block、tool references、thinking signature、tool_result：packages/ai/src/api/openai-completions.ts:convertMessages, packages/ai/src/api/anthropic-messages.ts:buildParams, convertMessages。
 - Tool 的 parameters 是 TypeBox schema；Agent 在 prepareToolCall 以 validateToolArguments 验证，provider adapter 只负责把 schema 发送给模型：packages/ai/src/types.ts:Tool, packages/agent/src/agent-loop.ts:prepareToolCall。
 
@@ -257,7 +257,7 @@ provider 事件不保证 text、thinking、toolcall block 连续；消费者必�
 构造一条带 thinking、长 tool-call id、image 的 assistant/toolResult history；分别喂给 OpenAI-compatible 与 Anthropic fake adapters 的转换函数（不发网络请求）。观察：
 
 - 目标 model 不支持 image 时会出现 placeholder：transformMessages:downgradeUnsupportedImages；
-- 跨 model 的 thinking 不再假设原 provider signature 可重放；
+- 切换模型后旧 thinking 块被忽略，原来的可见答复仍在；
 - tool-call id 会按目标 API 规则裁剪/规范化，tool result 跟随映射；
 - 孤立 tool call 获得 synthetic error result，而不是把非法 history 直接交给 provider。
 
@@ -284,7 +284,7 @@ provider 事件不保证 text、thinking、toolcall block 连续；消费者必�
 
 ### streamSimple 的意义
 
-SimpleStreamOptions 把 provider-neutral reasoning、toolChoice、thinkingBudgets 等选项放到统一接口；provider-specific stream/complete 仍可接收其 API 的完整 option type：packages/ai/src/types.ts:SimpleStreamOptions, ApiOptionsMap, ApiStreamOptions。
+SimpleStreamOptions 统一 reasoning 档位与 token 预算等常用选项；provider-specific stream/complete 仍可接收其 API 的完整 option type：packages/ai/src/types.ts:SimpleStreamOptions, ApiOptionsMap, ApiStreamOptions。
 
 ### 实验 7：fake provider 的统一接口
 
@@ -329,9 +329,9 @@ AssistantMessage.stopReason 是 pending | stop | length | toolUse | error | abor
 
 ### 三种结束与持久化证据
 
-基础 Agent 在 `processEvents` 折叠公开的内存状态。Coding Agent 持久化 session entry，并对外发 `agent_settled`；这一事件在会话层处理完自动重试、压缩与续跑后发出。RPC 客户端先订阅再发送 prompt，通过 `data.disposition` 判断是否开启 run。源文件为 [Coding Agent 会话壳](https://github.com/earendil-works/pi/blob/9c4652688590abb836b40ebd1e4725ecf9a7c7d1/packages/coding-agent/src/core/agent-session.ts) 和 [RPC 生命周期](https://github.com/earendil-works/pi/blob/9c4652688590abb836b40ebd1e4725ecf9a7c7d1/packages/coding-agent/docs/rpc.md#run-lifecycle)。
+基础 Agent 在 `processEvents` 折叠公开的内存状态。Coding Agent 持久化 session entry，并对外发 `agent_settled`；这一事件在会话层处理完自动重试、压缩与续跑后发出。RPC 客户端先订阅再发送 prompt，通过 `data.disposition` 区分 started、queued 与 handled。handled 只说明这条输入已被消费，无需专门为它等待结算。源文件为 [Coding Agent 会话壳](https://github.com/earendil-works/pi/blob/9c4652688590abb836b40ebd1e4725ecf9a7c7d1/packages/coding-agent/src/core/agent-session.ts) 和 [RPC 生命周期](https://github.com/earendil-works/pi/blob/9c4652688590abb836b40ebd1e4725ecf9a7c7d1/packages/coding-agent/docs/rpc.md#run-lifecycle)。
 
-独立的 `packages/durable` 以原子提交保存 transcript、文档和任务 checkpoint。打开同一存储后调用 `resume()`，调度器从任务的已提交进度恢复；同一个 `requestId` 找回原 submission。任务若会重做外部效果，需要自己的幂等标识。证据见 [Durable 恢复文档](https://github.com/earendil-works/pi/blob/9c4652688590abb836b40ebd1e4725ecf9a7c7d1/packages/durable/README.md#persist-and-resume) 和 [任务恢复测试](https://github.com/earendil-works/pi/blob/9c4652688590abb836b40ebd1e4725ecf9a7c7d1/packages/durable/test/harness-tasks-recovery.test.ts)。
+独立的 `packages/durable` 以原子提交保存 transcript、文档和任务 checkpoint。以等待测试服务回调为例，工具提交 park 后可释放进程，重开同一存储并调用 `resume()` 可继续等信号。同一 conversation 的同一个 `requestId` 找回原 submission。若进程死在工具执行中，只有显式标记 `replay: "safe"` 的工具可以自动重做，其他工具以 interrupted 结束。若工具会重复访问外部服务，仍需幂等标识。证据见 [Durable 恢复文档](https://github.com/earendil-works/pi/blob/9c4652688590abb836b40ebd1e4725ecf9a7c7d1/packages/durable/README.md#persist-and-resume) 和 [任务恢复测试](https://github.com/earendil-works/pi/blob/9c4652688590abb836b40ebd1e4725ecf9a7c7d1/packages/durable/test/harness-tasks-recovery.test.ts)。
 
 ## 结业实现顺序
 

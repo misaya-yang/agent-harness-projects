@@ -151,55 +151,82 @@ function initLoop(): void {
 function initProjection(): void {
   const root = document.querySelector("#oc-projection");
   if (!root) return;
-  const events: Record<string, { name: string; note: string; durable?: true; pending?: number; cost?: number }> = {
+  const events: Record<string, { name: string; note: string; durable?: true; pending?: number }> = {
     enqueued: { name: "session.inbox.enqueued", note: "受理后有待处理 Inbox 行", durable: true },
     delivered: { name: "session.inbox.delivered", note: "同事务消费待处理项并写入用户消息", durable: true },
     delta: { name: "session.text.delta", note: "实时文本片段" },
     ended: { name: "session.text.ended", note: "完整文本进入投影", durable: true },
     asked: { name: "permission.asked", note: "待批项在进程内", pending: 1 },
     replied: { name: "permission.replied", note: "本例仅答复一条 once 审批", pending: -1 },
-    stepfinish: { name: "session.step.ended", note: "写入结算及用量，示意成本加 $0.05", durable: true, cost: 0.05 },
+    stepfinish: { name: "session.step.ended", note: "写入 Step 结算和用量投影", durable: true },
     idle: { name: "session.execution.succeeded", note: "投影显示本次执行达到成功终态", durable: true },
   };
   let durable = 0;
+  let retained = 0;
   let frames = 0;
   let pending = 0;
-  let cost = 0;
+  let logIndex = 0;
+  let retainEvents = false;
+  let connected = true;
   const log = qs<HTMLElement>(root, "[data-log]");
-  const counters = ["[data-sqlite]", "[data-sse]", "[data-pending]", "[data-cost]"].map((name) =>
+  const status = qs<HTMLElement>(root, "[data-status]");
+  const retention = qs<HTMLButtonElement>(root, '[data-event="retention"]');
+  const connection = qs<HTMLButtonElement>(root, '[data-event="connection"]');
+  const counters = ["[data-sqlite]", "[data-retained]", "[data-sse]", "[data-pending]"].map((name) =>
     qs<HTMLElement>(root, name),
   );
-  const render = () => [String(durable), String(frames), String(pending), `$${cost.toFixed(2)}`]
-    .forEach((value, i) => {
+  const render = () => {
+    [durable, retained, frames, pending].forEach((value, i) => {
       const node = counters[i];
-      if (node) node.textContent = value;
+      if (node) node.textContent = String(value);
     });
+    if (status) status.textContent = `${connected ? "SSE 已连接" : "SSE 已断线"} · ${retainEvents ? "留存正文" : "正文留存关闭"}`;
+    retention?.setAttribute("aria-pressed", String(retainEvents));
+    connection?.setAttribute("aria-pressed", String(!connected));
+  };
 
   qsa<HTMLButtonElement>(root, "[data-event]").forEach((button) => button.addEventListener("click", () => {
     const type = button.dataset.event ?? "";
     if (type === "reset") {
       durable = 0;
+      retained = 0;
       frames = 0;
       pending = 0;
-      cost = 0;
+      logIndex = 0;
+      retainEvents = false;
+      connected = true;
       log?.replaceChildren();
+      render();
+      return;
+    }
+    if (type === "retention") {
+      retainEvents = !retainEvents;
+      appendEvent(log, ++logIndex, "服务留存设置", retainEvents ? "后续持久类事件将额外留存正文" : "后续提交仍更新查询投影");
+      render();
+      return;
+    }
+    if (type === "connection") {
+      connected = !connected;
+      const message = connected ? "继续接收新帧，遗漏状态由快照或已留存日志补齐" : "后续帧将被错过，服务器照常处理事件";
+      appendEvent(log, ++logIndex, connected ? "SSE 重连" : "SSE 断线", message);
       render();
       return;
     }
     const event = events[type];
     if (!event) return;
     if (event.pending === -1 && pending === 0) return;
-    durable += event.durable ? 1 : 0;
-    frames += 1;
+    if (event.durable) durable += 1;
+    if (event.durable && retainEvents) retained += 1;
+    if (connected) frames += 1;
     pending += event.pending ?? 0;
-    cost += event.cost ?? 0;
-    appendEvent(log, frames, event.name, event.note);
+    const delivery = connected ? "已收实时帧" : "实时帧遗漏";
+    appendEvent(log, ++logIndex, event.name, `${event.note} · ${delivery}`);
     render();
   }));
 }
 
 function initDecision(): void {
-  initMatrix("#oc-permission", ["perm", "agentgrp", "rulepos", "replygrp"], ({ perm, agentgrp, rulepos, replygrp }) => {
+  initMatrix("#oc-permission", ["perm", "agentgrp", "rulepos", "savedgrp", "replygrp"], ({ perm, agentgrp, rulepos, savedgrp, replygrp }) => {
     const resource = perm === "protected" ? "protected/guide.md" : "docs/guide.md";
     const denied = agentgrp === "deny" && perm === "protected";
     const trace = [`请求 action=edit，resource=${resource}。`];
@@ -210,6 +237,10 @@ function initDecision(): void {
     if (denied) {
       trace.push("Agent 的 protected/* deny 是此资源的最后一条配置匹配。先拒绝，已有项目级保存规则也无法覆盖。");
       return { state: "deny", label: "配置直接拒绝", trace };
+    }
+    if (savedgrp === "allow") {
+      trace.push("无生效的配置 deny，项目保存的 allow 匹配当前资源。本例直接放行。");
+      return { state: "ok", label: "项目历史批准放行", trace };
     }
     trace.push("无匹配，且本例没有已保存的 allow。发布 permission.asked，工具等待 Deferred。");
     if (replygrp === "always") {
@@ -265,7 +296,7 @@ function initTaskLab(): void {
     trace.push(
       "新 child 继承 Location 和显式父会话权限。子代理的后续工具还要按子 agent/session 规则裁决。",
       "先受理子输入，再交给后台 Job；工具迅速返回 child ID。",
-      "子任务完成后报告进入父 Inbox，下一安全边界才进入父历史。",
+      "子任务结算时写入待交付报告，父 Inbox 用通知 ID 受理。下一安全边界才进入父历史。",
     );
     return { state: "ok", label: "启动后台子任务", trace };
   });
@@ -279,7 +310,7 @@ function initAtlas(): void {
   const data: Record<string, [string, string]> = {
     stuck: ["查 Inbox 交付与 Step 边界", "已受理但未交付时，核对 delivery、当前运行与控制项。已出现 session.step.streamed 但缺结算时，检查工具状态和待批请求。"],
     approve: ["查本次请求资源和保存字段", "检查 action/resource 的末条配置匹配、项目保存范围和客户端回复。没有可保存资源时，always 只完成本次。"],
-    dumb: ["查压缩记录与模型兼容性", "对照旧模型的 native window 和新模型使用的历史边界。模型切换后，视图内保留的数据与准备发送的上下文长度会不同。"],
+    dumb: ["查压缩记录与模型兼容性", "比较旧窗口记录中的 Provider ID、模型 ID 与新模型。跳过不兼容窗口时，确认 Runner 是否重新读取较早的历史。"],
     model: ["查未结算的本地或托管调用", "用 Step 与工具终态确定是否卡在旧记录清理。核对执行 claim 的恢复状态及外部工具实际是否已提交。"],
   };
   onPick(root, "[data-key]", (button) => {
@@ -317,7 +348,7 @@ function boot(): void {
   initSurface("#oc-models", {
     compatible: [["工具", "示例模型用 edit、write，隐藏 patch"], ["传输", "利用所选模型的 HTTP 路由"], ["观测", "模型事件规范化后由 Step 归档"]],
     patch: [["工具", "模型 ID 符合策略时提供 patch；权限仍叫 edit"], ["模型参数", "variant 与 Provider 路由一起解析"], ["观测", "对照请求快照与工具策略分辨不可见还是被拒绝"]],
-    websocket: [["传输", "模型选择和传输配置允许时使用 Session 的 Provider WebSocket"], ["回退", "达到相应的传输条件可换用 HTTP"], ["观测", "客户端收 Agent 事件的 SSE 不受 Provider 通道切换影响"]],
+    websocket: [["传输", "模型选择和传输配置允许时使用 Session 的 Provider WebSocket"], ["回退", "建立连接失败后，会话固定使用 HTTP，直到服务重启或会话迁移等让连接所有者重建"], ["观测", "客户端的服务器 SSE 独立于 Provider 的连接"]],
   });
   initAtlas();
   initChapterReader();

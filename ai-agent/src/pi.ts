@@ -29,8 +29,8 @@ function initChoiceDetail(id: string, data: Record<string, Detail>): void {
 function initLoop(): void {
   const root = document.querySelector("#pi-loop"); if (!root) return;
   const steps = qsa<HTMLElement>(root, "[data-steps] li");
-  const events = ["agent_start", "turn_start", "message_start/end: user", "transformContext → convertToLlm", "start → delta* → done", "message_end: assistant", "tool_execution_start/update/end", "message_start/end: toolResult", "steer / follow-up / next turn", "agent_end"];
-  const notes = ["一次 Agent run 开始。", "Pi 的 Turn 是一次模型调用加工具批次。", "用户消息先进入 Agent transcript。", "应用消息在 LLM 边界转换成标准 Message。", "Provider events 用 contentIndex 关联交错 block。", "Committed assistant message 是工具 preflight 的 barrier。", "Tool body 可并发，生命周期事件仍可观察。", "最终 ToolResult transcript 按模型 source order 写入。", "Steer 优先；没有 Steering 才检查 Follow-up。", "等待型 agent_end listeners 完成后 run 才 settle。"];
+  const events = ["agent_start", "turn_start", "message_start/end: user", "transformContext → convertToLlm", "start → delta* → done", "message_end: assistant", "tool_execution_start/update/end", "message_start/end: toolResult", "turn_end → turn_start → assistant message_end → turn_end", "agent_end"];
+  const notes = ["一次 Agent run 开始。", "Pi 的 Turn 是一次模型调用加工具批次。", "用户消息先进入 Agent transcript。", "应用消息在 LLM 边界转换成标准 Message。", "Provider events 用 contentIndex 关联交错 block。", "Committed assistant message 是工具 preflight 的 barrier。", "Tool body 可并发，生命周期事件仍可观察。", "最终 ToolResult transcript 按模型 source order 写入。", "工具结果促成第二次模型请求。本例第二次直接给出答案，队列为空。", "agent_end 是核心循环结束信号，基础 Agent 仍等待结束监听器。"];
   let index = -1; let timer = 0;
   const log = qs<HTMLElement>(root, "[data-log]"); const note = qs<HTMLElement>(root, "[data-note]"); const phase = qs<HTMLElement>(root, "[data-phase]"); const led = qs<HTMLElement>(root, "[data-led]");
   const draw = () => { steps.forEach((item, i) => { item.classList.toggle("is-now", i === index); item.classList.toggle("is-done", i < index); }); if (index >= 0) { log?.insertAdjacentHTML("beforeend", `<span class="ev"><span class="t">${String(index + 1).padStart(2, "0")}</span> <span class="k-${index === 6 || index === 7 ? "tool" : "sys"}">${events[index]}</span></span>`); if (note) note.textContent = notes[index]; } if (phase) phase.textContent = index < 0 ? "idle" : index === steps.length - 1 ? "done" : `event ${index + 1}/${steps.length}`; led?.classList.toggle("is-run", index >= 0 && index < steps.length - 1); led?.classList.toggle("is-done", index === steps.length - 1); };
@@ -42,15 +42,18 @@ function initLoop(): void {
 function initState(): void {
   const root = document.querySelector("#pi-state");
   if (!root) return;
-  let phase: "idle" | "running" | "settling" = "idle";
+  let phase: "idle" | "draft" | "message" | "tool" | "result" | "settling" = "idle";
   let messages = 0;
-  let tools = 0;
   const log = qs<HTMLElement>(root, "[data-log]");
   const status = qs<HTMLElement>(root, "[data-phase]");
   const led = qs<HTMLElement>(root, "[data-led]");
 
   const render = (event?: string, note?: string) => {
-    const counters = { streaming: phase === "idle" ? "NO" : "YES", messages, tools };
+    const counters = {
+      streaming: phase === "idle" ? "NO" : "YES",
+      messages,
+      tools: phase === "tool" ? 1 : 0,
+    };
     for (const [name, value] of Object.entries(counters)) {
       const counter = qs<HTMLElement>(root, `[data-${name}]`);
       if (counter) counter.textContent = String(value);
@@ -70,52 +73,148 @@ function initState(): void {
     if (event === "reset") {
       phase = "idle";
       messages = 0;
-      tools = 0;
       log?.replaceChildren();
       render();
-    } else if (event === "idle") {
-      if (phase === "settling") {
-        phase = "idle";
-        tools = 0;
-        render("idle", "等待型监听器完成，finishRun 清除运行状态");
-      }
-    } else if (event === "agent_end") {
+      return;
+    }
+    if (event === "idle" && phase === "settling") {
+      phase = "idle";
+      render("idle", "等待型监听器已完成，waitForIdle() 可返回");
+    } else if (event === "agent_end" && phase === "message") {
       phase = "settling";
-      render(event, "消息流结束，等待型监听器仍在结算");
-    } else if (phase === "settling") {
-      render("先等监听器完成");
-    } else if (event === "message_start") {
-      phase = "running";
+      render(event, "循环结束，运行状态仍在等待监听器");
+    } else if (event === "message_start" && (phase === "idle" || phase === "message")) {
+      phase = "draft";
       render(event, "partial 进入 streamingMessage");
-    } else if (event === "message_update") {
-      render(event, "更新 partial，transcript 不增加");
-    } else if (event === "tool_start") {
-      phase = "running";
-      tools += 1;
-      render("tool_execution_start");
-    } else if (event === "tool_end") {
-      tools = Math.max(0, tools - 1);
-      render("tool_execution_end");
-    } else if (event === "message_end") {
+    } else if (event === "message_update" && phase === "draft") {
+      render(event, "更新 partial，消息数不变");
+    } else if (event === "message_end" && phase === "draft") {
+      phase = "message";
       messages += 1;
-      render(event, "完成消息追加到 public state");
+      render(event, "清除 partial，将消息追加到 Agent 内存状态");
+    } else if (event === "tool_start" && phase === "message") {
+      phase = "tool";
+      render("tool_execution_start", "调用进入处理流程，工具体可能尚未执行");
+    } else if (event === "tool_end" && phase === "tool") {
+      phase = "result";
+      render("tool_execution_end", "调用结束通知，结果消息仍待写入");
+    } else if (event === "tool_result" && phase === "result") {
+      phase = "message";
+      messages += 1;
+      render("message_start → message_end · toolResult", "工具结果成为下一次请求的历史");
+    } else {
+      render(phase === "settling" ? "先等监听器完成" : "当前阶段还不能发出这个事件");
     }
   }));
 }
 
 function initQueues(): void {
   const root = document.querySelector("#pi-queues"); if (!root) return;
-  let running = false; let steer = 0; let follow = 0;
-  const log = qs<HTMLElement>(root, "[data-log]"); const phase = qs<HTMLElement>(root, "[data-phase]"); const led = qs<HTMLElement>(root, "[data-led]");
-  const render = (line?: string) => { const set = (selector: string, value: string) => { const el = qs<HTMLElement>(root, selector); if (el) el.textContent = value; }; set("[data-tool]", running ? "running" : "idle"); set("[data-steer]", String(steer)); set("[data-follow]", String(follow)); if (phase) phase.textContent = running ? "tool running" : steer || follow ? "queued" : "idle"; led?.classList.toggle("is-run", running); if (line) log?.insertAdjacentHTML("beforeend", `<span class="ev"><span class="k-sys">${line}</span></span>`); };
-  qsa<HTMLButtonElement>(root, "[data-queue]").forEach((button) => button.addEventListener("click", () => { const action = button.dataset.queue; if (action === "reset") { running = false; steer = 0; follow = 0; if (log) log.innerHTML = ""; render(); return; } if (action === "start") { running = true; render("tool batch started"); } if (action === "steer") { steer += 1; render("steer queued; current tool keeps running"); } if (action === "follow") { follow += 1; render("follow-up queued behind steering"); } if (action === "abort") { render("abort signal fired; running tool must acknowledge it"); } if (action === "turn") { running = false; if (steer > 0) { steer -= 1; render("drain steer → next turn"); } else if (follow > 0) { follow -= 1; render("no steer/tool → drain follow-up"); } else render("no queued work → agent_end"); } }));
+  let stage: "idle" | "tool" | "model" | "aborting tool" | "aborting model" = "idle";
+  let steer = 0;
+  let follow = 0;
+  const log = qs<HTMLElement>(root, "[data-log]");
+  const phase = qs<HTMLElement>(root, "[data-phase]");
+  const led = qs<HTMLElement>(root, "[data-led]");
+
+  const render = (note?: string) => {
+    const counters = { tool: stage === "tool" ? "running" : stage === "aborting tool" ? "cancel requested" : "idle", steer, follow };
+    for (const [name, value] of Object.entries(counters)) {
+      const counter = qs<HTMLElement>(root, `[data-${name}]`);
+      if (counter) counter.textContent = String(value);
+    }
+    if (phase) phase.textContent = stage === "idle" && (steer || follow) ? "queued" : stage;
+    led?.classList.toggle("is-run", stage !== "idle");
+    if (note && log) {
+      const line = document.createElement("span");
+      line.className = "ev";
+      line.textContent = note;
+      log.append(line);
+    }
+  };
+
+  qsa<HTMLButtonElement>(root, "[data-queue]").forEach((button) => button.addEventListener("click", () => {
+    switch (button.dataset.queue) {
+      case "reset":
+        stage = "idle";
+        steer = 0;
+        follow = 0;
+        log?.replaceChildren();
+        render();
+        return;
+      case "start":
+        if (stage !== "idle" && stage !== "model") return;
+        stage = "tool";
+        render("模型发出调用，工具批次开始。");
+        return;
+      case "steer":
+        steer += 1;
+        render("Steer 入队，已经开始的工具继续运行。");
+        return;
+      case "follow":
+        follow += 1;
+        render("Follow-up 入队，等待当前任务自然收口。");
+        return;
+      case "abort":
+        if (stage !== "tool" && stage !== "model") return;
+        stage = stage === "tool" ? "aborting tool" : "aborting model";
+        render("已发取消信号，仍需等待当前执行体响应。");
+        return;
+      case "turn":
+        if (stage === "aborting tool") {
+          stage = "idle";
+          render("本例工具响应了取消，run 结束。已发生的副作用还需核对。");
+          return;
+        }
+        if (stage !== "tool") return;
+        stage = "model";
+        if (steer > 0) {
+          steer -= 1;
+          render("结果按序写入，下一次模型请求同时带入一条 Steer。");
+        } else {
+          render("结果按序写入，下一次模型请求先处理工具结果，Follow-up 等待。");
+        }
+        return;
+      case "answer":
+        if (stage === "aborting model") {
+          stage = "idle";
+          render("本例模型流以 aborted 结束。");
+          return;
+        }
+        if (stage !== "model") return;
+        if (steer > 0) {
+          steer -= 1;
+          render("本轮无新工具，仍有 Steer，下一请求带入一条。");
+        } else if (follow > 0) {
+          follow -= 1;
+          render("当前任务自然收口，取一条 Follow-up 开始下一轮。");
+        } else {
+          stage = "idle";
+          render("本轮无新工具，队列为空，run 结束。");
+        }
+    }
+  }));
 }
 
 function initTools(): void {
   const root = document.querySelector("#pi-tools"); if (!root) return;
-  let mode = "parallel"; const log = qs<HTMLElement>(root, "[data-log]"); const status = qs<HTMLElement>(root, "[data-status]");
-  qsa<HTMLButtonElement>(root, "[data-mode] button").forEach((button) => button.addEventListener("click", () => { mode = button.dataset.v ?? "parallel"; qsa<HTMLButtonElement>(root, "[data-mode] button").forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === button))); if (status) status.textContent = mode; }));
-  qs<HTMLButtonElement>(root, "[data-run]")?.addEventListener("click", () => { if (log) log.innerHTML = ""; const lines = mode === "parallel" ? ["start slow_read", "start fast_grep", "end fast_grep", "end slow_read", "transcript: slow_read result", "transcript: fast_grep result"] : ["start slow_read", "end slow_read", "transcript: slow_read result", "start fast_grep", "end fast_grep", "transcript: fast_grep result"]; lines.forEach((line, index) => log?.insertAdjacentHTML("beforeend", `<span class="ev"><span class="t">${String(index + 1).padStart(2, "0")}</span> <span class="k-${line.startsWith("transcript") ? "sys" : "tool"}">${line}</span></span>`)); });
+  let mode = "parallel";
+  const log = qs<HTMLElement>(root, "[data-log]");
+  const status = qs<HTMLElement>(root, "[data-status]");
+  qsa<HTMLButtonElement>(root, "[data-mode] button").forEach((button) => button.addEventListener("click", () => {
+    mode = button.dataset.v ?? "parallel";
+    qsa<HTMLButtonElement>(root, "[data-mode] button").forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === button)));
+    if (status) status.textContent = button.textContent;
+  }));
+  qs<HTMLButtonElement>(root, "[data-run]")?.addEventListener("click", () => {
+    if (log) log.innerHTML = "";
+    const lines = mode === "length"
+      ? ["stopReason: length", "start slow_read → end · body 未执行", "transcript: slow_read 错误结果", "start fast_grep → end · body 未执行", "transcript: fast_grep 错误结果"]
+      : mode === "parallel"
+        ? ["start slow_read · 参数校验", "start fast_grep · 参数校验", "执行两个获准的工具", "end fast_grep", "end slow_read", "transcript: slow_read result", "transcript: fast_grep result"]
+        : ["start slow_read · 校验后执行", "end slow_read", "transcript: slow_read result", "start fast_grep · 校验后执行", "end fast_grep", "transcript: fast_grep result"];
+    lines.forEach((line, index) => log?.insertAdjacentHTML("beforeend", `<span class="ev"><span class="t">${String(index + 1).padStart(2, "0")}</span> <span class="k-${line.startsWith("transcript") ? "sys" : "tool"}">${line}</span></span>`));
+  });
   qs<HTMLButtonElement>(root, "[data-reset]")?.addEventListener("click", () => { if (log) log.innerHTML = ""; });
 }
 
@@ -139,10 +238,11 @@ function initSessionTree(): void {
   };
 
   const getProjection = (path: Entry[]): Entry[] => {
-    const omitted = new Set(path.flatMap((entry) => entry.kind === "context_edit" ? [entry.target] : []));
     const compacted = path.slice().reverse().find((entry) => entry.kind === "compaction");
     const start = compacted?.kind === "compaction" ? path.findIndex((entry) => entry.id === compacted.target) : 0;
-    const kept = path.slice(start).filter((entry) =>
+    const selected = path.slice(start);
+    const omitted = new Set(selected.flatMap((entry) => entry.kind === "context_edit" ? [entry.target] : []));
+    const kept = selected.filter((entry) =>
       entry.kind !== "context_edit" && entry.kind !== "compaction" && !omitted.has(entry.id),
     );
     return compacted ? [compacted, ...kept] : kept;
@@ -203,9 +303,9 @@ function initSessionTree(): void {
       const projection = getProjection(getPath()).filter((entry) => entry.kind !== "compaction");
       const retained = projection.slice(-2);
       const firstKept = retained.find((entry) => entry.kind !== "result");
-      render(firstKept && projection.length > retained.length
+      render(firstKept && firstKept !== projection[0]
         ? `e${append({ kind: "compaction", target: firstKept.id })} · 摘要 + firstKeptEntryId=e${firstKept.id}`
-        : "历史还短，先追加更多消息");
+        : "没有新的历史前缀可压缩，当前投影不变");
     }
   }));
 }
@@ -237,7 +337,7 @@ function initCompaction(): void {
   qsa<HTMLButtonElement>(root, "[data-cp]").forEach((button) => button.addEventListener("click", () => {
     const action = button.dataset.cp;
     if (action === "reset") { reserve = 16384; seq = 0; entries = []; keptFrom = -1; compactions = 0; if (log) log.innerHTML = ""; qsa<HTMLButtonElement>(root, "[data-reserve] button").forEach((candidate) => candidate.setAttribute("aria-pressed", "false")); render(); return; }
-    if (action === "heavy" || action === "light") { const tool = action === "heavy" ? 9000 : 2400; entries.push({ id: `e${++seq}`, kind: "user", tokens: 420 }, { id: `e${++seq}`, kind: "assistant", tokens: 1800 }, { id: `e${++seq}`, kind: "tool", tokens: tool }); line(`turn 追加：u 0.4k + a 1.8k + toolResult ${k(tool)}，context=${k(projectedTotal())}${keptFrom >= 0 ? "（落在 firstKept 之后，投影随之增长）" : ""}`); render(); return; }
+    if (action === "heavy" || action === "light") { const tool = action === "heavy" ? 26000 : 2400; entries.push({ id: `e${++seq}`, kind: "user", tokens: 420 }, { id: `e${++seq}`, kind: "assistant", tokens: 1800 }, { id: `e${++seq}`, kind: "tool", tokens: tool }); line(`turn 追加：u 0.4k + a 1.8k + toolResult ${k(tool)}，context=${k(projectedTotal())}${keptFrom >= 0 ? "（落在 firstKept 之后，投影随之增长）" : ""}`); render(); return; }
     if (action === "compact") {
       if (!entries.length) { line("空 transcript，无可压缩段", "k-warn"); return; }
       const ctx = projectedTotal(); const threshold = WINDOW - reserve;
@@ -260,7 +360,7 @@ function initCompaction(): void {
       if (cut <= start) { line("没有更早的段可摘要，投影不变", "k-warn"); render(); return; }
       keptFrom = cut;
       compactions += 1;
-      line(`findCutPoint：从后向前累计 ≥ ${k(KEEP)} → cut@${entries[cut].id}（toolResult 不能作切点）`);
+      line(`预算约 ${k(KEEP)}。首个保留条目为 ${entries[cut].id}，历史保留的工具结果仍有对应调用。`);
       line("摘要输入：单个 tool result 截到 2000 字符；不声明工具，cacheRetention none");
       line(`appendCompaction：firstKeptEntryId=${entries[cut].id}，tokensBefore=${k(ctx)}；追加一条 compaction，旧 entry 仍在 JSONL`);
       render(); return;
@@ -311,20 +411,20 @@ function boot(): void {
   initSessionTree();
   initCompaction();
   initTuiDiff();
-  initChoiceDetail("#pi-layers", { provider: { title: "模型适配层", body: "先核对目标 API 的请求形状、认证解析、流事件映射与最终错误消息。", status: "PI AI" }, loop: { title: "Agent 循环层", body: "查看助手消息是否已提交、工具批次是否回填、双队列是否排空，以及最终 stopReason。", status: "AGENT CORE" }, session: { title: "会话投影层", body: "核对当前 leaf、父子关系与压缩边界，确认恢复出的活动路径是否正确。", status: "SESSION TREE" }, render: { title: "终端呈现层", body: "比较前后帧、可用宽度与完整重绘条件；画面异常不等于 Agent 状态异常。", status: "TUI" } });
+  initChoiceDetail("#pi-layers", { provider: { title: "模型适配层", body: "例如同一张图片只在纯文本模型被拒绝，先检查该模型的图片能力和实际请求，再看循环。", status: "PI AI" }, loop: { title: "Agent 循环层", body: "工具已经结束却没有下一轮时，核对工具结果是否写入、是否整批 terminate，以及队列是否仍有输入。", status: "AGENT CORE" }, session: { title: "会话投影层", body: "核对当前 leaf、父子关系与压缩边界，确认恢复出的活动路径是否正确。", status: "SESSION TREE" }, render: { title: "终端呈现层", body: "比较前后帧、可用宽度与完整重绘条件；画面异常不等于 Agent 状态异常。", status: "TUI" } });
   initSurface("#pi-providers", { anthropic: [["统一层", "Model + Context + AssistantMessageEventStream"], ["Adapter", "system block、thinking signature、tool_result"], ["Auth", "Provider auth resolution"], ["Wire", "支持 Message Threads 时，前缀匹配则只发新消息"]], openai: [["统一层", "同一 Agent / Pi AI contracts"], ["Adapter", "system/developer role、image URL、tool ids"], ["Compat", "endpoint-specific stop/toolUse mapping"], ["Wire", "OpenAI-compatible streaming"]], google: [["统一层", "同一 provider-neutral events"], ["Adapter", "Google content parts 与 reasoning options"], ["模型", "catalog 由 Provider 提供"], ["Wire", "Google API-specific payload"]], faux: [["用途", "确定性测试"], ["响应", "scripted tool call / text / error"], ["网络", "不访问真实 Provider"], ["证据", "验证标准事件与最终 Message"]] });
-  initChoiceDetail("#pi-extensions", { tool: { title: "ExtensionAPI.registerTool", body: "注册 TypeBox schema、execute、progress 与 TUI renderers；异常才成为 isError。" }, skill: { title: "ResourceLoader + Skill", body: "System Prompt 先暴露 name/description，模型按需用 read 加载完整 SKILL.md。" }, hook: { title: "tool_call event", body: "执行前可改参数或 block。文件、网络和进程权限由宿主环境控制。" }, state: { title: "Session custom entry", body: "custom 持久扩展状态但不进 LLM；custom_message 才会进入 context。" } });
+  initChoiceDetail("#pi-extensions", { tool: { title: "ExtensionAPI.registerTool", body: "注册 TypeBox schema、execute、progress 与 TUI renderers；工具执行异常会变成 isError 结果，参数校验和调用前政策也能生成错误结果。" }, skill: { title: "ResourceLoader + Skill", body: "System Prompt 先暴露 name/description，模型按需用 read 加载完整 SKILL.md。" }, hook: { title: "tool_call event", body: "执行前可改参数或 block。文件、网络和进程权限由宿主环境控制。" }, state: { title: "Session custom entry", body: "custom 持久扩展状态但不进 LLM；custom_message 才会进入 context。" } });
   initSurface("#pi-mcp-exposure", {
-    codemode: [["模型工具清单", "默认没有该 MCP 工具声明"], ["调用路径", "脚本用 searchTools() 或 describeTool() 找到它，经 tools 调用"], ["边界", "脚本受 QuickJS 限制，宿主工具仍按真实权限执行"]],
-    deferred: [["模型工具清单", "开始时没有，tool_search 激活后下一次请求可见"], ["调用路径", "激活后模型可直接调用，脚本也可调用"], ["恢复", "已激活的工具声明跟随当前分支"]],
+    codemode: [["模型工具清单", "默认没有该 MCP 工具声明"], ["调用路径", "默认启用 Codemode 后，脚本可查找并调用。若 tool_search 已启用，它也可以激活该工具"], ["边界", "脚本受 QuickJS 限制，宿主工具仍按真实权限执行"]],
+    deferred: [["模型工具清单", "开始时没有，tool_search 激活后下一次请求可见"], ["调用路径", "搜索激活后模型可直接调用。已启用的 Codemode 脚本在搜索前也可访问"], ["恢复", "已激活的工具声明跟随当前分支"]],
     direct: [["模型工具清单", "连接并准备好后直接声明"], ["调用路径", "模型或 Codemode 脚本都可调用"], ["取舍", "模型立即看到 schema，工具越多上下文越长"]],
     hidden: [["模型工具清单", "没有声明"], ["调用路径", "已注册但模型和脚本均无法调用"], ["配置", "可以用 toolExposure 为单个工具配置不同方式"]],
   });
   initSurface("#pi-surfaces", {
     sdk: [["消费者", "Node / TypeScript 应用"], ["入口", "createAgentSession"], ["进程", "同进程"], ["状态", "AgentSession + SessionManager"]],
     json: [["消费者", "一次性脚本与观察器"], ["入口", "--mode json"], ["协议", "逐行会话事件"], ["控制", "单次运行，没有命令入口"]],
-    rpc: [["消费者", "IDE / 跨语言子进程"], ["分帧", "LF-only JSONL"], ["响应", "data.disposition 表示命令处理结果"], ["结束信号", "订阅后发 prompt，用 agent_settled 等待会话结算"]],
-    durable: [["消费者", "需要恢复运行的应用"], ["入口", "Harness.open() / resume()"], ["恢复点", "已提交的任务 checkpoint"], ["防重复提交", "同一 requestId 返回原 submission"]],
+    rpc: [["消费者", "IDE / 跨语言子进程"], ["分帧", "LF-only JSONL"], ["响应", "started 开始，queued 入队，handled 由扩展消费"], ["结束信号", "先订阅，started 或 queued 时继续读到 agent_settled"]],
+    durable: [["消费者", "需要恢复运行的应用"], ["入口", "Harness.open() / resume()"], ["恢复点", "任务从已提交 checkpoint 恢复。中断的工具按 replay 策略处理"], ["防重复提交", "同一 conversation 与 requestId 找回原 submission。外部效果另需幂等"]],
     chord: [["消费者", "跨宿主插件与应用"], ["状态", "contract、引用与文档事务"], ["p2", "实验性的自托管 Durable UI"], ["p3", "Chord v2 上的 headless server，按会话开 worker"]],
   });
   initChapterReader();

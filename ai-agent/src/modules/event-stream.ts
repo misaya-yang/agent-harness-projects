@@ -9,21 +9,22 @@ interface Line {
 
 const SCRIPT: Line[] = [
   { cls: "k-user", dir: "in", text: 'turn/start { threadId, input: [{ type: "text", text: "修复 test_login" }] }' },
-  { cls: "k-sys", text: "◂ turn/started { turn.id: turn_42 }" },
-  { cls: "k-tool", dir: "out", text: "◂ item/started { type: commandExecution }" },
+  { cls: "k-sys", dir: "out", text: "turn/started { turn.id: turn_42 }" },
+  { cls: "k-tool", dir: "out", text: "item/started { type: commandExecution }" },
   { cls: "k-user", dir: "in", text: 'turn/steer { threadId, expectedTurnId: turn_42, input: [{ type: "text", text: "不要修改数据库" }] }' },
-  { cls: "k-sys", text: "→ turn/steer result { turnId: turn_42 }", note: "已受理，仍等待后续采样" },
-  { cls: "k-tool", text: "◂ item/completed { commandExecution · exitCode: 1 }" },
-  { cls: "k-sys", text: "step boundary → drain pending_input" },
-  { cls: "k-user", text: 'history += "不要修改数据库"' },
+  { cls: "k-sys", dir: "out", text: "turn/steer result { turnId: turn_42 }", note: "已受理，仍等待后续采样" },
+  { cls: "k-tool", dir: "out", text: "item/completed { commandExecution · exitCode: 1 }" },
+  { cls: "k-sys", text: "内部 · 在后续采样边界消费排队输入" },
+  { cls: "k-user", text: '内部 · 活跃历史新增“不要修改数据库”' },
   { cls: "k-model", text: "next sampling step · 新约束已可见" },
-  { cls: "k-tool", dir: "out", text: "◂ item/started { type: commandExecution }" },
+  { cls: "k-tool", dir: "out", text: "item/started { type: commandExecution }" },
   { cls: "k-user", dir: "in", text: "turn/interrupt { threadId, turnId: turn_42 }" },
-  { cls: "k-warn", text: "cancellation token fired · 尝试收尾" },
-  { cls: "k-tool", text: "Core · 将在途工具收尾" },
-  { cls: "k-sys", text: "history += <turn_aborted>", note: "副作用可能已部分发生" },
+  { cls: "k-warn", text: "内部 · 触发取消并尝试收尾" },
+  { cls: "k-tool", text: "内部 · Core 尝试结算在途工具" },
+  { cls: "k-sys", text: "内部 · 记录中断边界", note: "副作用可能已部分发生" },
   { cls: "k-sys", text: "核对宿主日志 · 进程可能已产生副作用" },
-  { cls: "k-sys", text: "◂ turn/completed { threadId, turn: { id: turn_42, status: interrupted } }" },
+  { cls: "k-sys", dir: "out", text: "turn/interrupt result {}" },
+  { cls: "k-sys", dir: "out", text: "turn/completed { threadId, turn: { id: turn_42, status: interrupted } }" },
 ];
 
 export function initEventStream(

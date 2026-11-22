@@ -38,12 +38,12 @@ function initTurn(): void {
   const logs = [
     "session/prompt → queue", "round → 当前会话状态", "采样请求 → messages + tools",
     "session/update → agent_message_chunk", "tool_use → run_terminal_command", "准备 → 审批 → 执行",
-    "tool_result ↔ call ID", "采样步 → TurnOutcome → round 裁决",
+    "tool_result ↔ call ID → 再次采样", "文本候选 → 待办、插话与外层续跑检查",
   ];
   const notes = [
     "SessionActor 接纳普通 prompt，按会话队列安排。", "这一轮使用会话当前的模型、工具和对话状态。", "宿主启动一次可取消的流式采样。",
     "客户端可先显示增量，宿主仍需检查该采样的提交权。", "工具请求带调用 ID，后面的结果用同一 ID 配对。", "批准的调用进入执行，实际进程和文件状态由 Workspace 管理。",
-    "工具结果进入对话，可供下一次采样读取。", "获得候选终态后，round 再检查 Stop hook、goal 等是否续跑。取消或重复动作硬停走独立分支。",
+    "工具结果进入对话，可供下一次采样读取。", "下一次采样给出文本后，先检查待办提醒与插话。自然结束的候选结果仍受 Stop hook 和 goal 状态影响。",
   ];
   let index = -1;
   let timer = 0;
@@ -73,8 +73,8 @@ function initEvents(): void {
     ["client", "initialize"], ["sys", "ACP capabilities"], ["client", "session/new"], ["sys", "sessionId: s1"],
     ["client", "session/prompt → s1"], ["model", "session/update · agent_message_chunk"],
     ["model", "session/update · agent_thought_chunk"], ["client", "session/cancel → s1"],
-    ["warn", "宿主撤销采样的提交权"], ["sys", "PromptResponse · stopReason: cancelled"],
-    ["sys", "旧采样结果到达"], ["warn", "宿主丢弃旧结果"],
+    ["warn", "宿主清除在途采样的请求归属"], ["sys", "PromptResponse · stopReason: cancelled"],
+    ["sys", "模拟旧请求的结果晚到"], ["warn", "没有请求归属，旧结果及其统计被忽略"],
   ];
   let cursor = 0;
   let timer = 0;
@@ -93,15 +93,25 @@ function initEvents(): void {
 function initSafety(): void {
   const root = document.querySelector("#grok-safety");
   if (!root) return;
-  let op = ""; let mode = "";
-  const select = (group: string, value: string, button: HTMLButtonElement) => { qsa<HTMLButtonElement>(root, `[data-${group}] button`).forEach((b) => b.setAttribute("aria-pressed", String(b === button))); if (group === "op") op = value; else mode = value; evaluate(); };
-  qsa<HTMLButtonElement>(root, "[data-op] button").forEach((b) => b.addEventListener("click", () => select("op", b.dataset.v ?? "", b)));
-  qsa<HTMLButtonElement>(root, "[data-mode] button").forEach((b) => b.addEventListener("click", () => select("mode", b.dataset.v ?? "", b)));
+  let op = "";
+  let mode = "";
+  let sandbox = "off";
+  for (const group of ["op", "mode", "sandbox"]) {
+    const buttons = qsa<HTMLButtonElement>(root, `[data-${group}] button`);
+    buttons.forEach((button) => button.addEventListener("click", () => {
+      buttons.forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === button)));
+      const value = button.dataset.v ?? "";
+      if (group === "op") op = value;
+      else if (group === "mode") mode = value;
+      else sandbox = value;
+      evaluate();
+    }));
+  }
   const evaluate = () => {
     if (!op || !mode) return;
     let verdict: "ok" | "ask" | "deny" = "ask";
     let label = "请求批准";
-    const trace = [`审批模式 ${mode} · 按无额外规则、授权或 Hooks 推演`];
+    const trace = [`审批模式 ${mode} · 样例无额外规则、授权或钩子`];
 
     if (op === "read") {
       verdict = "ok";
@@ -110,7 +120,7 @@ function initSafety(): void {
     } else if (mode === "always-approve") {
       verdict = "ok";
       label = "跳过普通询问";
-      trace.push("always-approve 放行普通调用。真实会话仍需检查拒绝规则和组织策略。");
+      trace.push("always-approve 放行普通调用。真实会话仍检查 deny、钩子、匹配的 shell ask 和组织策略。");
     } else if (mode === "dontAsk") {
       verdict = "deny";
       label = "拒绝未获准的调用";
@@ -122,9 +132,21 @@ function initSafety(): void {
       trace.push("default 模式下，未提前授权的副作用进入审批。");
     }
     if (verdict !== "deny") {
-      trace.push(op === "network"
-        ? "获批后仍检查子进程网络策略。沙箱默认 off；启用 read-only 或 strict 时按该 profile 约束。"
-        : "获批后仍检查生效的沙箱 profile 和路径。");
+      const sandboxBlocks = (op === "edit" && sandbox === "read-only")
+        || (op === "network" && sandbox !== "off");
+      if (sandboxBlocks) {
+        trace.push(op === "edit"
+          ? "即使获批，read-only 仍禁止写入这个项目文件。"
+          : `即使获批，Linux 上已生效的 ${sandbox} 仍阻断命令的子进程网络。`);
+        if (verdict === "ok") {
+          verdict = "deny";
+          label = "审批放行，沙箱阻断";
+        }
+      } else {
+        trace.push(sandbox === "off"
+          ? "这次未启用 Grok OS 沙箱。实际访问仍由运行环境决定。"
+          : `这个项目内操作符合所选 Linux ${sandbox} 示例的范围。`);
+      }
     }
     const badge = qs<HTMLElement>(root, "[data-verdict]"); if (badge) badge.dataset.verdict = verdict;
     const out = qs<HTMLElement>(root, "[data-verdict-label]"); if (out) out.textContent = label;
@@ -141,12 +163,13 @@ function initSession(): void {
   let session = 1;
   let updates = 0;
   let prompts = 0;
-  let checkpoint: number | null = null;
+  const checkpoints: number[] = [];
 
   const render = (message?: string) => {
     if (sessionOutput) sessionOutput.textContent = String(session);
     if (updatesOutput) updatesOutput.textContent = String(updates);
-    if (checkpointOutput) checkpointOutput.textContent = checkpoint === null ? "—" : `P${checkpoint}`;
+    const latestCheckpoint = checkpoints.at(-1);
+    if (checkpointOutput) checkpointOutput.textContent = latestCheckpoint === undefined ? "—" : `P${latestCheckpoint}`;
     if (message) log?.insertAdjacentHTML("beforeend", `<span class="ev"><span class="t">P${prompts}</span> <span class="k-sys">${message}</span></span>`);
   };
 
@@ -162,7 +185,7 @@ function initSession(): void {
           render("先添加一轮对话。");
           break;
         }
-        checkpoint = prompts;
+        checkpoints.push(prompts);
         updates += 1;
         render("写入压缩历史文件，追加 CompactionCheckpoint 引用。");
         break;
@@ -172,13 +195,13 @@ function initSession(): void {
           break;
         }
         prompts -= 1;
-        if (checkpoint !== null && checkpoint > prompts) checkpoint = null;
+        while ((checkpoints.at(-1) ?? 0) > prompts) checkpoints.pop();
         updates += 1;
-        render("追加 RewindMarker。当前对话少一轮，文件保持原状。");
+        render("追加 RewindMarker。回退到最后一条 prompt 执行前，文件保持原状。");
         break;
       case "fork":
         session += 1;
-        render("派生新 Session，继承当前可见历史；后续追加到新会话。");
+        render("为分支分配新 Session ID，从当前可见历史起步。后续追加写入新会话。");
         break;
       case "resume":
         render("从既有记录恢复视图，过滤已放弃的对话分支。");
@@ -187,7 +210,7 @@ function initSession(): void {
         session = 1;
         updates = 0;
         prompts = 0;
-        checkpoint = null;
+        checkpoints.length = 0;
         log?.replaceChildren();
         render();
         break;
@@ -197,10 +220,10 @@ function initSession(): void {
 
 function initContext(): void {
   const root = document.querySelector("#grok-context"); if (!root) return; let percent = 42;
-  const render = (note?: string) => { const fill = qs<HTMLElement>(root, "[data-fill]"); if (fill) fill.style.width = `${percent}%`; const p = qs<HTMLElement>(root, "[data-percent]"); if (p) p.textContent = `${percent}%`; const s = qs<HTMLElement>(root, "[data-status]"); if (s) s.textContent = `${percent}%`; const policy = qs<HTMLElement>(root, "[data-policy]"); if (policy) policy.textContent = percent >= 85 ? "达到演示阈值" : "继续采样"; if (note) { const n = qs<HTMLElement>(root, "[data-note]"); if (n) n.textContent = note; } };
+  const render = (note?: string) => { const fill = qs<HTMLElement>(root, "[data-fill]"); if (fill) fill.style.width = `${percent}%`; const p = qs<HTMLElement>(root, "[data-percent]"); if (p) p.textContent = `${percent}%`; const s = qs<HTMLElement>(root, "[data-status]"); if (s) s.textContent = `${percent}%`; const policy = qs<HTMLElement>(root, "[data-policy]"); if (policy) policy.textContent = percent >= 85 ? "进入自动压缩检查" : "继续采样"; if (note) { const n = qs<HTMLElement>(root, "[data-note]"); if (n) n.textContent = note; } };
   qsa<HTMLButtonElement>(root, "[data-add]").forEach((b) => b.addEventListener("click", () => { percent = Math.min(100, percent + Number(b.dataset.add)); render(); }));
-  qs<HTMLButtonElement>(root, "[data-compact]")?.addEventListener("click", () => { percent = 31; render("用摘要、保留的约束和运行态重建对话，记录压缩历史引用。"); });
-  qs<HTMLButtonElement>(root, "[data-reset]")?.addEventListener("click", () => { percent = 42; render("本实验采用 85% 默认阈值，百分比变化是示意。"); });
+  qs<HTMLButtonElement>(root, "[data-compact]")?.addEventListener("click", () => { percent = 31; render("模拟手动压缩成功。重建约束与运行态，再记录指向压缩历史的引用。"); });
+  qs<HTMLButtonElement>(root, "[data-reset]")?.addEventListener("click", () => { percent = 42; render("使用 85% 回退阈值做演示。手动压缩可低于阈值触发，成功后的占用变化仅为示意。"); });
 }
 
 function initSurface(id: string, data: Record<string, Array<[string, string]>>): void {
@@ -223,9 +246,9 @@ function boot(): void {
   initContext();
   initChoiceDetail("#grok-architecture", {
     render: { title: "展示与承载层", body: "先比较客户端收到的事件与最终布局；会话事实可能完全正确，只是投影错了。", status: "SURFACE" },
-    stall: { title: "会话与采样层", body: "核对 TurnOutcome、待回填工具结果、插话、取消和外层续跑闸门。", status: "SESSION" },
+    stall: { title: "会话与采样层", body: "先检查当前采样是否已完成，再核对待回填工具、待办提醒或插话。看到 TurnOutcome 后查外层有没有触发下一 round。", status: "SESSION" },
     missing: { title: "能力装配与工具注册层", body: "区分工具是否被发现、是否可见、是否可派发，以及是否被当前工具集裁掉。", status: "CAPABILITY" },
-    dirty: { title: "执行世界与工作区层", body: "检查命令终态、实际 VCS/文件状态与回填证据是否一致。", status: "WORKSPACE" },
+    dirty: { title: "执行世界与工作区层", body: "若工具只返回后台任务句柄，先查进程终态。再用命令 cwd 和实际 VCS 或文件状态核对结果。", status: "WORKSPACE" },
   });
   initChoiceDetail("#grok-tools", {
     hidden: { title: "Agent capability selection", body: "读取最终 tool definitions，确认工具没有被 allowlist、denylist、mode 或 feature gate 裁掉。" },
@@ -242,7 +265,7 @@ function boot(): void {
   initChoiceDetail("#grok-extensions", {
     rules: { title: "AGENTS.md · 行为约束", body: "规则以独立的项目指令项注入，并在压缩后逐字重建；它不新增可执行工具。" },
     skills: { title: "Skills · 渐进式流程知识", body: "SKILL.md 提供专门工作流；同名项按来源优先级去重，执行仍依赖已有工具。" },
-    mcp: { title: "MCP · 外部能力协议", body: "注册服务器工具后，可直接暴露或经搜索延迟发现。派发仍经过信任和权限检查。" },
+    mcp: { title: "MCP · 外部能力协议", body: "项目来源在加载时检查信任。工具注册后可内联或延迟发现，实际派发还需通过权限检查。" },
     plugins: { title: "Plugins · 可分发扩展包", body: "把 agents、Skills、Hooks 与 MCP 组合为分发单元；项目来源仍要过目录信任。" },
     hooks: { title: "Hooks · 确定性生命周期代码", body: "PreToolUse 可拒绝、请求审批或改写参数。超时和崩溃通常放行，改写后的输入未通过 schema 则阻断。" },
     memory: { title: "Memory · 跨会话证据层", body: "V2 在启用时把观察写进收件箱，再独立整理为主题与汇总。检索所得信息仍需和当前工作区核对。" },
@@ -251,8 +274,8 @@ function boot(): void {
     tui: [["承载", "进程内嵌 Agent"], ["输入", "全屏 Prompt / slash commands"], ["输出", "Scrollback、diff、modal"], ["关键边界", "沙箱约束与启动进程绑定"]],
     headless: [["消费者", "远端与无人值守客户端"], ["输入", "relay 会话消息"], ["输出", "流式会话事件"], ["关键边界", "ping、半开检测与重连"]],
     acp: [["消费者", "IDE 与 Agent 客户端"], ["输入", "ACP PromptRequest"], ["输出", "SessionUpdate / ToolCallUpdate"], ["关键边界", "客户端不拥有运行时状态"]],
-    serve: [["消费者", "可信远端执行消费者"], ["输入", "JSON-RPC 工具调用"], ["输出", "本地工作区工具结果"], ["关键边界", "完整提示与工具结果可能离开本机"]],
-    leader: [["消费者", "多个 CLI/会话"], ["输入", "本地传输协议"], ["输出", "复用常驻宿主"], ["关键边界", "锁、认证刷新与进程生命周期"]],
+    serve: [["消费者", "可信远端执行消费者"], ["输入", "JSON-RPC 工具调用"], ["输出", "本地工作区工具结果"], ["关键边界", "本地工作区通过反向连接暴露工具。与 agent serve 承载 ACP 会话分开"]],
+    leader: [["消费者", "多个 CLI/会话"], ["输入", "本地传输协议"], ["输出", "复用常驻宿主"], ["关键边界", "锁与就绪决定能否连接。只有较新的可解析版本触发版本替换"]],
   });
   initChapterReader();
 }

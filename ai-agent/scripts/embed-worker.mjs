@@ -55,6 +55,13 @@ export default {
   async fetch(request) {
     const url = new URL(request.url);
     const routeAliases = { "/": "/index.html", "/codex": "/codex.html", "/grok": "/grok.html", "/deepseek": "/deepseek.html", "/pi": "/pi.html", "/opencode": "/opencode.html", "/openclaw": "/openclaw.html", "/hermes": "/hermes.html" };
+    if (url.pathname.endsWith("/") && url.pathname.length > 1) {
+      const clean = url.pathname.slice(0, -1);
+      if (Object.hasOwn(routeAliases, clean)) {
+        url.pathname = clean;
+        return Response.redirect(url.toString(), 308);
+      }
+    }
     const path = routeAliases[url.pathname] || url.pathname;
     const headers = {
       "content-type": contentType(path),

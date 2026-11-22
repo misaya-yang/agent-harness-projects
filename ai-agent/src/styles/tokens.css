@@ -116,14 +116,14 @@
   --ff-display: "Iowan Old Style", Charter, "Songti SC", "STSong", "Noto Serif CJK SC", Georgia, serif;
   --ff-body: -apple-system, BlinkMacSystemFont, "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
   --ff-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
-  --o-paper: #262523; --o-paper-deep: #2f2e2a; --o-paper-edge: #353430;
-  --o-ink: #efebe2; --o-ink-soft: #d6d1c6; --o-ink-mute: #aba69d;
+  --o-paper: #181818; --o-paper-deep: #202020; --o-paper-edge: #2a2a2a;
+  --o-ink: #ececec; --o-ink-soft: #d4d4d4; --o-ink-mute: #a0a0a0;
   --o-console: #211f1d; --o-console-raised: #2f2d29; --o-console-line: #43413c;
   --o-console-text: #ebe7df; --o-console-mute: #b3aea4;
   --o-amber-bright: #e5b36c; --o-amber-core: #dbac70; --o-amber-deep: #e5b36c;
-  --paper-panel: var(--o-paper-deep); --paper-nav: #292825; --paper-sunk: #211f1d;
+  --paper-panel: var(--o-paper-deep); --paper-nav: #202020; --paper-sunk: #181818;
   --atlas-blue: #96addc; --atlas-green: #90c1a5; --on-accent: #302416;
-  --line: #3d3c38; --line-strong: #57544d; --r-console: 16px; --r-control: 10px;
+  --line: #2a2a2a; --line-strong: #454545; --r-console: 16px; --r-control: 10px;
   --shadow-float: 0 8px 25px rgb(0 0 0 / .17); color-scheme: dark;
 }
 :root[data-theme="light"] {
@@ -136,3 +136,13 @@
 }
 :root{--atlas-ink-accent:#e5b36c;--atlas-line-accent:#d1a467}
 :root[data-theme="light"]{--atlas-ink-accent:#8b5615;--atlas-line-accent:#a16e32}
+
+:root[data-theme="dark"] {
+  --control-surface: #343434;
+  --current-surface: #323232;
+  --o-console: var(--o-paper);
+  --o-console-raised: var(--o-paper-deep);
+  --o-console-line: #454545;
+  --o-console-text: #ececec;
+  --o-console-mute: #b2b2b2;
+}

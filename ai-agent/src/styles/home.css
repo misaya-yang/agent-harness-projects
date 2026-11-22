@@ -70,3 +70,23 @@
 @media(max-width:440px){.project-card,.project-card:nth-child(-n+3),.atlas-case-list.is-filtering .project-card{grid-column:1/-1}.atlas-head nav{gap:10px}.project-card{padding:14px 15px}.project-card strong{font-size:1.27rem}}
 .home-page .skip-link{position:fixed;z-index:20;top:6px;left:8px;transform:translateY(-150%);padding:8px 12px;border-radius:7px;background:var(--paper-panel);color:var(--text)}
 .home-page .skip-link:focus-visible{transform:none}
+
+
+:root[data-theme="dark"] {
+  .home-page .theme-btn, .catalog-search input {
+    background: var(--control-surface);
+    border-color: transparent;
+  }
+  .run-steps {
+    width: fit-content;
+    padding: 4px;
+    background: var(--control-surface);
+    border: 0;
+    border-radius: 9px;
+  }
+  .run-steps [aria-pressed="true"] {
+    background: var(--current-surface);
+    box-shadow: inset 0 -2px var(--accent);
+  }
+  .atlas-topic-index a[aria-current] { background: var(--current-surface); }
+}

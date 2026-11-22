@@ -1093,3 +1093,22 @@ body[data-agent] .rail .rail-theme{display:none}
 }
 .reader-stage>.reader-view:focus-visible {outline:0}
 @media(max-width:600px){body[data-agent] .topbar{min-height:53px}}
+
+:root[data-theme="dark"] {
+  .topbar :is(.theme-btn, .menu-btn, .series-menu > summary), .reader-actions button {
+    background: var(--control-surface);
+  }
+  .series-option[aria-current="page"], .chapter-nav a[aria-current="true"],
+  .rail a[data-spy-link][aria-current="true"] {
+    background: var(--current-surface);
+    color: var(--accent);
+  }
+  .reader-stage .machine .m-controls {
+    background: var(--control-surface);
+    padding: 8px;
+    border-radius: var(--r-control);
+  }
+  .reader-stage .machine .cbtn:not(.primary, [aria-pressed="true"], [aria-expanded="true"]) {
+    background: var(--control-surface);
+  }
+}

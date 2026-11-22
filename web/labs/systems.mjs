@@ -1,3 +1,4 @@
+import inference from "./systems-inference.mjs";
 const diffusionSchedule = [1];
 for (let t = 0; t < 1000; t++) {
   const beta = 0.0001 + (0.02 - 0.0001) * t / 999;
@@ -312,4 +313,5 @@ export default {
       };
     },
   },
+  ...inference,
 };

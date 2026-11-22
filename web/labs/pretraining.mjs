@@ -1,5 +1,6 @@
 // Labs for M6 (pretraining). Every number is computed from the real iteration, not drawn by hand.
 import { escapeText as esc } from "./graphics.mjs";
+import scaling from "./pretraining-scaling.mjs";
 
 const QUINTIC = [3.4445, -4.775, 2.0315];   // Keller Jordan's Muon coefficients
 const CUBIC = [1.5, -0.5, 0];               // classic Newton–Schulz, converges to 1
@@ -139,4 +140,4 @@ const costLab = {
   },
 };
 
-export default { "6.3": newtonSchulzLab, "6.3-polynomial": polynomialLab, "6.3-cost": costLab };
+export default { "6.3": newtonSchulzLab, "6.3-polynomial": polynomialLab, "6.3-cost": costLab, ...scaling };

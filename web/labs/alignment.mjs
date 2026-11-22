@@ -1,3 +1,4 @@
+import basics from "./alignment-basics.mjs";
 const imageSizes = {
   document: [1920, 1080],
   desktop: [2560, 1440],
@@ -317,4 +318,5 @@ export default {
       };
     },
   },
+  ...basics,
 };

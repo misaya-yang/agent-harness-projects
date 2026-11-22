@@ -17,6 +17,34 @@ const siglip2 = arxiv("SigLIP 2（含 NaFlex）", "2502.14786");
 const visionSurvey = direct("Jina AI · Vision Encoders in Vision-Language Models: A Survey", "https://jina.ai/vision-encoder-survey.pdf");
 
 export default {
+  "2.8": [
+    arxiv("Hu et al. · LoRA: Low-Rank Adaptation of Large Language Models", "2106.09685"),
+    arxiv("Aghajanyan et al. · Intrinsic Dimensionality Explains the Effectiveness of Language Model Fine-Tuning", "2012.13255"),
+    arxiv("Biderman et al. · LoRA Learns Less and Forgets Less", "2405.09673"),
+    direct("Schulman & Thinking Machines · LoRA Without Regret（2025）", "https://thinkingmachines.ai/blog/lora/"),
+    arxiv("Kalajdzievski · A Rank Stabilization Scaling Factor for Fine-Tuning with LoRA（rsLoRA）", "2312.03732"),
+    arxiv("Hayou et al. · LoRA+: Efficient Low Rank Adaptation of Large Models", "2402.12354"),
+    arxiv("Liu et al. · DoRA: Weight-Decomposed Low-Rank Adaptation", "2402.09353"),
+    arxiv("Meng et al. · PiSSA: Principal Singular Values and Singular Vectors Adaptation", "2404.02948"),
+    arxiv("Dettmers et al. · QLoRA: Efficient Finetuning of Quantized LLMs", "2305.14314"),
+    arxiv("Sheng et al. · S-LoRA: Serving Thousands of Concurrent LoRA Adapters", "2311.03285"),
+    arxiv("Chen et al. · Punica: Multi-Tenant LoRA Serving", "2310.18547"),
+    arxiv("Ilharco et al. · Editing Models with Task Arithmetic", "2212.04089"),
+    arxiv("Yadav et al. · TIES-Merging: Resolving Interference When Merging Models", "2306.01708"),
+    arxiv("Houlsby et al. · Parameter-Efficient Transfer Learning for NLP", "1902.00751"),
+  ],
+  "2.0": [
+    search("Sutton & Barto · Reinforcement Learning: An Introduction（第 2 版）", "Sutton Barto Reinforcement Learning An Introduction second edition"),
+    direct("Watkins & Dayan · Q-learning（Machine Learning, 1992）", "https://doi.org/10.1007/BF00992698"),
+    direct("Williams · Simple Statistical Gradient-Following Algorithms for Connectionist Reinforcement Learning（1992）", "https://doi.org/10.1007/BF00992696"),
+    arxiv("Mnih et al. · Playing Atari with Deep Reinforcement Learning", "1312.5602"),
+    arxiv("Ziegler et al. · Fine-Tuning Language Models from Human Preferences", "1909.08593"),
+    arxiv("Ouyang et al. · Training language models to follow instructions with human feedback", "2203.02155"),
+    arxiv("Levine · Reinforcement Learning and Control as Probabilistic Inference", "1805.00909"),
+    arxiv("Schulman et al. · Equivalence Between Policy Gradients and Soft Q-Learning", "1704.06440"),
+    arxiv("DeepSeek-AI · DeepSeek-R1", "2501.12948"),
+    arxiv("Yue et al. · Does Reinforcement Learning Really Incentivize Reasoning Capacity in LLMs Beyond the Base Model?", "2504.13837"),
+  ],
   "2.3": [
     arxiv("Proximal Policy Optimization Algorithms（PPO）", "1707.06347"),
     arxiv("High-Dimensional Continuous Control Using Generalized Advantage Estimation（GAE）", "1506.02438"),

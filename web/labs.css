@@ -257,3 +257,25 @@ html:not(.dark) .learning-lab { --lab-grid: #e6e0d4; --lab-line: #cfc7b6; --lab-
 .lab-fig-target { fill: none; stroke: var(--ink); stroke-width: 1.3; stroke-dasharray: 4 3; stroke-opacity: .8; }
 .lab-fig-band { fill: none; stroke: var(--lab-amber); stroke-width: 1.6; stroke-dasharray: 6 4; }
 .lab-fig-band.is-mean { stroke-dasharray: 2 4; stroke-width: 1.3; }
+
+/* M1/M2/M6/M7 deep-lesson figures */
+.lab-figure .lab-fig-value.is-accent { fill: var(--accent); }
+
+/* Night reader: the plot shares the page's #181818, the controls tray is the #343434 operating zone. */
+html.dark[data-route-kind="reader"] .learning-lab {
+  --lab-stage: var(--ground);
+  --lab-dot: #272727; --lab-grid: #2c2c2c; --lab-line: #3e3e3e; --lab-empty: #262626;
+}
+.dark[data-route-kind="reader"] .lab-plate { background: var(--ground); border-color: #262626; }
+.dark[data-route-kind="reader"] .lab-controls { --line-strong: #565656; background: var(--control); border-top-color: transparent; }
+.dark[data-route-kind="reader"] .lab-options { background: var(--control-well); }
+.dark[data-route-kind="reader"] .lab-options input:checked + span { background: var(--control-raised); box-shadow: none; }
+.dark[data-route-kind="reader"] .lab-choice select { background: var(--control-well); border-color: transparent; }
+.dark[data-route-kind="reader"] .lab-presets button { background: var(--control-raised); color: var(--ink); }
+.dark[data-route-kind="reader"] .lab-presets button:hover { background: #505050; color: var(--ink); }
+.dark[data-route-kind="reader"] .lab-actions { border-top: 1px solid rgb(255 255 255 / 7%); }
+.dark[data-route-kind="reader"] .lab-slider input::-webkit-slider-thumb { box-shadow: 0 1px 3px rgb(0 0 0 / 45%); }
+.dark[data-route-kind="reader"] .lab-slider input::-moz-range-thumb { box-shadow: 0 1px 3px rgb(0 0 0 / 45%); }
+.dark[data-route-kind="reader"] .lab-slider input:is(:hover, :focus-visible)::-webkit-slider-thumb { box-shadow: 0 0 0 4px rgb(255 255 255 / 10%), 0 1px 3px rgb(0 0 0 / 45%); }
+.dark[data-route-kind="reader"] .lab-check { border-color: var(--line); }
+.dark[data-route-kind="reader"] .lab-gesture { background: var(--lab-stage); }

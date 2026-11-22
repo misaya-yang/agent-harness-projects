@@ -1,7 +1,7 @@
 /*
  * The star field's place on the page. The canvas paints the home page ground,
  * so NIGHT_SKY and DAY_PAPER in web/starfield/scene.ts match --ground in
- * academy.css (#262523 by night, #f7f4ed by day).
+ * academy.css (#181818 by night, #f7f4ed by day).
  */
 
 /* --- The canvas ---------------------------------------------------------- */

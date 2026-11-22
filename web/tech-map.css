@@ -45,7 +45,7 @@
 }
 .map-canvas {
   position: relative; min-width: 0; padding: 4px 18px 6px; border-radius: var(--radius-plate); background-color: var(--sunk);
-  background-image: radial-gradient(circle, var(--map-dot, #383733) 1px, transparent 1.25px); background-size: 18px 18px;
+  background-image: radial-gradient(circle, var(--map-dot, #303030) 1px, transparent 1.25px); background-size: 18px 18px;
 }
 html:not(.dark) .map-canvas { --map-dot: #ddd6c8; }
 .map-links { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; pointer-events: none; z-index: 0; }
@@ -151,4 +151,17 @@ html:not(.dark) .map-canvas { --map-dot: #ddd6c8; }
 @media (prefers-reduced-motion: reduce) {
   .map-link { animation: none; }
   .map-node { transition: none; }
+}
+
+html.dark .tech-map {
+  --map-card: var(--nav-surface);
+  --map-node: var(--nav-surface);
+  .map-canvas { background-color: var(--ground); }
+  .map-modes, .map-stages button, .map-refs button { background: var(--control); }
+  .map-modes button[aria-checked="true"], .map-stages button[aria-checked="true"], .map-node.is-selected {
+    background: var(--nav-current);
+    color: var(--accent);
+  }
+  .map-node.is-selected { box-shadow: none; }
+  .map-refs button:hover { background: var(--control-hover); }
 }

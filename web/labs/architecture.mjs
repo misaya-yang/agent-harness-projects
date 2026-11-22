@@ -1,3 +1,5 @@
+import core from "./architecture-core.mjs";
+
 const formatInteger = new Intl.NumberFormat("en-US");
 const indices = count => Array.from({ length: count }, (_, i) => i);
 
@@ -498,4 +500,5 @@ export default {
   "1.6": linearMemory,
   "2.1": distillationDivergences,
   "2.2": rewardOveroptimization,
+  ...core,
 };

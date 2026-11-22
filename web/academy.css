@@ -1,7 +1,7 @@
 /*
  * Misaya Academy · 灯下札记
  *
- * One stylesheet for every page. Warm charcoal paper by night, warm ivory by
+ * One stylesheet for every page. Neutral charcoal surfaces by night, warm ivory by
  * day; serif for structure (titles, section heads, figure titles), sans for
  * running text, mono for numbers. Depth comes from three lightness steps
  * (sunk, ground, raised), not from outlines: there is one hairline colour.
@@ -85,6 +85,30 @@
   --reader-hover-border: var(--line-strong);
   --reader-card-border: var(--line-strong);
   --reader-focus: var(--accent);
+}
+/* Reading, navigation, selection and controls share the same night palette. */
+html.dark:is([data-route-kind="reader"], [data-route-kind="home"], [data-route-kind="roadmap"], [data-route-kind="module"]) {
+  --ground: #181818;
+  --sunk: #131313;
+  --raised: #1f1f1f;
+  --raised-2: #2a2a2a;
+  --hover: rgb(255 255 255 / 4%);
+  --line: #2a2a2a;
+  --line-soft: #222222;
+  --line-strong: #3a3a3a;
+  --ink: #ececec;
+  --body: #d4d4d4;
+  --muted: #a0a0a0;
+  --faint: #6e6e6e;
+  --shadow-pop: 0 20px 48px -20px rgb(0 0 0 / 75%), 0 2px 6px rgb(0 0 0 / 30%);
+
+  --nav-surface: #202020;
+  --nav-current: #323232;
+  --nav-hover: #2a2a2a;
+  --control: #343434;
+  --control-well: #2a2a2a;
+  --control-raised: #464646;
+  --control-hover: #3c3c3c;
 }
 html:not(.dark) {
   --ground: #f7f4ed;
@@ -568,4 +592,38 @@ html[data-route-kind="reader"] { scroll-padding-top: 84px; }
   .reader-margin, .site-header, .starfield, .lesson-end, .lesson-sequence, .observatory-footer { display: none; }
   .paper-reader-container { width: 100%; display: block; }
   .paper-reader-main details::details-content { display: block; content-visibility: visible; }
+}
+
+html.dark:is([data-route-kind="reader"], [data-route-kind="home"], [data-route-kind="roadmap"], [data-route-kind="module"]) {
+  /* Navigation: header pill, outline sidebar, menus. */
+  .academy-primary-nav { background: var(--nav-surface); }
+  .nav-link:hover,
+  .nav-disclosure[open] > summary.nav-link { background: var(--nav-hover); }
+  .nav-link:is([aria-current], .is-current) { background: var(--nav-current); }
+  .nav-panel { background: var(--nav-surface); border-color: var(--line); }
+  .reader-margin { background: var(--nav-surface); border-color: transparent; }
+  :is(.lesson-outline a, .course-links a):hover { background: var(--nav-hover); color: var(--ink); }
+  .lesson-outline a[aria-current],
+  .course-links .current-module { background: var(--nav-current); color: var(--ink); }
+  .module-code { background: var(--nav-hover); }
+  /* Things you operate: search field, chips, copy buttons. */
+  .search-trigger { background: var(--control); border-color: transparent; }
+  .search-trigger:hover { background: var(--control-hover); }
+  .search-trigger kbd { background: var(--control-well); }
+  .search-dialog { background: var(--nav-surface); border-color: var(--line); }
+  .search-dialog input { background: var(--control); border-color: transparent; }
+  :is(.lesson-meta > span:first-child, .lab-skip, .intro-notes > summary) { background: var(--control); }
+  :is(.lab-skip, .intro-notes > summary):hover { background: var(--control-hover); }
+  .markdown-code-toolbar button { background: var(--control); }
+  .markdown-code-toolbar button:hover { background: var(--control-hover); }
+  /* Reading surface: blocks stay one quiet step above the page, figures share the page tone. */
+  .lesson-supplement { border-color: transparent; }
+  .lesson-supplement[open] { border-color: var(--line-soft); }
+  .academy-figure { background: var(--ground); box-shadow: inset 0 0 0 1px var(--line-soft); }
+  .lesson-sequence a { border-color: var(--line-soft); }
+
+  .module-directory a, .module-study-bar, .study-collection, .roadmap-original { background: var(--nav-surface); }
+  .study-button { background: var(--control); border-color: transparent; }
+  .study-button:hover { background: var(--control-hover); }
+  .study-button[aria-pressed="true"], .study-collection[open] > summary { background: var(--nav-current); }
 }

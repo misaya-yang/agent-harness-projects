@@ -208,4 +208,9 @@ const traceLab = {
   },
 };
 
-export default { "8.1": contrast, "8.1-graph": graphLab, "8.2": hybridLab, "8.2-trace": traceLab };
+export {
+  contrast as "8.1",
+  graphLab as "8.1-graph",
+  hybridLab as "8.2",
+  traceLab as "8.2-trace",
+};

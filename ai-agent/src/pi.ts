@@ -1,8 +1,3 @@
-import "./styles/base.css";
-import "./styles/layout.css";
-import "./styles/machine.css";
-import "./styles/pi.css";
-
 import { initNavMenu } from "./modules/navmenu";
 import { initReveal } from "./modules/reveal";
 import { initSeriesNav } from "./modules/series-nav";
@@ -404,30 +399,33 @@ function boot(): void {
   initReveal(reduced.matches);
   initNavMenu();
   initHeroPause();
-  initState();
-  initLoop();
-  initQueues();
-  initTools();
-  initSessionTree();
-  initCompaction();
-  initTuiDiff();
-  initChoiceDetail("#pi-layers", { provider: { title: "模型适配层", body: "例如同一张图片只在纯文本模型被拒绝，先检查该模型的图片能力和实际请求，再看循环。", status: "PI AI" }, loop: { title: "Agent 循环层", body: "工具已经结束却没有下一轮时，核对工具结果是否写入、是否整批 terminate，以及队列是否仍有输入。", status: "AGENT CORE" }, session: { title: "会话投影层", body: "核对当前 leaf、父子关系与压缩边界，确认恢复出的活动路径是否正确。", status: "SESSION TREE" }, render: { title: "终端呈现层", body: "比较前后帧、可用宽度与完整重绘条件；画面异常不等于 Agent 状态异常。", status: "TUI" } });
-  initSurface("#pi-providers", { anthropic: [["统一层", "Model + Context + AssistantMessageEventStream"], ["Adapter", "system block、thinking signature、tool_result"], ["Auth", "Provider auth resolution"], ["Wire", "支持 Message Threads 时，前缀匹配则只发新消息"]], openai: [["统一层", "同一 Agent / Pi AI contracts"], ["Adapter", "system/developer role、image URL、tool ids"], ["Compat", "endpoint-specific stop/toolUse mapping"], ["Wire", "OpenAI-compatible streaming"]], google: [["统一层", "同一 provider-neutral events"], ["Adapter", "Google content parts 与 reasoning options"], ["模型", "catalog 由 Provider 提供"], ["Wire", "Google API-specific payload"]], faux: [["用途", "确定性测试"], ["响应", "scripted tool call / text / error"], ["网络", "不访问真实 Provider"], ["证据", "验证标准事件与最终 Message"]] });
-  initChoiceDetail("#pi-extensions", { tool: { title: "ExtensionAPI.registerTool", body: "注册 TypeBox schema、execute、progress 与 TUI renderers；工具执行异常会变成 isError 结果，参数校验和调用前政策也能生成错误结果。" }, skill: { title: "ResourceLoader + Skill", body: "System Prompt 先暴露 name/description，模型按需用 read 加载完整 SKILL.md。" }, hook: { title: "tool_call event", body: "执行前可改参数或 block。文件、网络和进程权限由宿主环境控制。" }, state: { title: "Session custom entry", body: "custom 持久扩展状态但不进 LLM；custom_message 才会进入 context。" } });
-  initSurface("#pi-mcp-exposure", {
-    codemode: [["模型工具清单", "默认没有该 MCP 工具声明"], ["调用路径", "默认启用 Codemode 后，脚本可查找并调用。若 tool_search 已启用，它也可以激活该工具"], ["边界", "脚本受 QuickJS 限制，宿主工具仍按真实权限执行"]],
-    deferred: [["模型工具清单", "开始时没有，tool_search 激活后下一次请求可见"], ["调用路径", "搜索激活后模型可直接调用。已启用的 Codemode 脚本在搜索前也可访问"], ["恢复", "已激活的工具声明跟随当前分支"]],
-    direct: [["模型工具清单", "连接并准备好后直接声明"], ["调用路径", "模型或 Codemode 脚本都可调用"], ["取舍", "模型立即看到 schema，工具越多上下文越长"]],
-    hidden: [["模型工具清单", "没有声明"], ["调用路径", "已注册但模型和脚本均无法调用"], ["配置", "可以用 toolExposure 为单个工具配置不同方式"]],
+  initChapterReader({
+    "state": initState,
+    "loop": initLoop,
+    "queues": initQueues,
+    "tools": initTools,
+    "sessions": initSessionTree,
+    "compaction": initCompaction,
+    "tui": initTuiDiff,
+    "layers": () => initChoiceDetail("#pi-layers", { provider: { title: "模型适配层", body: "例如同一张图片只在纯文本模型被拒绝，先检查该模型的图片能力和实际请求，再看循环。", status: "PI AI" }, loop: { title: "Agent 循环层", body: "工具已经结束却没有下一轮时，核对工具结果是否写入、是否整批 terminate，以及队列是否仍有输入。", status: "AGENT CORE" }, session: { title: "会话投影层", body: "核对当前 leaf、父子关系与压缩边界，确认恢复出的活动路径是否正确。", status: "SESSION TREE" }, render: { title: "终端呈现层", body: "比较前后帧、可用宽度与完整重绘条件；画面异常不等于 Agent 状态异常。", status: "TUI" } }),
+    "providers": () => initSurface("#pi-providers", { anthropic: [["统一层", "Model + Context + AssistantMessageEventStream"], ["Adapter", "system block、thinking signature、tool_result"], ["Auth", "Provider auth resolution"], ["Wire", "支持 Message Threads 时，前缀匹配则只发新消息"]], openai: [["统一层", "同一 Agent / Pi AI contracts"], ["Adapter", "system/developer role、image URL、tool ids"], ["Compat", "endpoint-specific stop/toolUse mapping"], ["Wire", "OpenAI-compatible streaming"]], google: [["统一层", "同一 provider-neutral events"], ["Adapter", "Google content parts 与 reasoning options"], ["模型", "catalog 由 Provider 提供"], ["Wire", "Google API-specific payload"]], faux: [["用途", "确定性测试"], ["响应", "scripted tool call / text / error"], ["网络", "不访问真实 Provider"], ["证据", "验证标准事件与最终 Message"]] }),
+    "extensions": () => {
+      initChoiceDetail("#pi-extensions", { tool: { title: "ExtensionAPI.registerTool", body: "注册 TypeBox schema、execute、progress 与 TUI renderers；工具执行异常会变成 isError 结果，参数校验和调用前政策也能生成错误结果。" }, skill: { title: "ResourceLoader + Skill", body: "System Prompt 先暴露 name/description，模型按需用 read 加载完整 SKILL.md。" }, hook: { title: "tool_call event", body: "执行前可改参数或 block。文件、网络和进程权限由宿主环境控制。" }, state: { title: "Session custom entry", body: "custom 持久扩展状态但不进 LLM；custom_message 才会进入 context。" } });
+      initSurface("#pi-mcp-exposure", {
+        codemode: [["模型工具清单", "默认没有该 MCP 工具声明"], ["调用路径", "默认启用 Codemode 后，脚本可查找并调用。若 tool_search 已启用，它也可以激活该工具"], ["边界", "脚本受 QuickJS 限制，宿主工具仍按真实权限执行"]],
+        deferred: [["模型工具清单", "开始时没有，tool_search 激活后下一次请求可见"], ["调用路径", "搜索激活后模型可直接调用。已启用的 Codemode 脚本在搜索前也可访问"], ["恢复", "已激活的工具声明跟随当前分支"]],
+        direct: [["模型工具清单", "连接并准备好后直接声明"], ["调用路径", "模型或 Codemode 脚本都可调用"], ["取舍", "模型立即看到 schema，工具越多上下文越长"]],
+        hidden: [["模型工具清单", "没有声明"], ["调用路径", "已注册但模型和脚本均无法调用"], ["配置", "可以用 toolExposure 为单个工具配置不同方式"]],
+      });
+    },
+    "protocol": () => initSurface("#pi-surfaces", {
+      sdk: [["消费者", "Node / TypeScript 应用"], ["入口", "createAgentSession"], ["进程", "同进程"], ["状态", "AgentSession + SessionManager"]],
+      json: [["消费者", "一次性脚本与观察器"], ["入口", "--mode json"], ["协议", "逐行会话事件"], ["控制", "单次运行，没有命令入口"]],
+      rpc: [["消费者", "IDE / 跨语言子进程"], ["分帧", "LF-only JSONL"], ["响应", "started 开始，queued 入队，handled 由扩展消费"], ["结束信号", "先订阅，started 或 queued 时继续读到 agent_settled"]],
+      durable: [["消费者", "需要恢复运行的应用"], ["入口", "Harness.open() / resume()"], ["恢复点", "任务从已提交 checkpoint 恢复。中断的工具按 replay 策略处理"], ["防重复提交", "同一 conversation 与 requestId 找回原 submission。外部效果另需幂等"]],
+      chord: [["消费者", "跨宿主插件与应用"], ["状态", "contract、引用与文档事务"], ["p2", "实验性的自托管 Durable UI"], ["p3", "Chord v2 上的 headless server，按会话开 worker"]],
+    }),
   });
-  initSurface("#pi-surfaces", {
-    sdk: [["消费者", "Node / TypeScript 应用"], ["入口", "createAgentSession"], ["进程", "同进程"], ["状态", "AgentSession + SessionManager"]],
-    json: [["消费者", "一次性脚本与观察器"], ["入口", "--mode json"], ["协议", "逐行会话事件"], ["控制", "单次运行，没有命令入口"]],
-    rpc: [["消费者", "IDE / 跨语言子进程"], ["分帧", "LF-only JSONL"], ["响应", "started 开始，queued 入队，handled 由扩展消费"], ["结束信号", "先订阅，started 或 queued 时继续读到 agent_settled"]],
-    durable: [["消费者", "需要恢复运行的应用"], ["入口", "Harness.open() / resume()"], ["恢复点", "任务从已提交 checkpoint 恢复。中断的工具按 replay 策略处理"], ["防重复提交", "同一 conversation 与 requestId 找回原 submission。外部效果另需幂等"]],
-    chord: [["消费者", "跨宿主插件与应用"], ["状态", "contract、引用与文档事务"], ["p2", "实验性的自托管 Durable UI"], ["p3", "Chord v2 上的 headless server，按会话开 worker"]],
-  });
-  initChapterReader();
 }
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, { once: true }); else boot();

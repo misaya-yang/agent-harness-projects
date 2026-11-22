@@ -154,4 +154,9 @@ const packing = {
   },
 };
 
-export default { "6.4": schedule, "6.4-transfer": transfer, "6.5": budget, "6.5-packing": packing };
+export {
+  schedule as "6.4",
+  transfer as "6.4-transfer",
+  budget as "6.5",
+  packing as "6.5-packing",
+};

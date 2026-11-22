@@ -114,7 +114,7 @@ describe("published course contract", () => {
   it("keeps the no-JS document and enables the shared reader once", () => {
     const entries = ["src/main.ts", "src/grok.ts", "src/deepseek.ts", "src/pi.ts", "src/opencode.ts", "src/openclaw.ts", "src/hermes.ts"].map(read);
     entries.forEach((source) => {
-      assert.equal((source.match(/initChapterReader\(\)/g) ?? []).length, 1);
+      assert.equal((source.match(/\binitChapterReader\(/g) ?? []).length, 1);
       assert.doesNotMatch(source, /initSpy/);
     });
     assert.doesNotMatch(pages.map(read).join("\n"), /class="reader-mode"|class="reader-view"/);

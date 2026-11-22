@@ -141,4 +141,7 @@ const overtrain = {
   },
 };
 
-export default { "6.1": isoflop, "6.1-overtrain": overtrain };
+export {
+  isoflop as "6.1",
+  overtrain as "6.1-overtrain",
+};

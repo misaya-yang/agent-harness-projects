@@ -348,7 +348,9 @@ const adamw = {
   },
 };
 
-export default {
-  "0.1": svdLab, "0.1-lowrank": lowRank,
-  "0.6": optimizerRace, "0.6-adamw": adamw,
+export {
+  svdLab as "0.1",
+  lowRank as "0.1-lowrank",
+  optimizerRace as "0.6",
+  adamw as "0.6-adamw",
 };

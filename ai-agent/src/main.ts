@@ -1,7 +1,3 @@
-import "./styles/base.css";
-import "./styles/layout.css";
-import "./styles/machine.css";
-
 import { initReveal } from "./modules/reveal";
 import { initChapterReader } from "./modules/chapter-reader";
 import { initNavMenu } from "./modules/navmenu";
@@ -26,19 +22,22 @@ function boot(): void {
   initNavMenu();
   initHeroPause();
 
-  initLoopMachine(document.querySelector("#machine-loop"), reducedMotion);
-  initEventStream(document.querySelector("#machine-stream"), reducedMotion);
-  initSandboxSim(document.querySelector("#machine-sandbox"));
-  initContextMeter(document.querySelector("#machine-context"));
-  initPlatformMap(document.querySelector("#machine-platform"));
-  initStateModel(document.querySelector("#machine-state"));
-  initExtensionAtlas(document.querySelector("#machine-extensions"));
-  initSurfaceSwitchboard(document.querySelector("#machine-surfaces"));
-  initCxPromptLayers(document.querySelector("#cx-prompt"));
-  initCxToolPipeline(document.querySelector("#cx-tools"));
-  initCxConfigOrder(document.querySelector("#cx-customization"));
-  initCxMultiAgent(document.querySelector("#cx-environments"));
-  initChapterReader();
+  initChapterReader({
+    "loop": () => initLoopMachine(document.querySelector("#machine-loop"), reducedMotion),
+    "protocol": () => initEventStream(document.querySelector("#machine-stream"), reducedMotion),
+    "safety": () => initSandboxSim(document.querySelector("#machine-sandbox")),
+    "context": () => {
+      initContextMeter(document.querySelector("#machine-context"));
+      initCxPromptLayers(document.querySelector("#cx-prompt"));
+    },
+    "platform": () => initPlatformMap(document.querySelector("#machine-platform")),
+    "state": () => initStateModel(document.querySelector("#machine-state")),
+    "extensions": () => initExtensionAtlas(document.querySelector("#machine-extensions")),
+    "surfaces": () => initSurfaceSwitchboard(document.querySelector("#machine-surfaces")),
+    "tools": () => initCxToolPipeline(document.querySelector("#cx-tools")),
+    "customization": () => initCxConfigOrder(document.querySelector("#cx-customization")),
+    "environments": () => initCxMultiAgent(document.querySelector("#cx-environments")),
+  });
 }
 
 /* ------------------------------------------------------------------

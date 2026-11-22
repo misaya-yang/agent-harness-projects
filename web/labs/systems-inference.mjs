@@ -543,13 +543,13 @@ const decodeLab = {
   },
 };
 
-export default {
-  "7.1": truncLab,
-  "7.1-grammar": grammarLab,
-  "7.2": specLab,
-  "7.2-batch": specBatchLab,
-  "7.3": quantLab,
-  "7.3-smooth": smoothLab,
-  "7.4": serveLab,
-  "7.4-batch": decodeLab,
+export {
+  truncLab as "7.1",
+  grammarLab as "7.1-grammar",
+  specLab as "7.2",
+  specBatchLab as "7.2-batch",
+  quantLab as "7.3",
+  smoothLab as "7.3-smooth",
+  serveLab as "7.4",
+  decodeLab as "7.4-batch",
 };

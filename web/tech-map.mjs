@@ -8,7 +8,7 @@ function stored(key, fallback) {
   catch { return fallback; }
 }
 
-export function setupTechMap(root) {
+function setupTechMap(root) {
   const data = JSON.parse(root.querySelector("[data-map-data]").textContent);
   const canvas = root.querySelector("[data-map-canvas]");
   const svg = root.querySelector("[data-map-links]");
@@ -37,14 +37,12 @@ export function setupTechMap(root) {
   }
 
   // Geometry is measured in the canvas' own coordinate space.
-  function box(id) {
-    const origin = canvas.getBoundingClientRect();
+  function box(id, origin) {
     const rect = elements.get(id).getBoundingClientRect();
     return { left: rect.left - origin.left, right: rect.right - origin.left, top: rect.top - origin.top,
       bottom: rect.bottom - origin.top, cx: rect.left - origin.left + rect.width / 2, cy: rect.top - origin.top + rect.height / 2, h: rect.height };
   }
-  function curve(fromId, toId) {
-    const a = box(fromId), b = box(toId);
+  function curve(a, b) {
     if (Math.abs(a.cy - b.cy) < a.h * 0.6) {
       // Same row: bow the link above the two nodes so it does not cross their labels.
       const [l, r] = a.cx < b.cx ? [a, b] : [b, a];
@@ -57,12 +55,23 @@ export function setupTechMap(root) {
     const bend = Math.max(28, Math.abs(y2 - y1) * 0.45) * (down ? 1 : -1);
     return `M${a.cx} ${y1} C${a.cx} ${y1 + bend}, ${b.cx} ${y2 - bend}, ${b.cx} ${y2}`;
   }
-  function link(fromId, toId, kind, optional = false) {
-    const path = document.createElementNS(SVG, "path");
-    path.setAttribute("d", curve(fromId, toId));
-    path.setAttribute("class", `map-link map-link-${kind}${optional ? " is-optional" : ""}`);
-    path.setAttribute("marker-end", `url(#map-arrow-${kind === "route" ? "route" : kind === "next" ? "next" : "prereq"})`);
-    layer.append(path);
+  function drawLinks(edges) {
+    const origin = canvas.getBoundingClientRect();
+    const boxes = new Map();
+    const bounds = id => {
+      if (!boxes.has(id)) boxes.set(id, box(id, origin));
+      return boxes.get(id);
+    };
+    const paths = document.createDocumentFragment();
+    for (const [from, to, kind, optional] of edges) {
+      const path = document.createElementNS(SVG, "path");
+      path.setAttribute("d", curve(bounds(from), bounds(to)));
+      path.setAttribute("class", `map-link map-link-${kind}${optional ? " is-optional" : ""}`);
+      path.setAttribute("marker-end", `url(#map-arrow-${kind === "chain" ? "prereq" : kind})`);
+      paths.append(path);
+    }
+    svg.setAttribute("viewBox", `0 0 ${origin.width} ${origin.height}`);
+    layer.replaceChildren(paths);
   }
 
   function chain(summary) {
@@ -98,47 +107,47 @@ export function setupTechMap(root) {
         : `<p>规划中 · 属于「${esc(stage.label)}」阶段：${esc(stage.title)}</p>`}</div>`;
   }
 
-  function render() {
-    const focus = state.hovered ?? state.selected;
-    for (const [id, el] of elements) {
-      el.classList.toggle("is-done", Boolean(stored("lesson:" + id, {}).done));
-      el.classList.toggle("is-filtered", state.core && byId.get(id).priority !== "P0");
-      el.classList.remove("is-selected", "is-prereq", "is-ancestor", "is-next", "is-dim", "in-route");
-      el.setAttribute("aria-pressed", String(id === state.selected));
-      el.querySelector(".map-node-order").textContent = "";
-    }
-    layer.replaceChildren();
-    const { width, height } = canvas.getBoundingClientRect();
-    svg.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  function syncProgress() {
+    for (const [id, el] of elements) el.classList.toggle("is-done", Boolean(stored("lesson:" + id, {}).done));
+  }
 
-    if (state.mode === "route") {
-      const ids = data.stages[state.stage].ids;
-      for (const [id, el] of elements) el.classList.toggle("is-dim", !ids.includes(id));
-      ids.forEach((id, i) => {
-        const el = elements.get(id);
-        el.classList.add("in-route");
-        el.querySelector(".map-node-order").textContent = i + 1;
-        if (i) link(ids[i - 1], id, "route");
-      });
-      if (state.selected) elements.get(state.selected).classList.add("is-selected");
-      return;
+  function render() {
+    const route = state.mode === "route" ? data.stages[state.stage].ids : null;
+    const focus = route ? null : state.hovered ?? state.selected;
+    const direct = focus ? byId.get(focus).prerequisites : [];
+    const next = focus ? dependents.get(focus) : [];
+    const upstream = focus ? ancestors(focus) : new Set();
+    const prereqIds = new Set(direct.map(ref => ref.id));
+    const nextIds = new Set(next.map(ref => ref.id));
+
+    for (const [id, el] of elements) {
+      const order = route ? route.indexOf(id) + 1 : 0;
+      el.classList.toggle("is-filtered", state.core && byId.get(id).priority !== "P0");
+      el.classList.toggle("is-selected", id === (route ? state.selected : focus));
+      el.classList.toggle("is-prereq", prereqIds.has(id));
+      el.classList.toggle("is-ancestor", upstream.has(id));
+      el.classList.toggle("is-next", nextIds.has(id));
+      const lit = id === focus || upstream.has(id) || prereqIds.has(id) || nextIds.has(id);
+      el.classList.toggle("is-dim", route ? !order : Boolean(focus && !lit));
+      el.classList.toggle("in-route", Boolean(order));
+      el.setAttribute("aria-pressed", String(id === state.selected));
+      const badge = el.querySelector(".map-node-order");
+      const label = order ? String(order) : "";
+      if (badge.textContent !== label) badge.textContent = label;
     }
-    if (!focus) return;
-    const direct = byId.get(focus).prerequisites;
-    const upstream = ancestors(focus);
-    const next = dependents.get(focus);
-    const lit = new Set([focus, ...upstream, ...direct.map(ref => ref.id), ...next.map(ref => ref.id)]);
-    for (const [id, el] of elements) el.classList.toggle("is-dim", !lit.has(id));
-    elements.get(focus).classList.add("is-selected");
-    for (const id of upstream) elements.get(id).classList.add("is-ancestor");
-    for (const ref of direct) elements.get(ref.id).classList.add("is-prereq");
-    for (const ref of next) elements.get(ref.id).classList.add("is-next");
-    // Earlier links of the prerequisite chain first, so the direct links paint on top.
-    for (const id of upstream) for (const ref of byId.get(id).prerequisites) {
-      if (!ref.optional && upstream.has(ref.id)) link(ref.id, id, "chain");
+
+    const edges = [];
+    if (route) {
+      for (let i = 1; i < route.length; i++) edges.push([route[i - 1], route[i], "route"]);
+    } else if (focus) {
+      // Paint the earlier links first so direct prerequisites remain visible on top.
+      for (const id of upstream) for (const ref of byId.get(id).prerequisites) {
+        if (!ref.optional && upstream.has(ref.id)) edges.push([ref.id, id, "chain"]);
+      }
+      for (const ref of direct) edges.push([ref.id, focus, "prereq", ref.optional]);
+      for (const ref of next) edges.push([focus, ref.id, "next", ref.optional]);
     }
-    for (const ref of direct) link(ref.id, focus, "prereq", ref.optional);
-    for (const ref of next) link(focus, ref.id, "next", ref.optional);
+    drawLinks(edges);
   }
 
   function select(id) {
@@ -202,8 +211,13 @@ export function setupTechMap(root) {
     cancelAnimationFrame(frame);
     frame = requestAnimationFrame(render);
   }).observe(canvas);
-  addEventListener("storage", render);
+  addEventListener("storage", syncProgress);
+  addEventListener("pageshow", event => { if (event.persisted) syncProgress(); });
+  syncProgress();
   showDetail(state.selected);
   document.fonts.ready.then(render);
   render();
 }
+
+const techMap = document.querySelector("[data-tech-map]");
+if (techMap) setupTechMap(techMap);

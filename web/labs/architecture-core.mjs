@@ -486,7 +486,11 @@ const digitGrouping = {
   },
 };
 
-export default {
-  "1.0": attentionSharpness, "1.0-cost": flopsPerToken, "1.7": memoryCapacity, "1.7-edit": romeEdit,
-  "1.8": bpeReplay, "1.8-digits": digitGrouping,
+export {
+  attentionSharpness as "1.0",
+  flopsPerToken as "1.0-cost",
+  memoryCapacity as "1.7",
+  romeEdit as "1.7-edit",
+  bpeReplay as "1.8",
+  digitGrouping as "1.8-digits",
 };

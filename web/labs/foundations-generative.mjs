@@ -33,13 +33,23 @@ function klToPosterior(model, x, mu, s, logPx) {
 }
 function bestQ(model, x) {
   let best = { elbo: -Infinity };
-  for (const mu of grid(-3, 3, 121)) for (const s of grid(0.05, 1.5, 146)) {
+  const scales = grid(0.05, 1.5, 146);
+  for (const mu of grid(-3, 3, 121)) for (const s of scales) {
     const elbo = reconstruction(model, x, mu, s) - klToPrior(mu, s);
     if (elbo > best.elbo) best = { elbo, mu, s };
   }
   return best;
 }
-const BEST_SQUARE = bestQ("square", 2), BEST_LINEAR = bestQ("linear", 2);
+function optimalPreset(label, model) {
+  let values;
+  return { label, get values() {
+    if (!values) {
+      const best = bestQ(model, 2);
+      values = { model, x: 2, mu: Number(best.mu.toFixed(2)), s: Number(best.s.toFixed(2)) };
+    }
+    return values;
+  } };
+}
 const elboLab = {
   title: "ELBO：下界与真实对数似然差多少？",
   question: "潜变量 z ~ N(0, 1)，观测到 x 之后，真实后验 p(z|x) 往往算不出来。用一个高斯 q(z) = N(μ, σ²) 去近似它：调 μ 和 σ，看 ELBO 离 log p(x) 有多远，这段差距和 KL(q‖p(z|x)) 是什么关系。",
@@ -50,8 +60,8 @@ const elboLab = {
     { key: "s", label: "q 的标准差 σ", min: 0.05, max: 1.5, step: 0.01, initial: 0.6, format: v => v.toFixed(2) },
   ],
   presets: [
-    { label: "线性模型的最优 q", values: { model: "linear", x: 2, mu: Number(BEST_LINEAR.mu.toFixed(2)), s: Number(BEST_LINEAR.s.toFixed(2)) } },
-    { label: "双峰：抓住一个峰", values: { model: "square", x: 2, mu: Number(BEST_SQUARE.mu.toFixed(2)), s: Number(BEST_SQUARE.s.toFixed(2)) } },
+    optimalPreset("线性模型的最优 q", "linear"),
+    optimalPreset("双峰：抓住一个峰", "square"),
     { label: "双峰：硬盖两个峰", values: { model: "square", x: 2, mu: 0, s: 1.4 } },
   ],
   check: {
@@ -171,23 +181,34 @@ const blurLab = {
 const MIX = [[0.7, -1.5], [0.3, 1.5]], MIX_SD = 0.3, B_MIN = 0.1, B_MAX = 20, T_END = 1e-3;
 const betaAt = t => B_MIN + (B_MAX - B_MIN) * t;
 const alphaAt = t => Math.exp(-0.5 * (B_MIN * t + 0.5 * (B_MAX - B_MIN) * t * t));
-function marginal(x, t) {
+function marginalAt(t) {
   const a = alphaAt(t), v = a * a * MIX_SD * MIX_SD + 1 - a * a;
-  let p = 0, ps = 0;
-  for (const [w, m] of MIX) { const d = w * normalPdf(x, a * m, Math.sqrt(v)); p += d; ps += d * -(x - a * m) / v; }
-  return { p, score: p > 1e-300 ? ps / p : -x / v };
+  const sd = Math.sqrt(v);
+  const means = MIX.map(([weight, mean]) => [weight, a * mean]);
+  return x => {
+    let p = 0, ps = 0;
+    for (const [weight, mean] of means) {
+      const d = weight * normalPdf(x, mean, sd);
+      p += d;
+      ps += d * -(x - mean) / v;
+    }
+    return { p, score: p > 1e-300 ? ps / p : -x / v };
+  };
 }
 const PARTICLES = 400, SHOWN = 18;
-const STARTS = (() => { const z = normals(31); return Array.from({ length: PARTICLES }, () => z()); })();
-const KICKS = (() => { const z = normals(37); return Array.from({ length: PARTICLES * 500 }, () => z()); })();
+let starts, kicks;
 function sample(steps, stochastic) {
+  starts ??= Array.from({ length: PARTICLES }, normals(31));
+  if (stochastic) kicks ??= Array.from({ length: PARTICLES * 500 }, normals(37));
   const h = (1 - T_END) / steps, keep = Math.max(1, Math.round(steps / 60));
-  const xs = STARTS.slice(), paths = Array.from({ length: SHOWN }, (_, i) => [[1, xs[i * 7]]]);
+  const xs = starts.slice(), paths = Array.from({ length: SHOWN }, (_, i) => [[1, xs[i * 7]]]);
   for (let n = 0; n < steps; n++) {
     const t = 1 - n * h, b = betaAt(t);
+    const marginal = marginalAt(t);
+    const noiseScale = Math.sqrt(b * h), offset = Math.floor(n * 500 / steps);
     for (let i = 0; i < PARTICLES; i++) {
-      const s = marginal(xs[i], t).score;
-      xs[i] += stochastic ? (0.5 * b * xs[i] + b * s) * h + Math.sqrt(b * h) * KICKS[(i * 500 + Math.floor(n * 500 / steps)) % KICKS.length]
+      const s = marginal(xs[i]).score;
+      xs[i] += stochastic ? (0.5 * b * xs[i] + b * s) * h + noiseScale * kicks[i * 500 + offset]
         : (0.5 * b * xs[i] + 0.5 * b * s) * h;
       xs[i] = clamp(xs[i], -8, 8);
     }
@@ -201,6 +222,8 @@ function discordant(a, b) {
   return bad / total;
 }
 const STEP_OPTIONS = [10, 30, 100, 500];
+// Changing visibility leaves the paths from this fixed-seed integration intact.
+let lastIntegration;
 const sdeLab = {
   title: "反向 SDE 与概率流 ODE：同样的终点分布，完全不同的轨迹",
   question: "同一组从 N(0, 1) 出发的粒子，按学到的 score 往回走到数据分布（70% 在左峰、30% 在右峰）。反向 SDE 每步加噪声，概率流 ODE 不加。背景是每个时刻的边缘密度 p_t：比较两种轨迹、终点直方图和步数的影响。",
@@ -219,13 +242,16 @@ const sdeLab = {
   },
   evaluate({ view, steps }) {
     const n = Number(steps);
-    const sde = sample(n, true), ode = sample(n, false);
+    if (lastIntegration?.steps !== n) lastIntegration = { steps: n, sde: sample(n, true), ode: sample(n, false) };
+    const { sde, ode } = lastIntegration;
     const right = xs => xs.filter(x => x > 0).length / xs.length;
     const X0 = 34, X1 = 430, Y0 = 34, Y1 = 296, lo = -3.2, hi = 3.2;
     const tx = t => xy(X0 + (1 - t) * (X1 - X0)), yy = x => xy(Y1 - (clamp(x, lo, hi) - lo) / (hi - lo) * (Y1 - Y0));
     const cols = 36, rows = 48, cw = (X1 - X0) / cols, rh = (Y1 - Y0) / rows;
     const density = Array.from({ length: cols }, (_, c) => {
-      const t = 1 - (c + 0.5) / cols * (1 - T_END), ys = Array.from({ length: rows }, (_, r) => marginal(hi - (r + 0.5) * rh / (Y1 - Y0) * (hi - lo), t).p);
+      const t = 1 - (c + 0.5) / cols * (1 - T_END);
+      const marginal = marginalAt(t);
+      const ys = Array.from({ length: rows }, (_, r) => marginal(hi - (r + 0.5) * rh / (Y1 - Y0) * (hi - lo)).p);
       const m = Math.max(...ys);
       return ys.map((p, r) => p / m < 0.04 ? "" : `<rect x="${xy(X0 + c * cw)}" y="${xy(Y0 + r * rh)}" width="${xy(cw + 0.4)}" height="${xy(rh + 0.4)}" class="lab-fig-density" fill-opacity="${(0.32 * p / m).toFixed(2)}"/>`).join("");
     }).join("");
@@ -241,7 +267,7 @@ const sdeLab = {
       return `${xy(x0 + Math.min(d, 1.15) * HW)} ${yy(x)}`;
     }).join(" L");
     const showSde = view !== "ode", showOde = view !== "sde";
-    const sdeMix = discordant(STARTS, sde.xs), odeMix = discordant(STARTS, ode.xs);
+    const sdeMix = discordant(starts, sde.xs), odeMix = discordant(starts, ode.xs);
     const width = xs => Math.sqrt(xs.reduce((acc, x) => acc + (x - (x > 0 ? 1.5 : -1.5)) ** 2, 0) / xs.length);
     const wSde = width(sde.xs), wOde = width(ode.xs);
     const body = `
@@ -336,7 +362,9 @@ const brownian = {
   },
 };
 
-export default {
-  "0.8": elboLab, "0.8-vae": blurLab,
-  "0.9": sdeLab, "0.9-brownian": brownian,
+export {
+  elboLab as "0.8",
+  blurLab as "0.8-vae",
+  sdeLab as "0.9",
+  brownian as "0.9-brownian",
 };

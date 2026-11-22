@@ -195,4 +195,9 @@ const thinkingLab = {
   },
 };
 
-export default { "3.4": rvqLab, "3.4-latency": latencyLab, "7.5": bestOfLab, "7.5-stopping": thinkingLab };
+export {
+  rvqLab as "3.4",
+  latencyLab as "3.4-latency",
+  bestOfLab as "7.5",
+  thinkingLab as "7.5-stopping",
+};

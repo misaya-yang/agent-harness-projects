@@ -1,10 +1,11 @@
 import { readFileSync } from "node:fs";
 import { lessonTopics } from "./lesson-topics.mjs";
-import { labAnchor, labGroups, labDefinitions } from "./lesson-labs.mjs";
+import { labAnchor, labDefinitions } from "./lesson-labs.mjs";
 import { lessonSources, sourceSection } from "./lesson-sources.mjs";
 import { available, lessons, modules, learningOrder, stages } from "./curriculum.mjs";
 import { techMapSection } from "./tech-map.mjs";
 
+const themeScript = readFileSync(new URL("../web/theme.js", import.meta.url), "utf8");
 const title = "Misaya Academy";
 const description = "从大模型架构到后训练、多模态、生成模型与训练工程，沿着讲义、推导、代码和自测系统学习 AI 算法。";
 export const escape = value => String(value).replace(/[&<>"']/g, char =>
@@ -35,7 +36,7 @@ function studyNav(current) {
 const themeControl = `<button class="nav-icon-button nav-theme-toggle" data-theme-toggle type="button" aria-label="切换浅色模式" aria-pressed="true"><span data-sun>${icon("sun", 17)}</span><span data-moon hidden>${icon("moon", 17)}</span></button>`;
 const motionControl = `<button class="starfield-toggle" type="button" data-sky-toggle aria-pressed="false" aria-label="暂停星场动画" aria-describedby="starfield-keys" hidden><span data-pause>${icon("pause", 14)}</span><span data-play hidden>${icon("play", 14)}</span><span class="starfield-toggle-label">暂停星场动画</span></button>`;
 
-function shell({ name, summary = description, url, type = "public", activeModule, body, id, outline = "", labGroup, math = false }) {
+function shell({ name, summary = description, url, type = "public", activeModule, body, id, outline = "", hasLabs = false, math = false }) {
   const canonicalOrigin = process.env.SITE_URL || "https://ai-algorithm-academy.lvy-u.chatgpt.site";
   const pageTitle = name ? `${name} · ${title}` : `${title} · AI 算法研习`;
   return `<!doctype html>
@@ -48,15 +49,15 @@ function shell({ name, summary = description, url, type = "public", activeModule
   <meta name="description" content="${escape(summary)}">
   <link rel="canonical" href="${escape(canonicalOrigin + url)}">
   <link rel="icon" href="/assets/academy.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="/misaya/typefaces.css">
-  <link rel="stylesheet" href="/misaya/starfield.css">
+  <script>${themeScript}</script>
+  ${type === "home" ? '<link rel="stylesheet" href="/misaya/starfield.css">' : ""}
   ${math ? '<link rel="stylesheet" href="/katex/katex.min.css">' : ""}
   <link rel="stylesheet" href="/academy.css">
   ${id ? '<link rel="stylesheet" href="/labs.css">' : ""}
   ${type === "roadmap" ? '<link rel="stylesheet" href="/tech-map.css">' : ""}
-  ${labGroup ? `<script type="module" src="/labs/${labGroup}.js"></script>` : ""}
-  <script src="/theme.js"></script>
+  ${hasLabs ? `<link rel="modulepreload" href="/labs/client.js"><script type="module" src="/labs/lesson-${id}.js"></script>` : ""}
   <script type="module" src="/app.js"></script>
+  ${type === "roadmap" ? '<script type="module" src="/tech-map.js"></script>' : ""}
 </head>
 <body data-study-order="${learningOrder.map(lesson => lesson.id).join(" ")}"${id ? ` data-lesson="${id}"` : ""}>
   <a class="skip-link" href="#main">跳到正文</a>
@@ -212,9 +213,6 @@ export function lessonPage(lesson, rendered) {
   const completed = `<button type="button" class="study-button" data-complete aria-pressed="false">${icon("check", 16)}<span>标记学完</span></button>`;
   const topic = lessonTopics(lesson.id);
   const labs = rendered.labs.map(id=>({ id: labAnchor(id), title: labDefinitions[id].title }));
-  const labGroup = labs.length && Object.keys(labGroups).find(group =>
-    rendered.labs.every(id => Object.hasOwn(labGroups[group], id)));
-  if (labs.length && !labGroup) throw Error(`课文 ${lesson.id} 的互动实验必须能从同一课组加载`);
   const sources = lessonSources[lesson.id] ?? [];
   const outline = `<nav class="lesson-outline" aria-label="本课目录"><h2>本课目录</h2><ol>${rendered.parts.map(part =>
     `<li><a href="#${part.id}">${escape(part.title)}</a></li>`
@@ -237,7 +235,7 @@ export function lessonPage(lesson, rendered) {
     return `<section class="lesson-section" data-part="${part.id}"><h2 id="${part.id}">${heading}</h2>${body}</section>`;
   }).join("");
 
-  return shell({ name: lesson.title, summary: lesson.summary, url: lesson.url, id: lesson.id, type: "reader", activeModule: lesson.module, math: true, outline, labGroup, body: `<main class="paper-reader-container" id="main">
+  return shell({ name: lesson.title, summary: lesson.summary, url: lesson.url, id: lesson.id, type: "reader", activeModule: lesson.module, math: true, outline, hasLabs: labs.length > 0, body: `<main class="paper-reader-container" id="main">
     <aside class="reader-margin">${outline}</aside>
     <article class="paper-reader-main">
       <header class="article-reading-header" data-part="lesson-intro" id="lesson-intro">

@@ -1,8 +1,3 @@
-import "./styles/base.css";
-import "./styles/layout.css";
-import "./styles/machine.css";
-import "./styles/openclaw.css";
-
 import { initNavMenu } from "./modules/navmenu";
 import { initReveal } from "./modules/reveal";
 import { initSeriesNav } from "./modules/series-nav";
@@ -534,27 +529,28 @@ function boot(): void {
   initReveal(reduced.matches);
   initNavMenu();
   initHeroPause();
-  initLoopStepper();
-  initDecisionMatrix();
-  initStateProjection();
-  initBudgetBreaker();
-  initWakeSources();
-  initApprovalGates();
-  initMemoryResume();
-  initSurface("#oclaw-surface", {
-    telegram: [["协议角色", "Gateway 宿主侧通道扩展（grammY）"], ["消息进出", "inbound debounce → 会话路由 → run；outbound 走通道插件"], ["审批与交互", "已配置的审批目标可由授权人批复"], ["断线语义", "Telegram 连接中断会影响这条通道的收发，可从 Gateway 核对会话状态。"]],
-    discord: [["协议角色", "Gateway 通道扩展"], ["消息进出", "会话路由与通道输出使用对应集成"], ["审批与交互", "在支持且按配置可达的审批面批复"], ["断线语义", "查看 Discord 入站与出站状态，再查 Gateway 中的会话。"]],
-    ui: [["协议角色", "Gateway 的 WebSocket 客户端"], ["消息进出", "聊天与历史通过统一协议读写"], ["审批与交互", "审批面板 + ask_user 回答框"], ["断线语义", "纯客户端，断线不应删除 Gateway 持久状态"]],
-    cli: [["协议角色", "可连接 Gateway，或用本地内置后端"], ["消息进出", "Gateway 模式读取目标会话，回发聊天通道需单独开启"], ["审批与交互", "查看待审批需相应 operator 作用域"], ["断线语义", "重连后核对 Gateway 身份、会话 ID 和历史"]],
-    macos: [["协议角色", "WS 客户端（control-plane）"], ["消息进出", "同左 + canvas.* 部件命令"], ["审批与交互", "系统通知 + 审批"], ["断线语义", "node 配对重连（device pairing store）"]],
+  initChapterReader({
+    "loop-stack": initLoopStepper,
+    "settle": initDecisionMatrix,
+    "state": initStateProjection,
+    "budget": initBudgetBreaker,
+    "wake": initWakeSources,
+    "approval": initApprovalGates,
+    "memory": initMemoryResume,
+    "gateway": () => initSurface("#oclaw-surface", {
+      telegram: [["协议角色", "Gateway 宿主侧通道扩展（grammY）"], ["消息进出", "inbound debounce → 会话路由 → run；outbound 走通道插件"], ["审批与交互", "已配置的审批目标可由授权人批复"], ["断线语义", "Telegram 连接中断会影响这条通道的收发，可从 Gateway 核对会话状态。"]],
+      discord: [["协议角色", "Gateway 通道扩展"], ["消息进出", "会话路由与通道输出使用对应集成"], ["审批与交互", "在支持且按配置可达的审批面批复"], ["断线语义", "查看 Discord 入站与出站状态，再查 Gateway 中的会话。"]],
+      ui: [["协议角色", "Gateway 的 WebSocket 客户端"], ["消息进出", "聊天与历史通过统一协议读写"], ["审批与交互", "审批面板 + ask_user 回答框"], ["断线语义", "纯客户端，断线不应删除 Gateway 持久状态"]],
+      cli: [["协议角色", "可连接 Gateway，或用本地内置后端"], ["消息进出", "Gateway 模式读取目标会话，回发聊天通道需单独开启"], ["审批与交互", "查看待审批需相应 operator 作用域"], ["断线语义", "重连后核对 Gateway 身份、会话 ID 和历史"]],
+      macos: [["协议角色", "WS 客户端（control-plane）"], ["消息进出", "同左 + canvas.* 部件命令"], ["审批与交互", "系统通知 + 审批"], ["断线语义", "node 配对重连（device pairing store）"]],
+    }),
+    "practice": () => initChoiceDetail("#oclaw-atlas", {
+      silent: { title: "核对 Gateway 和到期作业", body: "确认 Gateway 在线，再查作业是否启用、是否已经到期，以及是否在等主会话空闲。上一次运行的结果与下一次调度分别核对。", status: "先查唤醒" },
+      expensive: { title: "确认哪些重试消耗了预算", body: "区分单请求重试、run 内 recovery、跨 run 探测与凭证冷却；再检查副作用证据。外层连续计数遇到完整模型响应会回到 1。", status: "先分账" },
+      dreaming: { title: "记忆晋升与手工内容要分开看", body: "夜间任务会把满足分数、召回次数、查询多样性和时效门槛的碎片晋升；回收器只删除能确认由系统生成的自动分节。", status: "先看来源" },
+      loopy: { title: "检查同名同参是否连续重复", body: "重复守卫默认开启。连续同名同参第 3 次提示，第 20 次执行前拦截。换调用或新用户输入重置连击，声明可重复的轮询豁免。", status: "查看 tool_repeat_limit" },
+    }),
   });
-  initChoiceDetail("#oclaw-atlas", {
-    silent: { title: "核对 Gateway 和到期作业", body: "确认 Gateway 在线，再查作业是否启用、是否已经到期，以及是否在等主会话空闲。上一次运行的结果与下一次调度分别核对。", status: "先查唤醒" },
-    expensive: { title: "确认哪些重试消耗了预算", body: "区分单请求重试、run 内 recovery、跨 run 探测与凭证冷却；再检查副作用证据。外层连续计数遇到完整模型响应会回到 1。", status: "先分账" },
-    dreaming: { title: "记忆晋升与手工内容要分开看", body: "夜间任务会把满足分数、召回次数、查询多样性和时效门槛的碎片晋升；回收器只删除能确认由系统生成的自动分节。", status: "先看来源" },
-    loopy: { title: "检查同名同参是否连续重复", body: "重复守卫默认开启。连续同名同参第 3 次提示，第 20 次执行前拦截。换调用或新用户输入重置连击，声明可重复的轮询豁免。", status: "查看 tool_repeat_limit" },
-  });
-  initChapterReader();
 }
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, { once: true }); else boot();

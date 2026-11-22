@@ -152,4 +152,9 @@ const fusionPenalty = {
   },
 };
 
-export default { "5.5": diagnostic, "5.5-diagnosis": pairedLab, "5.6": fusion, "5.6-fusion-budget": fusionPenalty };
+export {
+  diagnostic as "5.5",
+  pairedLab as "5.5-diagnosis",
+  fusion as "5.6",
+  fusionPenalty as "5.6-fusion-budget",
+};

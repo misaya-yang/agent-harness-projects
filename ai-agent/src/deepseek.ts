@@ -1,8 +1,3 @@
-import "./styles/base.css";
-import "./styles/layout.css";
-import "./styles/machine.css";
-import "./styles/deepseek.css";
-
 import { initNavMenu } from "./modules/navmenu";
 import { initReveal } from "./modules/reveal";
 import { initSeriesNav } from "./modules/series-nav";
@@ -429,43 +424,44 @@ function boot(): void {
   initReveal(reduced.matches);
   initNavMenu();
   initHeroPause();
-  initLoop();
-  initSessionProjection();
-  initPromptAssembly();
-  initContextProjection();
-  initSafety();
-  initChoiceDetail("#dsh-composition", {
-    model: { title: "模型适配服务", body: "替换提供方实现；Loop 仍通过同一模型服务发起流式调用。验证点是有效组合中的当前 Provider。", status: "LLM PROVIDER" },
-    prompt: { title: "提示词注册与运行时快照", body: "静态规则进入有序片段，动态政策以历史快照追加；两者都必须能解释模型为何看见这段内容。", status: "SYSTEM PROMPT" },
-    tool: { title: "工具注册与能力 Provider", body: "先核对当前 Agent 作用域的工具注册，再查该工具使用哪一种后端。", status: "TOOLS" },
-    history: { title: "会话持久化与崩溃修补", body: "从实际保留的日志尾部开始，依序检查 flush、补齐的工具结果和当前消息投影。", status: "SESSION" },
+  initChapterReader({
+    "loop": initLoop,
+    "session": initSessionProjection,
+    "prompt": initPromptAssembly,
+    "context": initContextProjection,
+    "safety": initSafety,
+    "composition": () => initChoiceDetail("#dsh-composition", {
+      model: { title: "模型适配服务", body: "替换提供方实现；Loop 仍通过同一模型服务发起流式调用。验证点是有效组合中的当前 Provider。", status: "LLM PROVIDER" },
+      prompt: { title: "提示词注册与运行时快照", body: "静态规则进入有序片段，动态政策以历史快照追加；两者都必须能解释模型为何看见这段内容。", status: "SYSTEM PROMPT" },
+      tool: { title: "工具注册与能力 Provider", body: "先核对当前 Agent 作用域的工具注册，再查该工具使用哪一种后端。", status: "TOOLS" },
+      history: { title: "会话持久化与崩溃修补", body: "从实际保留的日志尾部开始，依序检查 flush、补齐的工具结果和当前消息投影。", status: "SESSION" },
+    }),
+    "tools": () => initChoiceDetail("#dsh-tools", {
+      hidden: { title: "组装结果与 Agent 作用域", body: "先检查当前作用域的可见工具集，再核对请求 Header 记录的工具顺序。未注册与模型不调用是两种问题。" },
+      denied: { title: "执行前政策链", body: "先看调用前决策（放行、拒绝、取消或请求审批），再检查审批结论和可独立拒绝的守卫。" },
+      timeout: { title: "执行与取消边界", body: "找出哪一层发出了取消信号，确认工具是否停下。同进程工具要响应信号，已发生的修改需另查。" },
+      distorted: { title: "执行后政策与结果收口", body: "比较规范化结果、post-execute 决策与最终模型文本；第一处发生变化的阶段就是责任层。" },
+    }),
+    "profiles": () => initChoiceDetail("#dsh-profiles", {
+      base: { title: "共享基础 Bundle", body: "进程级基础插件层；改变它会影响所有使用该组合的新启动实例。", status: "BUNDLE" },
+      surface: { title: "运行表面 Bundle", body: "不同表面在共享基础上增加自己的宿主能力；差异属于组合，不属于 Loop 分支。", status: "SURFACE BUNDLE" },
+      profile: { title: "用户 Profile Patch", body: "用户层按行标识替换整份配置，不做字段级深合并；先导出最终组合再判断。", status: "PROFILE PATCH" },
+      preset: { title: "AgentPresetRegistry", body: "修改 dsh-agent-preset 的 config.plugins。已经开始首个 Turn 的 Session 会拒绝切换。子 Agent 可以显式继承父代组合。", status: "AGENT PRESET" },
+    }),
+    "capabilities": () => initSurface("#dsh-capabilities", {
+      local: [["Definition", "文件与子进程的稳定能力接口"], ["Provider", "本地文件系统与本地进程"], ["Consumers", "Bash、PTY、LSP、文件工具"], ["判断", "执行发生在宿主工作区与进程树"]],
+      sandbox: [["Definition", "仍是同一组能力接口"], ["Provider", "平台沙箱 runner + 进程内写围栏"], ["Consumers", "上层工具无需分叉"], ["判断", "检查平台报告的文件约束；受限执行缺后端时返回错误"]],
+      ssh: [["Definition", "ctx.fs、ctx.subprocess 与 ctx.sandbox"], ["Provider", "fs-ssh、subprocess-ssh、sandbox-ssh 共用一个远端 helper"], ["Consumers", "文件工具、Bash 和 PTY 依赖同一服务接口"], ["执行位置", "文件与进程在远端，Harness、模型调用和 Session 存储在宿主"]],
+    }),
+    "surfaces": () => initSurface("#dsh-surfaces", {
+      web: [["消费者", "人类开发者"], ["交互", "Web UI、审批、问题、命令"], ["组合", "base + web-app Bundle"], ["状态", "持久事件页与实时助手帧"]],
+      desktop: [["消费者", "桌面开发者"], ["交互", "Electron 窗口加载 Web 应用"], ["组合", "打包的 Host 与保留的 Desktop Profile"], ["传输", "本地 carrier 连接 Host，继续使用 Web RPC 与流"]],
+      headless: [["消费者", "一次性脚本 / CI"], ["输入", "一个普通 user message"], ["输出", "活跃子代理收尾及会话 flush 后，取本次运行的末条非空助手文本"], ["网络", "不启动 HTTP Server"]],
+      acp: [["消费者", "自动化 Agent Client"], ["传输", "JSON-RPC stdio"], ["输出", "committed assistant message updates"], ["限制", "automation-only；不等于 Web UI"]],
+      sdk: [["消费者", "TypeScript 产品集成"], ["传输", "newline-delimited JSON-RPC"], ["运行", "启动完整 runtime 子进程"], ["生命周期", "initialize settle / shutdown flush"]],
+      python: [["消费者", "Python 调用方"], ["传输", "同一 JSON-RPC runtime"], ["运行", "bundled runtime 子进程"], ["收集", "prompt admission 至 Agent idle 的活动区间"]],
+    }),
   });
-  initChoiceDetail("#dsh-tools", {
-    hidden: { title: "组装结果与 Agent 作用域", body: "先检查当前作用域的可见工具集，再核对请求 Header 记录的工具顺序。未注册与模型不调用是两种问题。" },
-    denied: { title: "执行前政策链", body: "先看调用前决策（放行、拒绝、取消或请求审批），再检查审批结论和可独立拒绝的守卫。" },
-    timeout: { title: "执行与取消边界", body: "找出哪一层发出了取消信号，确认工具是否停下。同进程工具要响应信号，已发生的修改需另查。" },
-    distorted: { title: "执行后政策与结果收口", body: "比较规范化结果、post-execute 决策与最终模型文本；第一处发生变化的阶段就是责任层。" },
-  });
-  initChoiceDetail("#dsh-profiles", {
-    base: { title: "共享基础 Bundle", body: "进程级基础插件层；改变它会影响所有使用该组合的新启动实例。", status: "BUNDLE" },
-    surface: { title: "运行表面 Bundle", body: "不同表面在共享基础上增加自己的宿主能力；差异属于组合，不属于 Loop 分支。", status: "SURFACE BUNDLE" },
-    profile: { title: "用户 Profile Patch", body: "用户层按行标识替换整份配置，不做字段级深合并；先导出最终组合再判断。", status: "PROFILE PATCH" },
-    preset: { title: "AgentPresetRegistry", body: "修改 dsh-agent-preset 的 config.plugins。已经开始首个 Turn 的 Session 会拒绝切换。子 Agent 可以显式继承父代组合。", status: "AGENT PRESET" },
-  });
-  initSurface("#dsh-capabilities", {
-    local: [["Definition", "文件与子进程的稳定能力接口"], ["Provider", "本地文件系统与本地进程"], ["Consumers", "Bash、PTY、LSP、文件工具"], ["判断", "执行发生在宿主工作区与进程树"]],
-    sandbox: [["Definition", "仍是同一组能力接口"], ["Provider", "平台沙箱 runner + 进程内写围栏"], ["Consumers", "上层工具无需分叉"], ["判断", "检查平台报告的文件约束；受限执行缺后端时返回错误"]],
-    ssh: [["Definition", "ctx.fs、ctx.subprocess 与 ctx.sandbox"], ["Provider", "fs-ssh、subprocess-ssh、sandbox-ssh 共用一个远端 helper"], ["Consumers", "文件工具、Bash 和 PTY 依赖同一服务接口"], ["执行位置", "文件与进程在远端，Harness、模型调用和 Session 存储在宿主"]],
-  });
-  initSurface("#dsh-surfaces", {
-    web: [["消费者", "人类开发者"], ["交互", "Web UI、审批、问题、命令"], ["组合", "base + web-app Bundle"], ["状态", "持久事件页与实时助手帧"]],
-    desktop: [["消费者", "桌面开发者"], ["交互", "Electron 窗口加载 Web 应用"], ["组合", "打包的 Host 与保留的 Desktop Profile"], ["传输", "本地 carrier 连接 Host，继续使用 Web RPC 与流"]],
-    headless: [["消费者", "一次性脚本 / CI"], ["输入", "一个普通 user message"], ["输出", "活跃子代理收尾及会话 flush 后，取本次运行的末条非空助手文本"], ["网络", "不启动 HTTP Server"]],
-    acp: [["消费者", "自动化 Agent Client"], ["传输", "JSON-RPC stdio"], ["输出", "committed assistant message updates"], ["限制", "automation-only；不等于 Web UI"]],
-    sdk: [["消费者", "TypeScript 产品集成"], ["传输", "newline-delimited JSON-RPC"], ["运行", "启动完整 runtime 子进程"], ["生命周期", "initialize settle / shutdown flush"]],
-    python: [["消费者", "Python 调用方"], ["传输", "同一 JSON-RPC runtime"], ["运行", "bundled runtime 子进程"], ["收集", "prompt admission 至 Agent idle 的活动区间"]],
-  });
-  initChapterReader();
 }
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, { once: true }); else boot();

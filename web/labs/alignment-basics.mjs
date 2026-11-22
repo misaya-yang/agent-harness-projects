@@ -270,4 +270,9 @@ const nf4Lab = {
   },
 };
 
-export default { "2.0": gridworld, "2.0-td": tdVsMc, "2.8": loraRank, "2.8-nf4": nf4Lab };
+export {
+  gridworld as "2.0",
+  tdVsMc as "2.0-td",
+  loraRank as "2.8",
+  nf4Lab as "2.8-nf4",
+};

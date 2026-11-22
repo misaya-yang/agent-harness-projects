@@ -1,8 +1,3 @@
-import "./styles/base.css";
-import "./styles/layout.css";
-import "./styles/machine.css";
-import "./styles/grok.css";
-
 import { initReveal } from "./modules/reveal";
 import { initChapterReader } from "./modules/chapter-reader";
 import { initNavMenu } from "./modules/navmenu";
@@ -239,45 +234,46 @@ function boot(): void {
   initReveal(reduced.matches);
   initNavMenu();
   initHeroPause();
-  initTurn();
-  initEvents();
-  initSafety();
-  initSession();
-  initContext();
-  initChoiceDetail("#grok-architecture", {
-    render: { title: "展示与承载层", body: "先比较客户端收到的事件与最终布局；会话事实可能完全正确，只是投影错了。", status: "SURFACE" },
-    stall: { title: "会话与采样层", body: "先检查当前采样是否已完成，再核对待回填工具、待办提醒或插话。看到 TurnOutcome 后查外层有没有触发下一 round。", status: "SESSION" },
-    missing: { title: "能力装配与工具注册层", body: "区分工具是否被发现、是否可见、是否可派发，以及是否被当前工具集裁掉。", status: "CAPABILITY" },
-    dirty: { title: "执行世界与工作区层", body: "若工具只返回后台任务句柄，先查进程终态。再用命令 cwd 和实际 VCS 或文件状态核对结果。", status: "WORKSPACE" },
+  initChapterReader({
+    "turn": initTurn,
+    "protocol": initEvents,
+    "safety": initSafety,
+    "sessions": initSession,
+    "context": initContext,
+    "architecture": () => initChoiceDetail("#grok-architecture", {
+      render: { title: "展示与承载层", body: "先比较客户端收到的事件与最终布局；会话事实可能完全正确，只是投影错了。", status: "SURFACE" },
+      stall: { title: "会话与采样层", body: "先检查当前采样是否已完成，再核对待回填工具、待办提醒或插话。看到 TurnOutcome 后查外层有没有触发下一 round。", status: "SESSION" },
+      missing: { title: "能力装配与工具注册层", body: "区分工具是否被发现、是否可见、是否可派发，以及是否被当前工具集裁掉。", status: "CAPABILITY" },
+      dirty: { title: "执行世界与工作区层", body: "若工具只返回后台任务句柄，先查进程终态。再用命令 cwd 和实际 VCS 或文件状态核对结果。", status: "WORKSPACE" },
+    }),
+    "tools": () => initChoiceDetail("#grok-tools", {
+      hidden: { title: "Agent capability selection", body: "读取最终 tool definitions，确认工具没有被 allowlist、denylist、mode 或 feature gate 裁掉。" },
+      schema: { title: "Tool schema validation", body: "比较模型发出的参数与 canonical schema；名称映射不应改变内部身份。" },
+      permission: { title: "PermissionManager", body: "检查审批模式、有效规则、组织策略和待审批调用。用户拒绝可中止后续准备；单条策略拒绝后，准备阶段可以继续。" },
+      output: { title: "Normalization / truncation", body: "命令可能成功，但关键 stdout 被截断、折叠或转换错误，导致回注证据不完整。" },
+    }),
+    "workspace": () => initChoiceDetail("#grok-workspace", {
+      file: { title: "ToolBridge → Workspace filesystem", body: "路径校验、权限、编辑实现、diff 通知与 checkpoint 共同形成可恢复证据。" },
+      command: { title: "Permission → PTY/process", body: "命令获得会话上下文和取消句柄，stdout/stderr 流式产生 ToolNotification。" },
+      background: { title: "ProcessManager → BackgroundHandle", body: "启动后返回任务句柄；后续通过 task log、get output 与 kill 跟踪，而不是阻塞回合。" },
+      rewind: { title: "预览冲突与文件恢复", body: "工作区先列出可能被恢复的文件和外部修改冲突。执行后分别核对文件、可选 Git 与 hunk 恢复，可能出现部分成功。" },
+    }),
+    "extensions": () => initChoiceDetail("#grok-extensions", {
+      rules: { title: "AGENTS.md · 行为约束", body: "规则以独立的项目指令项注入，并在压缩后逐字重建；它不新增可执行工具。" },
+      skills: { title: "Skills · 渐进式流程知识", body: "SKILL.md 提供专门工作流；同名项按来源优先级去重，执行仍依赖已有工具。" },
+      mcp: { title: "MCP · 外部能力协议", body: "项目来源在加载时检查信任。工具注册后可内联或延迟发现，实际派发还需通过权限检查。" },
+      plugins: { title: "Plugins · 可分发扩展包", body: "把 agents、Skills、Hooks 与 MCP 组合为分发单元；项目来源仍要过目录信任。" },
+      hooks: { title: "Hooks · 确定性生命周期代码", body: "PreToolUse 可拒绝、请求审批或改写参数。超时和崩溃通常放行，改写后的输入未通过 schema 则阻断。" },
+      memory: { title: "Memory · 跨会话证据层", body: "V2 在启用时把观察写进收件箱，再独立整理为主题与汇总。检索所得信息仍需和当前工作区核对。" },
+    }),
+    "surfaces": () => initSurface("#grok-surfaces", {
+      tui: [["承载", "进程内嵌 Agent"], ["输入", "全屏 Prompt / slash commands"], ["输出", "Scrollback、diff、modal"], ["关键边界", "沙箱约束与启动进程绑定"]],
+      headless: [["消费者", "远端与无人值守客户端"], ["输入", "relay 会话消息"], ["输出", "流式会话事件"], ["关键边界", "ping、半开检测与重连"]],
+      acp: [["消费者", "IDE 与 Agent 客户端"], ["输入", "ACP PromptRequest"], ["输出", "SessionUpdate / ToolCallUpdate"], ["关键边界", "客户端不拥有运行时状态"]],
+      serve: [["消费者", "可信远端执行消费者"], ["输入", "JSON-RPC 工具调用"], ["输出", "本地工作区工具结果"], ["关键边界", "本地工作区通过反向连接暴露工具。与 agent serve 承载 ACP 会话分开"]],
+      leader: [["消费者", "多个 CLI/会话"], ["输入", "本地传输协议"], ["输出", "复用常驻宿主"], ["关键边界", "锁与就绪决定能否连接。只有较新的可解析版本触发版本替换"]],
+    }),
   });
-  initChoiceDetail("#grok-tools", {
-    hidden: { title: "Agent capability selection", body: "读取最终 tool definitions，确认工具没有被 allowlist、denylist、mode 或 feature gate 裁掉。" },
-    schema: { title: "Tool schema validation", body: "比较模型发出的参数与 canonical schema；名称映射不应改变内部身份。" },
-    permission: { title: "PermissionManager", body: "检查审批模式、有效规则、组织策略和待审批调用。用户拒绝可中止后续准备；单条策略拒绝后，准备阶段可以继续。" },
-    output: { title: "Normalization / truncation", body: "命令可能成功，但关键 stdout 被截断、折叠或转换错误，导致回注证据不完整。" },
-  });
-  initChoiceDetail("#grok-workspace", {
-    file: { title: "ToolBridge → Workspace filesystem", body: "路径校验、权限、编辑实现、diff 通知与 checkpoint 共同形成可恢复证据。" },
-    command: { title: "Permission → PTY/process", body: "命令获得会话上下文和取消句柄，stdout/stderr 流式产生 ToolNotification。" },
-    background: { title: "ProcessManager → BackgroundHandle", body: "启动后返回任务句柄；后续通过 task log、get output 与 kill 跟踪，而不是阻塞回合。" },
-    rewind: { title: "预览冲突与文件恢复", body: "工作区先列出可能被恢复的文件和外部修改冲突。执行后分别核对文件、可选 Git 与 hunk 恢复，可能出现部分成功。" },
-  });
-  initChoiceDetail("#grok-extensions", {
-    rules: { title: "AGENTS.md · 行为约束", body: "规则以独立的项目指令项注入，并在压缩后逐字重建；它不新增可执行工具。" },
-    skills: { title: "Skills · 渐进式流程知识", body: "SKILL.md 提供专门工作流；同名项按来源优先级去重，执行仍依赖已有工具。" },
-    mcp: { title: "MCP · 外部能力协议", body: "项目来源在加载时检查信任。工具注册后可内联或延迟发现，实际派发还需通过权限检查。" },
-    plugins: { title: "Plugins · 可分发扩展包", body: "把 agents、Skills、Hooks 与 MCP 组合为分发单元；项目来源仍要过目录信任。" },
-    hooks: { title: "Hooks · 确定性生命周期代码", body: "PreToolUse 可拒绝、请求审批或改写参数。超时和崩溃通常放行，改写后的输入未通过 schema 则阻断。" },
-    memory: { title: "Memory · 跨会话证据层", body: "V2 在启用时把观察写进收件箱，再独立整理为主题与汇总。检索所得信息仍需和当前工作区核对。" },
-  });
-  initSurface("#grok-surfaces", {
-    tui: [["承载", "进程内嵌 Agent"], ["输入", "全屏 Prompt / slash commands"], ["输出", "Scrollback、diff、modal"], ["关键边界", "沙箱约束与启动进程绑定"]],
-    headless: [["消费者", "远端与无人值守客户端"], ["输入", "relay 会话消息"], ["输出", "流式会话事件"], ["关键边界", "ping、半开检测与重连"]],
-    acp: [["消费者", "IDE 与 Agent 客户端"], ["输入", "ACP PromptRequest"], ["输出", "SessionUpdate / ToolCallUpdate"], ["关键边界", "客户端不拥有运行时状态"]],
-    serve: [["消费者", "可信远端执行消费者"], ["输入", "JSON-RPC 工具调用"], ["输出", "本地工作区工具结果"], ["关键边界", "本地工作区通过反向连接暴露工具。与 agent serve 承载 ACP 会话分开"]],
-    leader: [["消费者", "多个 CLI/会话"], ["输入", "本地传输协议"], ["输出", "复用常驻宿主"], ["关键边界", "锁与就绪决定能否连接。只有较新的可解析版本触发版本替换"]],
-  });
-  initChapterReader();
 }
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, { once: true }); else boot();

@@ -1,4 +1,4 @@
-import { drawModel } from "./graphics.mjs";
+import { drawModel, needsPlotWidth } from "./graphics.mjs";
 
 function activate(figure, lab) {
   const form = figure.querySelector(".lab-controls");
@@ -12,10 +12,11 @@ function activate(figure, lab) {
   let width = 0;
   let model;
   function render() {
-    const w = Math.round(scene.getBoundingClientRect().width);
-    if (!w) return;
-    width = w;
-    scene.innerHTML = drawModel(model, w, figure.id);
+    if (needsPlotWidth(model)) {
+      width = Math.round(scene.getBoundingClientRect().width);
+      if (!width) return;
+    }
+    scene.innerHTML = drawModel(model, width, figure.id);
   }
   function calculate() {
     const state = {};
@@ -34,7 +35,7 @@ function activate(figure, lab) {
     caption.hidden = !model.caption;
   }
   form.addEventListener("input", calculate);
-  form.addEventListener("change", () => { announcement.textContent = model.readout; });
+  form.addEventListener("change", () => { announcement.textContent = readout.textContent; });
   function applyValues(values) {
     for (const input of fields) {
       if (!Object.hasOwn(values, input.dataset.key)) continue;
@@ -63,7 +64,9 @@ function activate(figure, lab) {
       const x = logX === "true" ? Number(xMin) * Math.pow(Number(xMax) / Number(xMin), t) : Number(xMin) + (Number(xMax) - Number(xMin)) * t;
       const raw = lab.scrub.transform === "log10" ? Math.log10(x) : x;
       const step = Number(slider.step), lo = Number(slider.min), hi = Number(slider.max);
-      slider.value = String(Math.min(hi, Math.max(lo, lo + Math.round((raw-lo)/step)*step)));
+      const value = Math.min(hi, Math.max(lo, lo + Math.round((raw-lo)/step)*step));
+      if (Number(slider.value) === value) return;
+      slider.value = String(value);
       calculate();
     };
     scene.addEventListener("pointerdown", event => {
@@ -73,7 +76,7 @@ function activate(figure, lab) {
       move(event);
     });
     scene.addEventListener("pointermove", event => { if (event.pointerId === dragging) move(event); });
-    scene.addEventListener("lostpointercapture", () => { dragging = undefined; announcement.textContent = model.readout; });
+    scene.addEventListener("lostpointercapture", () => { dragging = undefined; announcement.textContent = readout.textContent; });
   }
   for (const button of form.querySelectorAll("[data-preset]")) {
     button.addEventListener("click", () => {
@@ -81,8 +84,14 @@ function activate(figure, lab) {
     });
   }
   form.hidden = false;
-  calculate();
+  // Intrinsically sized figures already contain the exact initial plot and readout.
+  // A browser may restore non-default controls when navigating back to a lesson.
+  const restored = fields.some(field => field.type === "radio" ? field.checked !== field.defaultChecked
+    : field.tagName === "SELECT" ? field.value !== [...field.options].find(option => option.defaultSelected)?.value
+    : field.value !== field.defaultValue);
+  if (restored || scene.hasAttribute("data-width-dependent")) calculate();
   new ResizeObserver(() => {
+    if (!model || !needsPlotWidth(model)) return;
     const w = Math.round(scene.getBoundingClientRect().width);
     if (w && w !== width) render();
   }).observe(scene);

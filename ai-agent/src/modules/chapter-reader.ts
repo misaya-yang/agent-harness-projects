@@ -121,12 +121,25 @@ function buildCourseMap(chapters: Chapter[], courseId: string): HTMLElement {
   return map;
 }
 
-export function initChapterReader(): void {
+export function initChapterReader(experiments: Record<string, () => void>): void {
   const main = document.querySelector<HTMLElement>("main");
   const tabs = main?.querySelector<HTMLElement>(":scope > .series-nav-tabs");
   const hero = main?.querySelector<HTMLElement>(":scope > .hero#top");
   const sections = main ? Array.from(main.querySelectorAll<HTMLElement>(":scope > section.chapter")) : [];
-  if (!main || !tabs || !hero || sections.length === 0) return;
+  if (!main || !tabs || !hero || sections.length === 0) {
+    Object.values(experiments).forEach(start => start());
+    return;
+  }
+  const pending = new Map(Object.entries(experiments));
+  function startExperiments(chapterId: string): void {
+    const start = pending.get(chapterId);
+    if (!start) return;
+    start();
+    pending.delete(chapterId);
+  }
+  window.addEventListener("beforeprint", () => {
+    for (const id of pending.keys()) startExperiments(id);
+  }, { once: true });
 
   const chapters: Chapter[] = [
     {
@@ -218,6 +231,7 @@ export function initChapterReader(): void {
     const nextIndex = Math.max(0, Math.min(chapters.length - 1, index));
     const chapter = chapters[nextIndex];
     if (push) history.pushState(null, "", `#${nestedTarget?.id || chapter.id}`);
+    startExperiments(chapter.id);
     if (current !== nextIndex) {
       chapters.forEach((item, itemIndex) => {
         const active = itemIndex === nextIndex;

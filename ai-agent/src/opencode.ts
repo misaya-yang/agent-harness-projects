@@ -1,8 +1,3 @@
-import "./styles/base.css";
-import "./styles/layout.css";
-import "./styles/machine.css";
-import "./styles/opencode.css";
-
 import { initNavMenu } from "./modules/navmenu";
 import { initReveal } from "./modules/reveal";
 import { initSeriesNav } from "./modules/series-nav";
@@ -327,31 +322,32 @@ function boot(): void {
   initReveal(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   initNavMenu();
   initHeroPause();
-  initLoop();
-  initProjection();
-  initDecision();
-  initTools();
-  initTaskLab();
-  initSurface("#oc-surfaces", {
-    tui: [["启动", "默认连接托管本地服务"], ["边界", "TUI 持有视图状态，通过客户端提交 prompt 并监听事件"]],
-    remote: [["启动", "--server 显式指向已有服务"], ["边界", "客户端先查询服务信息，实际执行由目标服务和会话 Location 决定"]],
-    serve: [["启动", "opencode serve 独立提供服务，可指定 STDIO"], ["边界", "服务端运行 Session 与投影，接入端消费响应与状态"]],
-    run: [["启动", "opencode run 是一次性客户端"], ["审批", "非交互模式默认带反馈拒绝；自动通过时回复 once"], ["输出", "由客户端读取状态和事件后输出"]],
-    acp: [["宿主", "IDE 等 ACP 客户端"], ["适配", "ACP 入口通过内部客户端提交会话输入并转换 Step、工具和审批事件"]],
-    desktop: [["宿主", "桌面应用与服务连接"], ["边界", "渲染器使用 sidecar 或已保存的服务器连接，服务端持有 Session"]],
+  initChapterReader({
+    "loop": initLoop,
+    "projection": initProjection,
+    "permission": initDecision,
+    "tools": initTools,
+    "subagent": initTaskLab,
+    "server": () => initSurface("#oc-surfaces", {
+      tui: [["启动", "默认连接托管本地服务"], ["边界", "TUI 持有视图状态，通过客户端提交 prompt 并监听事件"]],
+      remote: [["启动", "--server 显式指向已有服务"], ["边界", "客户端先查询服务信息，实际执行由目标服务和会话 Location 决定"]],
+      serve: [["启动", "opencode serve 独立提供服务，可指定 STDIO"], ["边界", "服务端运行 Session 与投影，接入端消费响应与状态"]],
+      run: [["启动", "opencode run 是一次性客户端"], ["审批", "非交互模式默认带反馈拒绝；自动通过时回复 once"], ["输出", "由客户端读取状态和事件后输出"]],
+      acp: [["宿主", "IDE 等 ACP 客户端"], ["适配", "ACP 入口通过内部客户端提交会话输入并转换 Step、工具和审批事件"]],
+      desktop: [["宿主", "桌面应用与服务连接"], ["边界", "渲染器使用 sidecar 或已保存的服务器连接，服务端持有 Session"]],
+    }),
+    "system": () => initSurface("#oc-system", {
+      default: [["基础 system", "默认 system.txt 随工具视图渲染专用指导"], ["指令基线", "按通用到会话专有的顺序合并指令"], ["请求", "历史转换后交给会话 hook 与模型路由"]],
+      custom: [["基础 system", "agent.system 替换基础文本"], ["指令基线", "独立保留指令来源与 Session 历史"], ["请求", "同样应用会话 hook"]],
+      changed: [["基础 system", "agent 及工具视图保持时可复用"], ["指令更新", "指令状态记录变化，后续历史可带更新"], ["压缩", "压缩完成后推进指令 epoch"]],
+    }),
+    "models": () => initSurface("#oc-models", {
+      compatible: [["工具", "示例模型用 edit、write，隐藏 patch"], ["传输", "利用所选模型的 HTTP 路由"], ["观测", "模型事件规范化后由 Step 归档"]],
+      patch: [["工具", "模型 ID 符合策略时提供 patch；权限仍叫 edit"], ["模型参数", "variant 与 Provider 路由一起解析"], ["观测", "对照请求快照与工具策略分辨不可见还是被拒绝"]],
+      websocket: [["传输", "模型选择和传输配置允许时使用 Session 的 Provider WebSocket"], ["回退", "建立连接失败后，会话固定使用 HTTP，直到服务重启或会话迁移等让连接所有者重建"], ["观测", "客户端的服务器 SSE 独立于 Provider 的连接"]],
+    }),
+    "practice": initAtlas,
   });
-  initSurface("#oc-system", {
-    default: [["基础 system", "默认 system.txt 随工具视图渲染专用指导"], ["指令基线", "按通用到会话专有的顺序合并指令"], ["请求", "历史转换后交给会话 hook 与模型路由"]],
-    custom: [["基础 system", "agent.system 替换基础文本"], ["指令基线", "独立保留指令来源与 Session 历史"], ["请求", "同样应用会话 hook"]],
-    changed: [["基础 system", "agent 及工具视图保持时可复用"], ["指令更新", "指令状态记录变化，后续历史可带更新"], ["压缩", "压缩完成后推进指令 epoch"]],
-  });
-  initSurface("#oc-models", {
-    compatible: [["工具", "示例模型用 edit、write，隐藏 patch"], ["传输", "利用所选模型的 HTTP 路由"], ["观测", "模型事件规范化后由 Step 归档"]],
-    patch: [["工具", "模型 ID 符合策略时提供 patch；权限仍叫 edit"], ["模型参数", "variant 与 Provider 路由一起解析"], ["观测", "对照请求快照与工具策略分辨不可见还是被拒绝"]],
-    websocket: [["传输", "模型选择和传输配置允许时使用 Session 的 Provider WebSocket"], ["回退", "建立连接失败后，会话固定使用 HTTP，直到服务重启或会话迁移等让连接所有者重建"], ["观测", "客户端的服务器 SSE 独立于 Provider 的连接"]],
-  });
-  initAtlas();
-  initChapterReader();
 }
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, { once: true });

@@ -1,5 +1,4 @@
 import { setupLessonReader } from "./lesson-reader.mjs";
-import { setupTechMap } from "./tech-map.mjs";
 
 const root = document.documentElement;
 const prefix = "misaya-academy:";
@@ -137,8 +136,8 @@ const studyOrder = document.body.dataset.studyOrder.split(" ");
 const record = lessonId ? lessonRecord(lessonId) : {};
 if (lessonId) set("last", lessonId);
 
-function updateProgress() {
-  const completed = lessonId && Boolean(lessonRecord(lessonId).done);
+function updateProgress(readLesson) {
+  const completed = lessonId && Boolean(readLesson(lessonId).done);
   for (const button of completeButtons) {
     button.setAttribute("aria-pressed", String(completed));
     button.querySelector("span").textContent = completed ? "已学完" : "标记学完";
@@ -146,8 +145,8 @@ function updateProgress() {
   const markers = selectAll("[data-done]");
   const ids = new Set(markers.map(marker => marker.dataset.done));
   let count = 0;
-  for (const id of ids) if (lessonRecord(id).done) count++;
-  for (const marker of markers) marker.hidden = !lessonRecord(marker.dataset.done).done;
+  for (const id of ids) if (readLesson(id).done) count++;
+  for (const marker of markers) marker.hidden = !readLesson(marker.dataset.done).done;
   const progress = select("#course-progress");
   if (total && progress) {
     total.textContent = count;
@@ -157,13 +156,13 @@ function updateProgress() {
   for (const group of collections) {
     const ids = group.dataset.collection.split(" ").filter(Boolean);
     if (!ids.length) continue;
-    const done = ids.filter(id => lessonRecord(id).done).length;
+    const done = ids.filter(id => readLesson(id).done).length;
     if (total || done) group.querySelector("[data-collection-count]").textContent = `${done} / ${ids.length} 已学完`;
     else group.querySelector("[data-collection-count]").textContent = `${ids.length} 篇课文`;
   }
   for (const label of selectAll("[data-lesson-status]")) {
     const id = label.dataset.lessonStatus;
-    const lesson = lessonRecord(id);
+    const lesson = readLesson(id);
     const checked = Object.values(lesson.quiz ?? {}).filter(Boolean).length;
     const started = id === last || lesson.position || lesson.scroll || checked;
     label.textContent = (lesson.done ? "已学完" : started ? "在读" : "未开始") + (checked ? ` · 已自测 ${checked} 题` : "");
@@ -179,7 +178,7 @@ function writeLesson(fields) {
 
 for (const button of completeButtons) button.addEventListener("click", () => {
   writeLesson({ done: !lessonRecord(lessonId).done });
-  updateProgress();
+  refreshStudy();
 });
 for (const field of questions) {
   field.checked = Boolean(record.quiz?.[field.dataset.question]);
@@ -187,7 +186,7 @@ for (const field of questions) {
     writeLesson({ quiz: { ...lessonRecord(lessonId).quiz, [field.dataset.question]: field.checked } });
   });
 }
-function updateResumeLinks() {
+function updateResumeLinks(readLesson) {
   if (!resumeLinks.length) return;
   const last = get("last", "");
   for (const link of resumeLinks) {
@@ -195,13 +194,13 @@ function updateResumeLinks() {
     const index = order.indexOf(last);
     let target = index < 0 ? order[0] : last;
     let label = index < 0 ? (link.dataset.scope ? "开始本模块" : "开始学习") : "继续学习";
-    if (lessonRecord(target).done) {
+    if (readLesson(target).done) {
       const after = order.indexOf(target) + 1;
-      const remaining = [...order.slice(after), ...order.slice(0, after)].find(id => !lessonRecord(id).done);
+      const remaining = [...order.slice(after), ...order.slice(0, after)].find(id => !readLesson(id).done);
       if (remaining) { target = remaining; label = "学习下一课"; }
       else label = "复习课文";
     }
-    const saved = lessonRecord(target);
+    const saved = readLesson(target);
     const resume = Boolean(target === last || saved.position || saved.scroll);
     link.href = "/lessons/" + target.replace(".", "-") + ".html" + (resume ? "?resume=1" : "");
     (link.querySelector("span") ?? link).textContent = label;
@@ -214,8 +213,13 @@ function updateResumeLinks() {
   }
 }
 function refreshStudy() {
-  updateProgress();
-  updateResumeLinks();
+  const records = new Map();
+  const readLesson = id => {
+    if (!records.has(id)) records.set(id, lessonRecord(id));
+    return records.get(id);
+  };
+  updateProgress(readLesson);
+  updateResumeLinks(readLesson);
 }
 refreshStudy();
 if (collections.length) {
@@ -225,11 +229,9 @@ if (collections.length) {
   if (group) for (const item of collections) item.open = item === group;
 }
 window.addEventListener("storage", refreshStudy);
-window.addEventListener("pageshow", refreshStudy);
+window.addEventListener("pageshow", event => { if (event.persisted) refreshStudy(); });
 
 if (lessonId) setupLessonReader(record, writeLesson);
-const techMap = select("[data-tech-map]");
-if (techMap) setupTechMap(techMap);
 
 for (const button of selectAll("[data-copy]")) {
   button.addEventListener("click", async () => {
@@ -256,12 +258,14 @@ const searchResults = select("[data-search-results]");
 const suggestions = select("[data-search-suggestions]");
 const searchStatus = select("[data-search-status]");
 let searchIndex;
+let indexRequest;
 function openSearch() {
   if (dialog.open) return;
   dialog.showModal();
   root.setAttribute("data-sky-covered", "");
   searchInput.focus();
   searchInput.select();
+  loadSearchIndex();
   renderSearch();
 }
 select("[data-search]").addEventListener("click", openSearch);
@@ -286,6 +290,26 @@ searchInput.addEventListener("keydown", event => {
 });
 
 const normalize = text => text.normalize("NFKC").toLowerCase();
+function loadSearchIndex() {
+  if (!indexRequest) {
+    indexRequest = fetch("/search-index.json").then(response => {
+      if (!response.ok) throw new Error("Search index unavailable");
+      return response.json();
+    }).then(lessons => {
+      searchIndex = lessons.map(lesson => ({
+        ...lesson,
+        searchName: normalize(`${lesson.id} ${lesson.title} ${lesson.module}`),
+        searchBody: normalize(lesson.body),
+      }));
+      return searchIndex;
+    }).catch(() => {
+      indexRequest = undefined;
+      return null;
+    });
+  }
+  return indexRequest;
+}
+
 async function renderSearch() {
   const query = normalize(searchInput.value).trim();
   suggestions.hidden = Boolean(query);
@@ -294,17 +318,8 @@ async function renderSearch() {
     searchStatus.textContent = document.body.dataset.lesson ? "本模块其他课文" : "课程推荐";
     return;
   }
-  if (!searchIndex) {
-    searchStatus.textContent = "正在加载课程索引…";
-    searchIndex = fetch("/search-index.json").then(response => {
-      if (!response.ok) throw new Error("Search index unavailable");
-      return response.json();
-    }).catch(() => {
-      searchIndex = undefined;
-      return null;
-    });
-  }
-  const index = await searchIndex;
+  if (!searchIndex) searchStatus.textContent = "正在加载课程索引…";
+  const index = searchIndex ?? await loadSearchIndex();
   if (query !== normalize(searchInput.value).trim()) return;
   if (!index) {
     searchStatus.textContent = "课程索引暂时无法加载。请重新打开搜索。";
@@ -312,15 +327,18 @@ async function renderSearch() {
   }
   const words = query.split(/\s+/);
   const matches = index.map(lesson => {
-    const name = normalize(`${lesson.id} ${lesson.title} ${lesson.module}`);
-    const body = normalize(lesson.body);
-    const score = words.reduce((sum, word) => sum + (name.includes(word) ? 4 : body.includes(word) ? 1 : -100), 0);
-    let section, offset = body.indexOf(words[0]);
-    if (!words.every(word => name.includes(word)) && lesson.sections?.length) {
+    const score = words.reduce((sum, word) => sum + (lesson.searchName.includes(word) ? 4 : lesson.searchBody.includes(word) ? 1 : -100), 0);
+    return { lesson, score };
+  }).filter(hit => hit.score > 0).sort((a, b) => b.score - a.score);
+  searchStatus.textContent = matches.length ? `找到 ${matches.length} 篇课文` : "没有找到匹配的课文。";
+  for (const { lesson } of matches.slice(0, 14)) {
+    let section, offset = lesson.searchBody.indexOf(words[0]);
+    if (!words.every(word => lesson.searchName.includes(word)) && lesson.sections?.length) {
       let best = 0;
       for (const [i, part] of lesson.sections.entries()) {
-        const passage = normalize(lesson.body.slice(part.start, lesson.sections[i + 1]?.start));
-        const weight = words.reduce((n, word) => n + (normalize(part.title).includes(word) ? 3 : Number(passage.includes(word))), 0);
+        const passage = part.searchText ??= normalize(lesson.body.slice(part.start, lesson.sections[i + 1]?.start));
+        const title = part.searchTitle ??= normalize(part.title);
+        const weight = words.reduce((n, word) => n + (title.includes(word) ? 3 : Number(passage.includes(word))), 0);
         if (weight > best) {
           best = weight;
           section = part;
@@ -329,10 +347,6 @@ async function renderSearch() {
         }
       }
     }
-    return { lesson, score, section, offset };
-  }).filter(hit => hit.score > 0).sort((a, b) => b.score - a.score);
-  searchStatus.textContent = matches.length ? `找到 ${matches.length} 篇课文` : "没有找到匹配的课文。";
-  for (const { lesson, section, offset } of matches.slice(0, 14)) {
     const item = document.createElement("li");
     const link = document.createElement("a");
     link.href = lesson.url + (section ? "#" + section.id : "");

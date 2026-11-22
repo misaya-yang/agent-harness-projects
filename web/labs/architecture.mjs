@@ -1,6 +1,4 @@
-import studies from "./architecture-studies.mjs";
 import { distillationGradient, preferenceVotes } from "./preference-studies.mjs";
-import core from "./architecture-core.mjs";
 
 const formatInteger = new Intl.NumberFormat("en-US");
 const indices = count => Array.from({ length: count }, (_, i) => i);
@@ -495,17 +493,17 @@ const rewardOveroptimization = {
   },
 };
 
-export default {
-  "1.1": residualStream,
-  "1.2": ropeSpectrum,
-  "1.3": cacheBudget,
-  "1.4": expertRouting,
-  "1.5": tiledSoftmax,
-  "1.6": linearMemory,
-  "2.1": distillationDivergences,
-  "2.2": rewardOveroptimization,
-  ...core,
-  ...studies,
-  "2.1-gradient": distillationGradient,
-  "2.2-votes": preferenceVotes,
+export {
+  residualStream as "1.1",
+  ropeSpectrum as "1.2",
+  cacheBudget as "1.3",
+  expertRouting as "1.4",
+  tiledSoftmax as "1.5",
+  linearMemory as "1.6",
+  distillationDivergences as "2.1",
+  rewardOveroptimization as "2.2",
+  distillationGradient as "2.1-gradient",
+  preferenceVotes as "2.2-votes",
 };
+export * from "./architecture-core.mjs";
+export * from "./architecture-studies.mjs";

@@ -1,5 +1,3 @@
-import "./styles/base.css";
-import "./styles/home.css";
 import { initTheme } from "./modules/theme";
 import { initSeriesNav } from "./modules/series-nav";
 

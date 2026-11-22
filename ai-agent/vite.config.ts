@@ -18,7 +18,7 @@ export default defineConfig(({ mode }) => {
     build: {
       outDir: netlify ? "dist-netlify" : "dist",
       target: "es2022",
-      cssCodeSplit: false,
+      cssCodeSplit: true,
       rollupOptions: {
         preserveEntrySignatures: "strict",
         input: {

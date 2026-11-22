@@ -1,17 +1,17 @@
-import careerHardware from "../web/labs/career-hardware.mjs";
-import trainingData from "../web/labs/training-data.mjs";
-import searchRag from "../web/labs/search-rag.mjs";
-import visualGeneration from "../web/labs/visual-generation.mjs";
-import scheduleContext from "../web/labs/schedule-context.mjs";
-import audioInference from "../web/labs/audio-inference.mjs";
-import agentMemory from "../web/labs/agent-memory.mjs";
-import trustEvaluation from "../web/labs/trust-evaluation.mjs";
-import architecture from "../web/labs/architecture.mjs";
-import alignment from "../web/labs/alignment.mjs";
-import systems from "../web/labs/systems.mjs";
-import pretraining from "../web/labs/pretraining.mjs";
-import foundations from "../web/labs/foundations.mjs";
-import { drawModel, escapeText as esc } from "../web/labs/graphics.mjs";
+import * as careerHardware from "../web/labs/career-hardware.mjs";
+import * as trainingData from "../web/labs/training-data.mjs";
+import * as searchRag from "../web/labs/search-rag.mjs";
+import * as visualGeneration from "../web/labs/visual-generation.mjs";
+import * as scheduleContext from "../web/labs/schedule-context.mjs";
+import * as audioInference from "../web/labs/audio-inference.mjs";
+import * as agentMemory from "../web/labs/agent-memory.mjs";
+import * as trustEvaluation from "../web/labs/trust-evaluation.mjs";
+import * as architecture from "../web/labs/architecture.mjs";
+import * as alignment from "../web/labs/alignment.mjs";
+import * as systems from "../web/labs/systems.mjs";
+import * as pretraining from "../web/labs/pretraining.mjs";
+import * as foundations from "../web/labs/foundations.mjs";
+import { drawModel, needsPlotWidth, escapeText as esc } from "../web/labs/graphics.mjs";
 import { lessonReferenceTable } from "./lesson-figures.mjs";
 
 export const labGroups = {
@@ -51,7 +51,7 @@ export function renderLab(id, lessonId) {
   return `<figure id="${anchor}" class="learning-lab" data-lab="${id}" aria-labelledby="${anchor}-title">
     <figcaption><h3 id="${anchor}-title">${esc(lab.title)}</h3><p>${esc(lab.question)}</p></figcaption>
     <div class="lab-plate">
-      <div class="lab-scene" data-scene${lab.scrub ? ' data-scrub="true"' : ""}>${drawModel(model, 630, anchor)}</div>
+      <div class="lab-scene" data-scene${needsPlotWidth(model) ? " data-width-dependent" : ""}${lab.scrub ? ' data-scrub="true"' : ""}>${drawModel(model, 630, anchor)}</div>
       ${lab.scrub ? '<div class="lab-gesture">可在图中左右拖动工作点</div>' : ""}
       <div class="lab-caption" data-caption${model.caption ? "" : " hidden"}>${esc(model.caption)}</div>
       <form class="lab-controls" aria-label="${esc(lab.title)}参数" hidden>

@@ -153,6 +153,11 @@ function bars(model) {
         ${base}${guide == null ? "" : `<line x1="${guide}" x2="${guide}" y1="0" y2="20" stroke="var(--lab-amber)" vector-effect="non-scaling-stroke" stroke-width="2"/>`}</svg><strong>${escapeText(display ?? (fmt.format(value)+" "+(model.unit??"")))}</strong></div>`;
     }).join("")}</div>${ref ? legend([[`${ref.label} · ${tickLabel(ref.value)} ${model.unit ?? ""}`,"lab-amber"]]) : ""}`;
 }
+export function needsPlotWidth(model) {
+  return model.type === "lines" || (model.type === "panels" &&
+    !model.panels.every(panel => panel.shape === "vectors" || panel.shape === "matrix"));
+}
+
 export function drawModel(model, width = 620, key = "model") {
   // A lab may draw its whole figure itself (custom SVG built from the same evaluate() call).
   if (model.type === "svg") return model.svg;

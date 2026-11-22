@@ -254,4 +254,9 @@ const coverage = {
   },
 };
 
-export default { "6.2": dataFunnel, "6.2-audit": audit, "2.9": selfTrain, "2.9-coverage": coverage };
+export {
+  dataFunnel as "6.2",
+  audit as "6.2-audit",
+  selfTrain as "2.9",
+  coverage as "2.9-coverage",
+};

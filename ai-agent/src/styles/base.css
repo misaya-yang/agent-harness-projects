@@ -109,6 +109,50 @@ kbd {
   border: 0;
 }
 
+.skip-link {
+  position: fixed;
+  inset-block-start: 10px;
+  inset-inline-start: 10px;
+  z-index: 60;
+  padding: 10px 16px;
+  background: var(--surface-console);
+  color: var(--text-on-console);
+  border-radius: var(--r-control);
+  transform: translateY(-64px);
+}
+
+.skip-link:focus-visible {
+  transform: none;
+  transition: transform var(--dur-fast) var(--ease-out);
+}
+
+.theme-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 40px;
+  padding: 6px 12px;
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-pill);
+  color: var(--text-2);
+  font-family: var(--ff-mono);
+  font-size: 0.76rem;
+  letter-spacing: 0.04em;
+  transition:
+    color var(--dur-fast) var(--ease-out),
+    border-color var(--dur-fast) var(--ease-out),
+    background var(--dur-fast) var(--ease-out);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .theme-btn:hover {
+    color: var(--text);
+    border-color: var(--text-2);
+    background: var(--accent-wash);
+  }
+}
+
 /* Reading content stays visible when the interactive bundle cannot load. */
 @media (prefers-reduced-motion: no-preference) {
   [data-reveal].is-in {

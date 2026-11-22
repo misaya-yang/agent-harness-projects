@@ -1,8 +1,6 @@
 // Labs for M0 (math foundations). Every number is computed from the formula in the lesson; random draws use a
 // fixed seed so the same controls always give the same picture.
 import { f2, f3, pct, sci, grid, clamp, xy, rng, normals, normalPdf, normSf, lgamma, logSumExp, figure, text } from "./math-kit.mjs";
-import linalgOpt from "./foundations-linalg-opt.mjs";
-import generative from "./foundations-generative.mjs";
 
 /* ---------- 0.2 Calculus ---------- */
 const curves = {
@@ -544,11 +542,17 @@ const importance = {
   },
 };
 
-export default {
-  "0.2": linearization, "0.2-graph": computationGraph,
-  "0.3": detector, "0.3-clt": errorBars,
-  "0.4": covariance, "0.4-noise": forwardNoise,
-  "0.5": klDirections, "0.5-temperature": temperature,
-  "0.7": langevin, "0.7-importance": importance,
-  ...linalgOpt, ...generative,
+export {
+  linearization as "0.2",
+  computationGraph as "0.2-graph",
+  detector as "0.3",
+  errorBars as "0.3-clt",
+  covariance as "0.4",
+  forwardNoise as "0.4-noise",
+  klDirections as "0.5",
+  temperature as "0.5-temperature",
+  langevin as "0.7",
+  importance as "0.7-importance",
 };
+export * from "./foundations-linalg-opt.mjs";
+export * from "./foundations-generative.mjs";

@@ -144,4 +144,9 @@ const retrieval = {
   },
 };
 
-export default { "8.3": chain, "8.3-team": teamwork, "8.4": compression, "8.4-retrieval": retrieval };
+export {
+  chain as "8.3",
+  teamwork as "8.3-team",
+  compression as "8.4",
+  retrieval as "8.4-retrieval",
+};

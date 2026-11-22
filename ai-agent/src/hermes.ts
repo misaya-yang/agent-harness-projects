@@ -1,8 +1,3 @@
-import "./styles/base.css";
-import "./styles/layout.css";
-import "./styles/machine.css";
-import "./styles/hermes.css";
-
 import { initNavMenu } from "./modules/navmenu";
 import { initReveal } from "./modules/reveal";
 import { initSeriesNav } from "./modules/series-nav";
@@ -303,51 +298,52 @@ function boot(): void {
   initReveal(reduced.matches);
   initNavMenu();
   initHeroPause();
-  initLoop();
-  initStateProjection();
-  initChoiceDetail("#hm-decision", {
-    extend: { title: "LADDER 1 · 扩展现有命令", body: "已有命令覆盖主要动作，只差一个清晰选项。扩展现有接口即可，沿用原来的配置与权限制约。", status: "EXTEND" },
-    spotify: { title: "LADDER 4 · 带凭据的服务插件", body: "判断 trace：需要新 schema → 只对已连接账户有意义 → 有多项相关工具与独立凭据 → 放进插件。可延迟 schema 还能走 Tool Search。", status: "PLUGIN" },
-    ha: { title: "LADDER 3 · 按服务可用性门控", body: "判断 trace：能力需要 schema，但只有本地服务在线时才成立 → 用 check_fn 控制是否展示。瞬态失败可短时沿用 last-good，避免服务抖动让整组工具突然消失。", status: "CHECK_FN" },
-    seq: { title: "LADDER 2 · CLI 命令 + SKILL.md", body: "判断 trace：这只是模型可以学习的稳定操作序列 → 不新增工具，把步骤写成按需加载的技能。知识扩展与执行权限保持分离。", status: "CLI + SKILL" },
-    mcp: { title: "LADDER 5 · 第三方 MCP 目录", body: "判断 trace：schema 与生命周期由第三方维护 → 接入统一目录并渐进披露。Hermes 负责作用域、审批和结果治理，不接管上游契约。", status: "MCP CATALOG" },
-    codeexec: { title: "LADDER 6 · 核心工具（最后手段）", body: "判断 trace：能力跨所有后端、无法由技能或外部服务表达，并且每个会话都需要 → 才进入核心。常驻核心定义会占用每次请求的工具预算。", status: "CORE TOOL" },
-  }, "LADDER TRACE");
-  initChoiceDetail("#hm-envs", {
-    local: { title: "Local · 最低摩擦，最低隔离", body: "普通 shell 执行经过本机进程，工作目录和环境由会话管理。路径可见性受宿主权限约束。", status: "LOCAL" },
-    docker: { title: "Docker · 容器边界", body: "命令在容器内执行，适合需要可重复环境的任务。挂载与网络策略决定容器能接触哪些宿主资源。", status: "DOCKER" },
-    ssh: { title: "SSH · 远端执行", body: "SSH 连接可复用，命令发往远端。同一 execute 接口返回工具结果，路径必须按远端环境解析。", status: "SSH" },
-    singularity: { title: "Singularity · 官方插件", body: "HPC 后端已迁出核心。旧配置可通过更新迁移识别，当前由安装后的终端环境 provider 提供。", status: "PLUGIN" },
-    modal: { title: "Modal · 可快照的按需运行", body: "开启持久化时，可在清理前尝试保存文件系统快照。恢复标识写入当前 profile 的存储。", status: "MODAL" },
-    daytona: { title: "Daytona · 挂起与双向同步", body: "远端工作区生命周期有停止与恢复路径，文件同步层在工作区之间同步文件。", status: "DAYTONA" },
-    vercel: { title: "Vercel Sandbox · 短生命周期隔离", body: "开启持久化时，可通过 sandbox 快照保存工作现场。连接、镜像与快照生命周期由 Vercel 后端实现。", status: "VERCEL" },
-  }, "BACKEND FACTS");
-  initDeliveryMatrix();
-  initReviewTrigger();
-  initLineage("#hm-lineage", {
-    soul: { hermes: "SOUL.md 作为会话身份的稳定输入，恢复时应保持字节一致。", openclaw: "使用同名人格文件作为可迁移资产。", diff: "人格文件适合复制，因为它描述用户资产，而不是某次运行的锁和租约。", status: "SOUL.md" },
-    memory: { hermes: "MEMORY.md 与 USER.md 分离环境经验和用户偏好，条目可独立整合。", openclaw: "保留同类文件并采用追加式导入。", diff: "记忆可以搬运，但合并语义必须由目标系统解释；复制不等于理解。", status: "§ MEMORY" },
-    skills: { hermes: "SKILL.md 是按需加载的操作知识包。", openclaw: "同样把技能作为工作区内容发现。", diff: "技能最接近开放内容协议：迁移知识，不迁移进程内权限。", status: "SKILL.md" },
-    config: { hermes: "导入配置时要核对模型、传输方言和凭据对应关系。", openclaw: "导入时需要把来源协议翻译为目标配置。", diff: "配置不是原样复制；必须确认认证、端点和传输语义仍等价。", status: "CONFIG" },
-    cron: { hermes: "OpenClaw 导入说明把旧任务归档，操作者在 Hermes 中重新建立 cron。", openclaw: "Hermes 的 cron 目录归档保存，任务需在 OpenClaw 中重新建立。", diff: "归档保留复核材料。启用新任务前要重新检查时区、目标与权限，旧运行回执留在原调度器。", status: "AUTOMATION" },
-    migrate: { hermes: "官方 agent-importers 插件提供 hermes import-agent openclaw，兼容 hermes claw migrate。", openclaw: "也能从 Hermes 导入可移植内容。", diff: "双向迁移说明文件格式是用户资产接口；双方同时在线不是必要条件。", status: "MIGRATORS" },
-    notmine: { hermes: "凭据与命令白名单只能选择性导入。", openclaw: "插件、会话、日志等运行时私有状态不直接激活。", diff: "不迁移清单就是安全边界：内容可搬，权力与活状态要重新授权。", status: "BOUNDARY" },
+  initChapterReader({
+    "loop": initLoop,
+    "state": initStateProjection,
+    "tools": () => initChoiceDetail("#hm-decision", {
+      extend: { title: "LADDER 1 · 扩展现有命令", body: "已有命令覆盖主要动作，只差一个清晰选项。扩展现有接口即可，沿用原来的配置与权限制约。", status: "EXTEND" },
+      spotify: { title: "LADDER 4 · 带凭据的服务插件", body: "判断 trace：需要新 schema → 只对已连接账户有意义 → 有多项相关工具与独立凭据 → 放进插件。可延迟 schema 还能走 Tool Search。", status: "PLUGIN" },
+      ha: { title: "LADDER 3 · 按服务可用性门控", body: "判断 trace：能力需要 schema，但只有本地服务在线时才成立 → 用 check_fn 控制是否展示。瞬态失败可短时沿用 last-good，避免服务抖动让整组工具突然消失。", status: "CHECK_FN" },
+      seq: { title: "LADDER 2 · CLI 命令 + SKILL.md", body: "判断 trace：这只是模型可以学习的稳定操作序列 → 不新增工具，把步骤写成按需加载的技能。知识扩展与执行权限保持分离。", status: "CLI + SKILL" },
+      mcp: { title: "LADDER 5 · 第三方 MCP 目录", body: "判断 trace：schema 与生命周期由第三方维护 → 接入统一目录并渐进披露。Hermes 负责作用域、审批和结果治理，不接管上游契约。", status: "MCP CATALOG" },
+      codeexec: { title: "LADDER 6 · 核心工具（最后手段）", body: "判断 trace：能力跨所有后端、无法由技能或外部服务表达，并且每个会话都需要 → 才进入核心。常驻核心定义会占用每次请求的工具预算。", status: "CORE TOOL" },
+    }, "LADDER TRACE"),
+    "environments": () => initChoiceDetail("#hm-envs", {
+      local: { title: "Local · 最低摩擦，最低隔离", body: "普通 shell 执行经过本机进程，工作目录和环境由会话管理。路径可见性受宿主权限约束。", status: "LOCAL" },
+      docker: { title: "Docker · 容器边界", body: "命令在容器内执行，适合需要可重复环境的任务。挂载与网络策略决定容器能接触哪些宿主资源。", status: "DOCKER" },
+      ssh: { title: "SSH · 远端执行", body: "SSH 连接可复用，命令发往远端。同一 execute 接口返回工具结果，路径必须按远端环境解析。", status: "SSH" },
+      singularity: { title: "Singularity · 官方插件", body: "HPC 后端已迁出核心。旧配置可通过更新迁移识别，当前由安装后的终端环境 provider 提供。", status: "PLUGIN" },
+      modal: { title: "Modal · 可快照的按需运行", body: "开启持久化时，可在清理前尝试保存文件系统快照。恢复标识写入当前 profile 的存储。", status: "MODAL" },
+      daytona: { title: "Daytona · 挂起与双向同步", body: "远端工作区生命周期有停止与恢复路径，文件同步层在工作区之间同步文件。", status: "DAYTONA" },
+      vercel: { title: "Vercel Sandbox · 短生命周期隔离", body: "开启持久化时，可通过 sandbox 快照保存工作现场。连接、镜像与快照生命周期由 Vercel 后端实现。", status: "VERCEL" },
+    }, "BACKEND FACTS"),
+    "cron": initDeliveryMatrix,
+    "learning": initReviewTrigger,
+    "skills": () => initLineage("#hm-lineage", {
+      soul: { hermes: "SOUL.md 作为会话身份的稳定输入，恢复时应保持字节一致。", openclaw: "使用同名人格文件作为可迁移资产。", diff: "人格文件适合复制，因为它描述用户资产，而不是某次运行的锁和租约。", status: "SOUL.md" },
+      memory: { hermes: "MEMORY.md 与 USER.md 分离环境经验和用户偏好，条目可独立整合。", openclaw: "保留同类文件并采用追加式导入。", diff: "记忆可以搬运，但合并语义必须由目标系统解释；复制不等于理解。", status: "§ MEMORY" },
+      skills: { hermes: "SKILL.md 是按需加载的操作知识包。", openclaw: "同样把技能作为工作区内容发现。", diff: "技能最接近开放内容协议：迁移知识，不迁移进程内权限。", status: "SKILL.md" },
+      config: { hermes: "导入配置时要核对模型、传输方言和凭据对应关系。", openclaw: "导入时需要把来源协议翻译为目标配置。", diff: "配置不是原样复制；必须确认认证、端点和传输语义仍等价。", status: "CONFIG" },
+      cron: { hermes: "OpenClaw 导入说明把旧任务归档，操作者在 Hermes 中重新建立 cron。", openclaw: "Hermes 的 cron 目录归档保存，任务需在 OpenClaw 中重新建立。", diff: "归档保留复核材料。启用新任务前要重新检查时区、目标与权限，旧运行回执留在原调度器。", status: "AUTOMATION" },
+      migrate: { hermes: "官方 agent-importers 插件提供 hermes import-agent openclaw，兼容 hermes claw migrate。", openclaw: "也能从 Hermes 导入可移植内容。", diff: "双向迁移说明文件格式是用户资产接口；双方同时在线不是必要条件。", status: "MIGRATORS" },
+      notmine: { hermes: "凭据与命令白名单只能选择性导入。", openclaw: "插件、会话、日志等运行时私有状态不直接激活。", diff: "不迁移清单就是安全边界：内容可搬，权力与活状态要重新授权。", status: "BOUNDARY" },
+    }),
+    "surfaces": () => initSurface("#hm-surfaces", {
+      cli: [["宿主职责", "终端交互、显示与审批"], ["接入协议", "Classic CLI 默认用共享网关的本地会话协议"], ["执行所有者", "共享网关持有准入和运行状态"], ["关键区分", "主动 detach 只撤销订阅。停止回合使用独立控制，断线还可能触发无订阅者回收。"]],
+      gateway: [["宿主职责", "平台消息路由与 busy 仲裁"], ["接入协议", "平台 adapter 与注册表"], ["执行所有者", "按平台会话键与 profile 选择会话和执行范围"], ["关键区分", "消息路由键与本地客户端的逻辑 session id 各司其职"]],
+      tui: [["宿主职责", "Ink 终端展示与控制"], ["接入协议", "共享网关 WebSocket JSON-RPC"], ["执行所有者", "SessionAuthority 管理会话、执行和订阅"], ["关键区分", "单独运行的 stdio 传输仍可进入传统分发器"]],
+      desktop: [["宿主职责", "Electron 客户端与图形交互"], ["接入协议", "共享网关 WebSocket"], ["执行所有者", "目标网关持有活动会话"], ["关键区分", "已授权客户端可重接尚未收尾的回合，再按执行世代和提示 id 响应审批。"]],
+      acp: [["宿主职责", "编辑器内对话与审批"], ["接入协议", "Agent Client Protocol"], ["执行所有者", "ACP 适配器连接对应会话后端"], ["关键区分", "编辑器协议 id 和内核会话 identity 分层"]],
+      mcp: [["宿主职责", "把消息会话操作暴露给 MCP 客户端"], ["接入协议", "官方 mcp-serve 插件提供 stdio 服务"], ["执行所有者", "工具操作经 active profile 的消息会话"], ["关键区分", "Codex App Server 的 Hermes 工具桥是另一条路径"]],
+    }),
+    "practice": () => initChoiceDetail("#hm-atlas", {
+      cost: { title: "同一会话 API 费用突然翻倍 → 先查缓存前缀", body: "最高区分度证据是 cache hit 与真实 prompt 用量。若每回合都重建系统提示、工具面或历史摘要，前缀缓存会持续失效；切换 provider 与正式 compaction 会发生一次合法边界变化。", status: "高频" },
+      vanish: { title: "远端环境下整套工具突然没了 → 先查能力门控", body: "先查工具是否折叠在 Tool Search，再看服务探针、last-good 宽限以及宿主工具面。", status: "偶发" },
+      resume: { title: "恢复旧会话被拒 → 先判断它是不是保护性失败", body: "检查恢复使用末段活跃视图还是整条展示血缘，再看 sessions.max_resume_messages；全链保护可因压缩归档行而拒绝，同时末段仍可加载。", status: "低频" },
+      cron: { title: "后台任务到点没触发 → 拆成调度、认领、执行、交付", body: "先确认调度器是否活着，再查是否被旧 claim 占用、执行是否形成终态、目标平台是否声明交付能力。四层不要混成一句“cron 坏了”。", status: "高频" },
+    }, "FIRST EVIDENCE"),
   });
-  initSurface("#hm-surfaces", {
-    cli: [["宿主职责", "终端交互、显示与审批"], ["接入协议", "Classic CLI 默认用共享网关的本地会话协议"], ["执行所有者", "共享网关持有准入和运行状态"], ["关键区分", "主动 detach 只撤销订阅。停止回合使用独立控制，断线还可能触发无订阅者回收。"]],
-    gateway: [["宿主职责", "平台消息路由与 busy 仲裁"], ["接入协议", "平台 adapter 与注册表"], ["执行所有者", "按平台会话键与 profile 选择会话和执行范围"], ["关键区分", "消息路由键与本地客户端的逻辑 session id 各司其职"]],
-    tui: [["宿主职责", "Ink 终端展示与控制"], ["接入协议", "共享网关 WebSocket JSON-RPC"], ["执行所有者", "SessionAuthority 管理会话、执行和订阅"], ["关键区分", "单独运行的 stdio 传输仍可进入传统分发器"]],
-    desktop: [["宿主职责", "Electron 客户端与图形交互"], ["接入协议", "共享网关 WebSocket"], ["执行所有者", "目标网关持有活动会话"], ["关键区分", "已授权客户端可重接尚未收尾的回合，再按执行世代和提示 id 响应审批。"]],
-    acp: [["宿主职责", "编辑器内对话与审批"], ["接入协议", "Agent Client Protocol"], ["执行所有者", "ACP 适配器连接对应会话后端"], ["关键区分", "编辑器协议 id 和内核会话 identity 分层"]],
-    mcp: [["宿主职责", "把消息会话操作暴露给 MCP 客户端"], ["接入协议", "官方 mcp-serve 插件提供 stdio 服务"], ["执行所有者", "工具操作经 active profile 的消息会话"], ["关键区分", "Codex App Server 的 Hermes 工具桥是另一条路径"]],
-  });
-  initChoiceDetail("#hm-atlas", {
-    cost: { title: "同一会话 API 费用突然翻倍 → 先查缓存前缀", body: "最高区分度证据是 cache hit 与真实 prompt 用量。若每回合都重建系统提示、工具面或历史摘要，前缀缓存会持续失效；切换 provider 与正式 compaction 会发生一次合法边界变化。", status: "高频" },
-    vanish: { title: "远端环境下整套工具突然没了 → 先查能力门控", body: "先查工具是否折叠在 Tool Search，再看服务探针、last-good 宽限以及宿主工具面。", status: "偶发" },
-    resume: { title: "恢复旧会话被拒 → 先判断它是不是保护性失败", body: "检查恢复使用末段活跃视图还是整条展示血缘，再看 sessions.max_resume_messages；全链保护可因压缩归档行而拒绝，同时末段仍可加载。", status: "低频" },
-    cron: { title: "后台任务到点没触发 → 拆成调度、认领、执行、交付", body: "先确认调度器是否活着，再查是否被旧 claim 占用、执行是否形成终态、目标平台是否声明交付能力。四层不要混成一句“cron 坏了”。", status: "高频" },
-  }, "FIRST EVIDENCE");
-  initChapterReader();
 }
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, { once: true }); else boot();

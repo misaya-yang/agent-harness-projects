@@ -1,3 +1,11 @@
+import careerHardware from "../web/labs/career-hardware.mjs";
+import trainingData from "../web/labs/training-data.mjs";
+import searchRag from "../web/labs/search-rag.mjs";
+import visualGeneration from "../web/labs/visual-generation.mjs";
+import scheduleContext from "../web/labs/schedule-context.mjs";
+import audioInference from "../web/labs/audio-inference.mjs";
+import agentMemory from "../web/labs/agent-memory.mjs";
+import trustEvaluation from "../web/labs/trust-evaluation.mjs";
 import architecture from "../web/labs/architecture.mjs";
 import alignment from "../web/labs/alignment.mjs";
 import systems from "../web/labs/systems.mjs";
@@ -6,7 +14,17 @@ import foundations from "../web/labs/foundations.mjs";
 import { drawModel, escapeText as esc } from "../web/labs/graphics.mjs";
 import { lessonReferenceTable } from "./lesson-figures.mjs";
 
-export const labGroups = { foundations, architecture, alignment, systems, pretraining };
+export const labGroups = {
+  foundations, architecture, alignment, systems, pretraining,
+  "career-hardware": careerHardware,
+  "training-data": trainingData,
+  "search-rag": searchRag,
+  "visual-generation": visualGeneration,
+  "schedule-context": scheduleContext,
+  "audio-inference": audioInference,
+  "agent-memory": agentMemory,
+  "trust-evaluation": trustEvaluation,
+};
 export const labDefinitions = Object.assign({}, ...Object.values(labGroups));
 export const labAnchor = id => "lab-" + id.replaceAll(".", "-");
 

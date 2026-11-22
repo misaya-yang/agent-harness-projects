@@ -3,7 +3,7 @@ import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { build } from "esbuild";
 import { available, modules, roadmap } from "./curriculum.mjs";
-import { labAnchor, labDefinitions } from "./lesson-labs.mjs";
+import { labAnchor, labDefinitions, labGroups } from "./lesson-labs.mjs";
 import { lessonSources } from "./lesson-sources.mjs";
 import { renderMarkdown, mathErrors } from "./markdown.mjs";
 import { allPaths, homePage, lessonPage, modulePage, progressPage, roadmapPage } from "./pages.mjs";
@@ -27,7 +27,7 @@ await mkdir(dist, { recursive: true });
 await Promise.all([
   ...["academy.css", "labs.css", "tech-map.css", "theme.js", "misaya", "fonts", "assets"].map(asset =>
     cp(input(`web/${asset}`), resolve(dist, asset), { recursive: true })),
-  ...["foundations", "architecture", "alignment", "systems", "pretraining"].map(buildLabs),
+  ...Object.keys(labGroups).map(buildLabs),
   cp(input("node_modules/katex/dist/katex.min.css"), resolve(dist, "katex/katex.min.css")),
   cp(input("node_modules/katex/dist/fonts"), resolve(dist, "katex/fonts"), { recursive: true }),
   build({

@@ -212,7 +212,9 @@ export function lessonPage(lesson, rendered) {
   const completed = `<button type="button" class="study-button" data-complete aria-pressed="false">${icon("check", 16)}<span>标记学完</span></button>`;
   const topic = lessonTopics(lesson.id);
   const labs = rendered.labs.map(id=>({ id: labAnchor(id), title: labDefinitions[id].title }));
-  const labGroup = labs.length && Object.keys(labGroups).find(group=>Object.hasOwn(labGroups[group], rendered.labs[0]));
+  const labGroup = labs.length && Object.keys(labGroups).find(group =>
+    rendered.labs.every(id => Object.hasOwn(labGroups[group], id)));
+  if (labs.length && !labGroup) throw Error(`课文 ${lesson.id} 的互动实验必须能从同一课组加载`);
   const sources = lessonSources[lesson.id] ?? [];
   const outline = `<nav class="lesson-outline" aria-label="本课目录"><h2>本课目录</h2><ol>${rendered.parts.map(part =>
     `<li><a href="#${part.id}">${escape(part.title)}</a></li>`

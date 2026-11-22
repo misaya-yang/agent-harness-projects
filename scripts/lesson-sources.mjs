@@ -1,3 +1,11 @@
+import careerHardware from "./sources-career-hardware.mjs";
+import trainingData from "./sources-training-data.mjs";
+import searchRag from "./sources-search-rag.mjs";
+import visualGeneration from "./sources-visual-generation.mjs";
+import scheduleContext from "./sources-schedule-context.mjs";
+import audioInference from "./sources-audio-inference.mjs";
+import agentMemory from "./sources-agent-memory.mjs";
+import trustEvaluation from "./sources-trust-evaluation.mjs";
 import architecture from "./sources-architecture.mjs";
 import alignment from "./sources-alignment.mjs";
 import systems from "./sources-systems.mjs";
@@ -5,7 +13,11 @@ import pretraining from "./sources-pretraining.mjs";
 import foundations from "./sources-foundations.mjs";
 import { escapeText as esc } from "../web/labs/graphics.mjs";
 
-export const lessonSources = { ...foundations, ...architecture, ...alignment, ...systems, ...pretraining };
+export const lessonSources = {
+  ...foundations, ...architecture, ...alignment, ...systems, ...pretraining,
+  ...careerHardware, ...trainingData, ...searchRag, ...visualGeneration,
+  ...scheduleContext, ...audioInference, ...agentMemory, ...trustEvaluation,
+};
 
 function sourceLink(source) {
   const url = new URL(source.url);

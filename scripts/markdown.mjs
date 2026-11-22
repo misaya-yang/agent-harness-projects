@@ -20,8 +20,11 @@ for (const name of Object.keys(md.renderer.rules)) {
   if (!name.startsWith("math_")) continue;
   md.renderer.rules[name] = (tokens, index, options, env) => {
     const displayMode = name.startsWith("math_block") || name.includes("double");
-    // The exported notes escape each TeX backslash twice, including line breaks.
-    const expression = tokens[index].content.replaceAll("\\\\", "\\").trim();
+    const raw = tokens[index].content.trim();
+    // Older exports doubled every command backslash. Native TeX uses a pair
+    // for row breaks in matrices and alignments, which must reach KaTeX intact.
+    const escapedExport = /(?:^|[^\\])\\\\[a-zA-Z]+/.test(raw) && !/(?:^|[^\\])\\[a-zA-Z]+/.test(raw);
+    const expression = escapedExport ? raw.replaceAll("\\\\", "\\") : raw;
     try {
       const rendered = katex.renderToString(expression, { displayMode, throwOnError: true, strict: "ignore", trust: false });
       return displayMode ? `<div class="math-block" tabindex="0" aria-label="公式">${rendered}</div>\n` : rendered;
@@ -40,7 +43,7 @@ function sectionInfo(title, topic) {
   if (/^承重墙推导/.test(name)) return { title: topic?.derivation ?? "数学推导", kind: "proof" };
   if (/^极简代码锚点/.test(name)) return { title: name.replace("极简代码锚点", "代码实现"), kind: "code" };
   if (/^实战直觉/.test(name)) return { title: "工程应用与常见误区", kind: "practice" };
-  if (/自测/.test(name)) return { title: "自测", kind: "quiz" };
+  if (/自测/.test(name)) return { title: /练习|迁移/.test(name) ? name : "自测", kind: "quiz" };
   return { title: name, kind: "text" };
 }
 
@@ -81,6 +84,7 @@ md.renderer.rules.text = (tokens, index, options, env, self) => {
 };
 
 function prepareTokens(tokens, env) {
+  let workedExamples = 0;
   let quizSection = false;
   let question = 0;
   for (const [i, token] of tokens.entries()) {
@@ -96,7 +100,10 @@ function prepareTokens(tokens, env) {
         const heading = text(tokens[i + 1].children);
         const subsection = heading.match(/^(\d+\.\d+)/)?.[1];
         if (subsection) token.attrSet("id", `section-${subsection.replace(".", "-")}`);
-        else if (heading.startsWith("数值复算 · ")) token.attrSet("id", "worked-example");
+        else if (heading.startsWith("数值复算 · ")) {
+          workedExamples++;
+          token.attrSet("id", workedExamples === 1 ? "worked-example" : `worked-example-${workedExamples}`);
+        }
       }
     }
     if (quizSection && token.type === "ordered_list_open" && token.level === 0) {
@@ -137,7 +144,7 @@ export function renderMarkdown(markdown, { isRoadmap = false, id } = {}) {
   // The opening quote contains the core intuition and a separate set of recall cues.
   const source = markdown.replace(/^(> [^\n]+\n)(> \*\*唤醒标签\*\*)/, "$1>\n$2");
   // The structured bibliography replaces the trailing source paragraph. Keep other notes.
-  const bodySource = !isRoadmap && lessonSources[id]?.length ? source.replace(/(?:^|\n)> \*\*前沿数据来源\*\*[：:][^\n]*\s*$/, "") : source;
+  const bodySource = !isRoadmap && lessonSources[id]?.length ? source.replace(/(?:^|\n)> \*\*(?:前沿数据来源|主要来源|参考一手材料|原始资料)\*\*[：:][^\n]*\s*$/, "") : source;
   const tokens = md.parse(bodySource, env);
   const labs = tokens.filter(t => t.type === "fence" && t.info.trim() === "academy-lab").map(t=>t.content.trim());
   if (new Set(labs).size !== labs.length) throw Error("Duplicate lab in "+id);
@@ -171,7 +178,12 @@ export function renderMarkdown(markdown, { isRoadmap = false, id } = {}) {
         });
       }
     }
-    return { ...section, html: groups ? "" : render(body), groups, searchText: searchable(body) };
+    // Fold the implementation without hiding an experiment or the lesson's main argument.
+    const codeSection = section.kind === "text" && /复算|代码|从零实现/.test(section.title)
+      && body.some(token => token.attrGet("id")?.startsWith("worked-example"))
+      && !body.some(token => token.type === "fence" && token.info.trim() === "academy-lab");
+    return { ...section, kind: codeSection ? "code" : section.kind,
+      html: groups ? "" : render(body), groups, searchText: searchable(body) };
   });
   return { intro, introText: searchable(opening), labs, parts, outline: env.outline, plain };
 }

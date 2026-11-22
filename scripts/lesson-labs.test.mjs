@@ -92,3 +92,21 @@ test("worked examples match the interactive curves at the same parameter setting
     assert.ok(new Set(readouts).size > 1, id);
   }
 });
+
+test("the three new core lessons reproduce their worked retrieval and data examples", () => {
+  function at(id, changes = {}) {
+    const lab = labDefinitions[id];
+    const initial = Object.fromEntries(lab.controls.map(c => [c.key, c.initial]));
+    return lab.evaluate({ ...initial, ...changes });
+  }
+  // 48 successful hits and two successful misses. Holding the old hit rate
+  // fixed would instead predict 60 successful hits and the same two misses.
+  const rates = at("5.5", { recall: 0.8, hit: 0.6 }).rows.map(row => Math.round(row.value));
+  assert.deepEqual(rates, [50, 62, 49]);
+  assert.match(at("6.2").readout, /原始 91 → 精确 81 → 近重 71 → 过滤 61 token/);
+  assert.match(at("6.2", { near: 0.6 }).readout, /原始 91 → 精确 81 → 近重 61 → 过滤 51 token/);
+  for (const [ef, hits, visits] of [[3, 0, 10], [6, 3, 22]]) {
+    const { readout } = at("8.1-graph", { m: 3, ef });
+    assert.ok(readout.includes(`召回 ${hits}/3`) && readout.includes(`计算距离 ${visits}/36`), readout);
+  }
+});

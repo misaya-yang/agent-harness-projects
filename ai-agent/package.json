@@ -1,0 +1,20 @@
+{
+  "name": "codex-kernel-atlas",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "七大开源 Agent Harness 的交互式工程课程",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build && node scripts/embed-worker.mjs",
+    "typecheck": "tsc --noEmit",
+    "test": "tsc --noEmit && node --test tests/*.test.mjs",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@openai/sites-vite-plugin": "^0.2.0",
+    "playwright": "^1.62.1",
+    "typescript": "^5.9.2",
+    "vite": "^8.2.2"
+  }
+}

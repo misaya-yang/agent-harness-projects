@@ -1,0 +1,64 @@
+.hermes-page {
+  --o-amber-bright: oklch(0.83 0.12 110);
+  --o-amber-core: oklch(0.62 0.15 110);
+  --o-amber-deep: oklch(0.45 0.14 110);
+  --accent: var(--o-amber-deep);
+  --accent-vivid: var(--o-amber-core);
+  --accent-glow: var(--o-amber-bright);
+  --accent-wash: color-mix(in oklch, var(--o-amber-core) 10%, transparent);
+  --accent-line: color-mix(in oklch, var(--o-amber-core) 42%, transparent);
+  --focus-ring: var(--o-amber-deep);
+}
+
+.hermes-page .brand-short { display: none; }
+
+@media (min-width: 1280px) {
+  .hermes-page .hero {
+    --step-hero: clamp(2.75rem, 1.25rem + 3.4vw, 3.85rem);
+  }
+
+  .hermes-page .hero-grid {
+    grid-template-columns: minmax(0, 12fr) minmax(340px, 8fr);
+  }
+}
+
+@media (min-width: 821px) and (max-width: 1279px) {
+  .hermes-page .hero-grid { align-items: center; }
+}
+
+:root[data-theme="dark"] .hermes-page { --o-amber-deep: oklch(0.76 0.13 110); }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .hermes-page { --o-amber-deep: oklch(0.76 0.13 110); }
+}
+
+.hermes-page .loop-layout { grid-template-columns: minmax(210px, .9fr) minmax(170px, .65fr) minmax(230px, 1fr); }
+.hermes-page .m-steps { grid-template-columns: 1fr; }
+.hermes-page .state-counters { grid-template-columns: repeat(3, 1fr); }
+.hermes-page .surface-detail { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+
+/* lineage-compare：两代对照的 detail 面板节奏（.machine .atlas-layout 装置内） */
+.hermes-page .atlas-detail .label-mono + p { margin-block-start: 6px; }
+.hermes-page .atlas-detail > .label-mono:not(:first-child) { margin-block-start: var(--s-4); display: inline-block; }
+.hermes-page .atlas-detail .decision { margin-block-start: var(--s-4); }
+
+/* hm-learn：复盘触发判定 trace（sim-layout 右列）——trace-list 装进控制台面板 */
+.hermes-page #hm-learn .trace-list {
+  padding: var(--s-4);
+  border: 1px dashed var(--line-on-console);
+  border-radius: var(--r-control);
+  background: color-mix(in oklch, black 22%, var(--surface-console));
+  max-block-size: 360px;
+  overflow-y: auto;
+  line-height: 1.9;
+}
+
+@media (max-width: 820px) {
+  .hermes-page .loop-layout { grid-template-columns: 1fr; }
+  .hermes-page .surface-detail { grid-template-columns: 1fr; }
+}
+
+@media (max-width: 520px) {
+  .hermes-page .topbar .brand-long { display: none; }
+  .hermes-page .topbar .brand-short { display: inline; }
+}

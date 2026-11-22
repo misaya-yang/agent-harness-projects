@@ -9,7 +9,7 @@ const WINDOW = 100_000;
 const SYSTEM = 9_400;
 const DOCS = 3_600;
 const THRESHOLD = 0.86;
-const RETAINED_ITEMS = 6; // Two complete three-item sample items.
+const RETAINED_ITEMS = 6; // Two example turns of three items each.
 
 let items: HistoryItem[] = [];
 let summaryTok = 0;

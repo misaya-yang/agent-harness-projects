@@ -5,7 +5,7 @@
 
 type Op = {
   id: string;
-    cmd: string;
+  cmd: string;
   writeIn: boolean;
   writeOut: boolean;
   net: boolean;
@@ -26,7 +26,7 @@ const OPS: Op[] = [
 
 const VERDICTS = {
   allow: { tag: "当前权限放行", cls: "ok", desc: "示例操作在当前权限内。执行后读取工具结果和命令退出状态。" },
-  ask: { tag: "可请示", cls: "ask", desc: "请查看判定路径。命令规则可以要求执行前确认；按需审批也可由模型另行发起明确的权限申请。" },
+  ask: { tag: "执行前请示", cls: "ask", desc: "示例命令规则没有预先放行该操作。待审批后，再据获批尝试的有效权限判断能否执行。" },
   request: { tag: "本次越界失败 · 可另行申请", cls: "ask", desc: "这次执行的失败先返回给模型。明确请求其他权限才会进入审批决策，是否获批另行判断。" },
   deny: { tag: "越界失败", cls: "deny", desc: "当前权限不足，普通升级审批已关闭。失败结果回到模型。" },
 } as const;

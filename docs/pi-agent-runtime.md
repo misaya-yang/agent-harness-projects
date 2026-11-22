@@ -1,7 +1,6 @@
 # Pi Agent Runtime：从一次 prompt 到 provider stream 的可验证教程
 
-> 源码基线：本地 `pi` 快照，短提交 `a470b121b`。
-> 本文只依据该 checkout 的源码、README 和 `packages/agent/docs/harness.md` 编写；没有联网、安装依赖、运行真实模型或修改源仓。
+> 源码基线为 [Pi `9c465268`](https://github.com/earendil-works/pi/tree/9c4652688590abb836b40ebd1e4725ecf9a7c7d1)，其中 Coding Agent 包版本为 1.6.0（发布于 2026-11-20，快照含发布后修订）。本文逐段核对本地源码、文档与上游测试，实验可用 faux provider。
 
 ## 读法与证据边界
 
@@ -11,7 +10,7 @@
 - **推断**：由多个实现事实组合出的运行时解释，适合帮助读者建立心智模型，但不等同于额外 API 保证。
 - **教学简化**：为了实验而省略的生产复杂度；实现任务不能把它误当作 Pi 的真实契约。
 
-每个核心结论都带 repo-relative 路径和具体 symbol，例如 `packages/agent/src/agent-loop.ts:runLoop`。`packages/agent/docs/harness.md` 是 AgentHarness 的实现规格，包含未来/分阶段设计；涉及它时本文会明确标记为“规格说明”，不把规格当作当前 `Agent` 已经拥有的持久化保证。
+每个核心结论带相对于仓库根目录的路径和符号，例如 `packages/agent/src/agent-loop.ts:runLoop`。本文从基础 Agent 的内存循环出发；Coding Agent 的 v3 SessionManager 与独立 Pi Durable 各有持久化入口。
 
 ## 贯穿任务：做一个可中断、可观察的文件审阅 Agent
 
@@ -21,7 +20,7 @@
 2. 让模型按需调用 `read_file(path)` 和 `summarize_findings(findings)` 两个工具。
 3. 在工具调用前校验参数，并允许策略层阻止路径越界。
 4. 将 assistant 文本、thinking、tool call、tool result 画成事件时间线。
-5. 工具运行期间支持 `steer("只检查配置加载，不要修改文件")`；支持 `abort()` 后用 `continue()` 重试。
+5. 工具运行期间支持 `steer("只检查配置加载，不要修改文件")`；支持 `abort()`，并根据末条消息选择 `continue()` 或新 prompt。
 6. 在每次 provider 请求前裁剪旧的 UI-only 消息；仍然把完整 Agent transcript 保留在 `Agent.state.messages`。
 7. 用 `fauxProvider()` 完成确定性测试，再用一个第二 provider/fake provider 验证 provider adaptation，不调用真实模型。
 
@@ -56,18 +55,18 @@ agentLoop.runLoop ── transformContext ── convertToLlm
 
 这张图是**教学简化**：真实实现还包括 lazy API loading、动态 auth、retry、deferred response、跨 provider message normalization 和 harness 层；这些在后文分别指出。
 
-## 第一章：先分清三种消息与两个边界
+## 第一章：先分清 Agent 消息、标准消息与请求上下文
 
 ### 目标
 
-建立最重要的边界：Agent 处理的是可扩展的 `AgentMessage[]`；provider 只接受 `Message[]`；工具结果回到 Agent 后才会成为下一次 LLM 请求的上下文。
+建立两个边界：Agent 处理的是可扩展的 `AgentMessage[]`；provider 接收从标准 `Message[]` 归一化出来的 `TranscriptContext`；工具结果回到 Agent 后才会成为下一次 LLM 请求的上下文。
 
 ### 实现事实
 
-- `AgentMessage` 是 `Message` 与 declaration-merging custom messages 的 union；`AgentContext` 持有 `systemPrompt`、`messages`、`tools`：`packages/agent/src/types.ts:AgentMessage`, `AgentContext`。
-- `AgentMessage[] → transformContext → convertToLlm → Message[]` 的顺序在 `packages/agent/src/agent-loop.ts:streamAssistantResponse` 中直接实现：先 `config.transformContext`，再 `config.convertToLlm`，最后组装 `Context`。
-- 默认转换只保留 `user`、`assistant`、`toolResult`：`packages/agent/src/agent.ts:defaultConvertToLlm`。
-- Pi AI 的 `Context` 只包含可供 LLM 使用的 `systemPrompt?`、`messages: Message[]`、`tools?`：`packages/ai/src/types.ts:Context`。
+- `AgentMessage` 是 `Message` 与 declaration-merging custom messages 的 union；`AgentContext` 持有 `messages` 和可执行 `tools`：`packages/agent/src/types.ts:AgentMessage`, `AgentContext`。
+- `AgentMessage[] → transformContext → convertToLlm → Message[]` 的顺序在 `packages/agent/src/agent-loop.ts:streamAssistantResponse` 中直接实现：先 `config.transformContext`，再 `config.convertToLlm`，随后调用 `normalizeContext({ messages })`。
+- 默认转换保留 `system`、`user`、`assistant`、`toolResult`：`packages/agent/src/agent.ts:defaultConvertToLlm`。
+- Pi AI 的公共 `Context` 接受 `messages` 与可选的旧式 `systemPrompt`、`tools`。归一化后 prompt 与工具声明沿 system 消息重放。源码见 `packages/ai/src/types.ts:Context, TranscriptContext, SystemMessage` 与 `packages/ai/src/utils/transcript.ts:normalizeContext, getCurrentSystemMessage`。
 
 ### 真实任务中的设计
 
@@ -77,12 +76,12 @@ agentLoop.runLoop ── transformContext ── convertToLlm
 
 用 faux provider 返回一个固定文本；在 `Agent.state.messages` 中插入一条 `review_status`，在 `convertToLlm` 内记录收到的消息角色。
 
-预期观察：Agent state/transcript 仍包含 status；provider context 只收到 LLM 三种角色。若把过滤写进 `transformContext`，则会改变 Agent 侧可观察 transcript，这是边界错误。
+预期观察：Agent state/transcript 仍包含 status；provider context 只收到标准 Message 角色。若可在 `transformContext` 返回新数组做裁剪，或在 `convertToLlm` 过滤 UI-only 角色；避免原地改动消息对象。
 
 ### 推断与简化
 
 - **推断**：这两个边界允许 UI、session 或审计层保留比模型更多的信息，同时不迫使每个 provider 理解 custom role。
-- **教学简化**：本任务的 `transformContext` 只做“保留最近 N 条”，没有实现 token 估算/compaction。真正的 compaction helper 与持久化状态属于 `packages/agent/src/harness/` 和规格 `packages/agent/docs/harness.md`，不能用本实验替代。
+- **教学简化**：本任务的 `transformContext` 只做“保留最近 N 条”，没有实现 token 估算/compaction。Coding Agent 的压缩实现见 `packages/coding-agent/src/core/compaction/compaction.ts`；独立 Durable 另有会话和任务状态机。
 
 ## 第二章：Agent state 是谁拥有的
 
@@ -94,8 +93,8 @@ agentLoop.runLoop ── transformContext ── convertToLlm
 
 - `Agent` 私有持有 `_state`、listener 集合、steering/follow-up 队列和 `activeRun`：`packages/agent/src/agent.ts:Agent`。
 - `createMutableAgentState` 对初始 `tools` 和 `messages` 做 top-level `slice()`；setter 也复制传入数组，但 getter 返回当前数组本身：`packages/agent/src/agent.ts:createMutableAgentState`。
-- 可见 state 包括 `systemPrompt`、`model`、`thinkingLevel`、`tools`、`messages`，以及只读的 `isStreaming`、`streamingMessage`、`pendingToolCalls`、`errorMessage`：`packages/agent/src/types.ts:AgentState`。
-- `createContextSnapshot` 再复制 `messages/tools`，因此一次 run 使用的是启动时 context snapshot；事件处理再把完成消息写回 `_state`：`packages/agent/src/agent.ts:createContextSnapshot`, `processEvents`。
+- 可见 state 包括 `model`、`thinkingLevel`、`tools`、`messages`，以及只读的 `systemPrompt`（从 system 消息重放）、 `isStreaming`、`streamingMessage`、`pendingToolCalls`、`errorMessage`：`packages/agent/src/types.ts:AgentState`。
+- `createContextSnapshot` 再复制 `messages/tools`，因此 run 从启动快照开始。宿主可通过后续回合的 `prepareNextTurn` 或请求前的 `prepareRequest` 更新 context、model、thinking level；事件处理会将完成消息写回 `_state`：`packages/agent/src/agent.ts:createContextSnapshot`, `processEvents`。
 - `runWithLifecycle` 建立一个 `AbortController`，置 `isStreaming = true`，执行 loop，最终由 `finishRun` 清空 streaming/pending runtime state：`packages/agent/src/agent.ts:runWithLifecycle`, `finishRun`。
 
 ### 状态不变量
@@ -147,11 +146,11 @@ agentLoop.runLoop ── transformContext ── convertToLlm
 
 让 faux provider 第一个响应请求一个短工具，并让工具延迟；工具开始后调用 steer("缩小范围")，同时调用 followUp("最后再给摘要")。
 
-预期顺序：当前 tool 仍完成；steer message 在下一次 assistant 请求前注入；若 steer 产生的回合最终无 tool，才检查 follow-up。把两条消息都设为 all，再改为 one-at-a-time，比较一次 drain 的消息数量。
+预期顺序：当前 tool 仍完成；steer message 在下一次 assistant 请求前注入；若 steer 产生的回合最终无 tool，才检查 follow-up。把两条队列各入多条消息，先用 all，再改用 one-at-a-time，比较一次 drain 的消息数量。
 
 ### 教学简化
 
-本文实验把“abort 后 retry”表达为 await agent.abort(); await agent.continue()，但实际工程要区分 provider 返回的 aborted、loop 抛异常、工具不合作、以及最后一条消息是否仍可继续。continue 不是任意位置的 resume API。
+调用 `agent.abort()` 后等待 `waitForIdle()`。若末条已提交消息是 assistant，低层 `continue()` 要求新用户输入等合法入口；它从当前内存 transcript 发起新 run。
 
 ## 第四章：stream events 是跨层协议
 
@@ -222,14 +221,14 @@ provider 事件不保证 text、thinking、toolcall block 连续；消费者必�
 
 ### 并行语义
 
-- parallel 模式只并发真正 execute；preflight 仍按 source order：packages/agent/src/agent-loop.ts:executeToolCallsParallel。
+- parallel 模式先按 source order 完成 preflight，再并发执行工具并处理各自的结果钩子：packages/agent/src/agent-loop.ts:executeToolCallsParallel。
 - tool_execution_end 在各 tool 完成后立即发出；之后 Promise.all 按 source order 生成/发出 toolResult messages：同一 symbol。
-- shouldTerminateToolBatch 只有在 batch 非空且每个 finalized result 都 terminate === true 时才终止自动 follow-up：packages/agent/src/agent-loop.ts:shouldTerminateToolBatch。
+- shouldTerminateToolBatch 只有在 batch 非空且每个 finalized result 都 terminate === true 时才关闭工具驱动的自动继续；随后仍检查待处理的队列：packages/agent/src/agent-loop.ts:shouldTerminateToolBatch。
 
 ### 截断与中止安全
 
 - assistant stopReason === length 时不执行任何 tool call，而为每个调用生成解释性 error result：packages/agent/src/agent-loop.ts:failToolCallsFromTruncatedMessage, runLoop。
-- abort signal 在 preflight、tool execute 与 loop 分支都会检查；“tool 已开始”不等于一定被取消，工具自身必须尊重 signal：packages/agent/src/agent-loop.ts:prepareToolCall, executePreparedToolCall。
+- abort signal 在 preflight、tool execute 与 loop 分支都会检查；已经运行的工具必须尊重 signal；未开始的调用生成 “Operation aborted” 错误结果用来保全配对。证据见 `packages/agent/src/agent-loop.ts:prepareToolCall, executeToolCallsParallel` 与 1.6.0 changelog 的 #9986。
 
 ### 实验 5：平行工具的两种顺序
 
@@ -247,9 +246,11 @@ provider 事件不保证 text、thinking、toolcall block 连续；消费者必�
 
 - Agent 的 transformContext 合同是输入/输出 AgentMessage[]，用于 prune 或外部上下文注入；不得依赖 provider-specific Message：packages/agent/src/types.ts:AgentLoopConfig.transformContext。
 - convertToLlm 合同是 AgentMessage[] → Message[]，需要过滤或转换 custom messages；实现异常会中断 low-level loop，因此应返回安全 fallback：packages/agent/src/types.ts:AgentLoopConfig.convertToLlm。
-- Pi AI 的 transformMessages 做模型相关的 replay normalization：降级不支持的 image、规范化 tool-call id、跨模型时把 thinking 转成 text，并为孤立 tool calls 补 synthetic tool results：packages/ai/src/api/transform-messages.ts:transformMessages。
+- Pi AI 的 transformMessages 做模型相关的 replay normalization：降级不支持的 image、规范化 tool-call id、跨模型时移除旧模型 thinking，并为孤立 tool calls 补 synthetic tool results：packages/ai/src/api/transform-messages.ts:transformMessages。
 - provider adapter 再把统一消息转为 wire format。例如 OpenAI convertMessages 处理 system/developer role、image data URL、tool call id 与 thinking；Anthropic buildParams/convertMessages 处理 system block、tool references、thinking signature、tool_result：packages/ai/src/api/openai-completions.ts:convertMessages, packages/ai/src/api/anthropic-messages.ts:buildParams, convertMessages。
 - Tool 的 parameters 是 TypeBox schema；Agent 在 prepareToolCall 以 validateToolArguments 验证，provider adapter 只负责把 schema 发送给模型：packages/ai/src/types.ts:Tool, packages/agent/src/agent-loop.ts:prepareToolCall。
+
+首次模型请求需有系统声明，后续在 system 消息上追加 `sections` 和 `toolsAdded` / `toolsRemoved`。`runLoop` 的 `declareToolChanges` 会根据实际可执行集合生成差量；Pi AI 归一化并重放，让不同 provider 能用各自的 wire 格式表达最新状态。Coding Agent 将这些消息存入当前分支。用 [system 消息重放测试](https://github.com/earendil-works/pi/blob/9c4652688590abb836b40ebd1e4725ecf9a7c7d1/packages/ai/test/system-message-replay.test.ts) 对照实现。
 
 ### 实验 6：同一 transcript，两个 provider 视图
 
@@ -313,7 +314,7 @@ AssistantMessage.stopReason 是 pending | stop | length | toolUse | error | abor
 ### provider adaptation 的真实例子
 
 - OpenAI-compatible stream 解析 chunk，维护 partial content、reasoning、tool calls，并对部分 endpoint 没有 finish_reason 的情况按 compat 推断 stop/toolUse：packages/ai/src/api/openai-completions.ts:stream, mapStopReason。
-- Anthropic adapter 将 SSE content block、thinking delta、input_json_delta、message_delta usage 映射到同一事件 union：packages/ai/src/api/anthropic-messages.ts:stream。
+- Anthropic adapter 将 SSE text、thinking、tool delta 与 usage 映射到标准流。Message Threads 复用通过本地前缀验证的远端线程；改变前缀时走完整请求。可用 [threads 测试](https://github.com/earendil-works/pi/blob/9c4652688590abb836b40ebd1e4725ecf9a7c7d1/packages/ai/test/anthropic-message-threads.test.ts) 观察仅追加消息和改写历史两种请求。
 - transformMessages 是跨 provider replay 的共享中间层，但最后的 payload 适配仍由每个 API implementation 负责；这是 provider adaptation 与 agent context conversion 的两层，不应合并成一个“大转换器”：packages/ai/src/api/transform-messages.ts:transformMessages；packages/ai/src/api/*。
 
 ### 实验 8：三类故障的 transcript
@@ -326,9 +327,11 @@ AssistantMessage.stopReason 是 pending | stop | length | toolUse | error | abor
 
 记录 Agent event 和最终 waitForIdle()：前两类应该出现标准的 assistant failure/agent end；第三类可能由 Agent lifecycle 的 failure handler 兜底，不能把它当 provider in-band error。实验重点是**故障层级**，不是“所有异常都长得一样”。
 
-### 规格说明：harness 与当前 core 的边界
+### 三种结束与持久化证据
 
-packages/agent/docs/harness.md:Part 5.7 说明未来/扩展的 AgentHarness 会把 Models、durable operation state、hooks、telemetry 和现有 agent-loop building blocks 组合起来；Part 5.5 的事件还区分 entry_added（持久化已完成）和 process-local message_end。当前 Agent 的 processEvents 只维护内存 state，并没有把每个 message/event 写入持久 session。课程任务可讲清这条演进路线，但不能声称基础 Agent 已提供 crash recovery 或 exactly-once tool effect。
+基础 Agent 在 `processEvents` 折叠公开的内存状态。Coding Agent 持久化 session entry，并对外发 `agent_settled`；这一事件在会话层处理完自动重试、压缩与续跑后发出。RPC 客户端先订阅再发送 prompt，通过 `data.disposition` 判断是否开启 run。源文件为 [Coding Agent 会话壳](https://github.com/earendil-works/pi/blob/9c4652688590abb836b40ebd1e4725ecf9a7c7d1/packages/coding-agent/src/core/agent-session.ts) 和 [RPC 生命周期](https://github.com/earendil-works/pi/blob/9c4652688590abb836b40ebd1e4725ecf9a7c7d1/packages/coding-agent/docs/rpc.md#run-lifecycle)。
+
+独立的 `packages/durable` 以原子提交保存 transcript、文档和任务 checkpoint。打开同一存储后调用 `resume()`，调度器从任务的已提交进度恢复；同一个 `requestId` 找回原 submission。任务若会重做外部效果，需要自己的幂等标识。证据见 [Durable 恢复文档](https://github.com/earendil-works/pi/blob/9c4652688590abb836b40ebd1e4725ecf9a7c7d1/packages/durable/README.md#persist-and-resume) 和 [任务恢复测试](https://github.com/earendil-works/pi/blob/9c4652688590abb836b40ebd1e4725ecf9a7c7d1/packages/durable/test/harness-tasks-recovery.test.ts)。
 
 ## 结业实现顺序
 
@@ -353,11 +356,11 @@ packages/agent/docs/harness.md:Part 5.7 说明未来/扩展的 AgentHarness 会�
 | provider 事件以 done/error 收口，最终 message 可由 result() 取得 | packages/ai/src/types.ts:AssistantMessageEvent；packages/ai/src/utils/event-stream.ts:AssistantMessageEventStream |
 | Models 负责 auth 合并/headers/dispatch，provider 负责 wire protocol | packages/ai/src/models.ts:applyAuth, ModelsImpl.stream；packages/ai/src/api/openai-completions.ts:stream |
 | error/aborted 是 in-band assistant message，而非正常 provider rejection | packages/ai/src/types.ts:StreamFunction；packages/ai/src/api/lazy.ts:lazyStream |
-| 当前基础 Agent 不等于 durable harness | packages/agent/src/agent.ts；对照规格 packages/agent/docs/harness.md:Part 5.5, Part 5.7 |
+| 基础 Agent 折叠内存事件，Durable 从提交的任务状态恢复 | packages/agent/src/agent.ts:processEvents；packages/durable/src/harness/harness.ts:HarnessImpl.resume |
 
-## 已知不确定点与避免过度承诺
+## 扩展阅读
 
-- **实现事实**：当前 checkout 同时导出了基础 Agent、agentLoop 和 AgentHarness 相关模块；本文贯穿任务只使用前两者，避免把 session/harness API 的规格目标混入 core 教程：packages/agent/src/index.ts。
-- **不确定点**：README 的示例与源码在一些版本演进字段上可能不同（例如 prepareNextTurn 的两种 Agent option 形态）；教学代码应以当前 packages/agent/src/types.ts 和 agent.ts 的实际签名为准，而不是复制旧片段。
+- 基础 Agent、agentLoop 从 `packages/agent/src/index.ts` 导出，Durable Harness 的入口在 `packages/durable/src/index.ts`。
+- Agent 支持 `prepareNextTurn(signal)` 与 `prepareNextTurnWithContext(turn, signal)`；两者并存时后者优先。签名见 `packages/agent/src/agent.ts:AgentOptions, createLoopConfig`。
 - **推断**：provider-specific compat 字段的组合可解释为“统一语义、局部协议”；真正可用性仍要以对应 adapter 和目标 endpoint 的测试/响应为准，本文没有联网验证。
-- **教学简化**：没有覆盖 dynamic model refresh、OAuth login、deferred polling、image generation、retry delay、telemetry schema 的全部 API；这些在 packages/ai/README.md 和 packages/agent/docs/harness.md 有完整背景，但不是主线任务的必要前置。
+- **教学简化**：没有覆盖 dynamic model refresh、OAuth login、deferred polling、image generation、retry delay、telemetry schema 的全部 API；这些在 packages/ai/README.md 和 packages/durable/README.md 有完整背景，但不是主线任务的必要前置。

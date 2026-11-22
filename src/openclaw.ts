@@ -34,18 +34,18 @@ function initLoopStepper(): void {
   const root = document.querySelector("#oclaw-loop");
   if (!root) return;
   const steps = qsa<HTMLElement>(root, "[data-steps] li");
-  const events = ["gateway.message_in", "run_attempt_begin", "agent_start", "message_end → turn_end", "tool_execution_end ×k", "steering_drain", "agent_end", "post_agent_run: settle", "agent_settled", "state_flushed"];
+  const events = ["gateway.message_in", "run_attempt_begin", "agent_start", "assistant tool call", "tool_execution_end ×k", "steering_drain", "agent_end", "post_agent_run: settle", "agent_settled", "persisted session state"];
   const notes = [
-    "Telegram 消息到达 Gateway；为该会话发起一次有界 run。",
+    "Telegram 消息经 Gateway 路由，先由对应会话的 mailbox 准入。",
     "外层 runner 开始第一个 attempt，并为失败恢复建立独立预算。",
     "session 层启动 logical prompt；内层广播 agent_start 与首个 turn_start。",
-    "模型返回 tool call；shouldTerminateToolBatch=false，内层 while 继续。",
-    "before/afterToolCall 钩子夹住每个工具；parallel/sequential 按 executionMode。",
-    "用户 steer() 的消息在下一检查点 getSteeringAtCheckpoint（:76）注入内层。",
-    "无更多 tool call 且队列空；内层→外层→agent_end（:523）。",
+    "模型提出工具调用；本例工具结果允许内层继续。",
+    "工具通过执行入口和钩子，再按批次的并行或串行约束执行。",
+    "在检查点消费已接受的插话。顺序批的未开始尾部可跳过，已启动调用保留结果。",
+    "模型已答完，工具与输入队列均已处理，内核发出 agent_end。",
     "handlePostAgentRun：非重试、未触发压缩、无排队 → settled。",
-    "非 handoff 路径发出 settled 事件；handoff 则由外部投递接管。",
-    "transcript / 状态已在 SQLite；进程不需要空转，等下一次唤醒。",
+    "这里发 agent_settled，移交路径会发独立的 agent_handoff。",
+    "持久转录保留已经提交的事件，会话等待下次输入。",
   ];
   let index = -1;
   let timer = 0;
@@ -84,25 +84,25 @@ function initDecisionMatrix(): void {
   const scenarios: Record<string, { intro: string; trace: RuleHit[]; verdict: string; tail: string }> = {
     handoff: {
       intro: "输入：endedForTurnHandoff = true",
-      trace: [{ rule: 0, hit: true, text: "R1 ✓ endedForTurnHandoff（:57-60）→ 控制权移交外部投递方", kind: "tool" }],
+      trace: [{ rule: 0, hit: true, text: "R1 ✓ endedForTurnHandoff→ 控制权移交外部投递方", kind: "tool" }],
       verdict: "handoff",
-      tail: "不发 agent_settled：finally 里的 emit 只在非 handoff 时执行（:47）。",
+      tail: "会话发出 agent_handoff，后续投递由外部所有者处理。",
     },
     abort: {
       intro: "输入：stopReason === \"aborted\"",
       trace: [
         { rule: 0, hit: false, text: "R1 ✗ 非 handoff" },
-        { rule: 1, hit: true, text: "R2 ✓ 无消息或 aborted（:63-65）→ 收束", kind: "tool" },
+        { rule: 1, hit: true, text: "R2 ✓ 无消息或 aborted→ 收束", kind: "tool" },
       ],
       verdict: "settled",
       tail: "abort 会把半截回合以 aborted 结果落进消息流，不能假装本轮从未发生。",
     },
     overloaded: {
-      intro: "输入：overloaded 错误，retryCount 1/3",
+      intro: "输入：overloaded 错误，仍有会话重试配额",
       trace: [
         { rule: 0, hit: false, text: "R1 ✗ 非 handoff" },
         { rule: 1, hit: false, text: "R2 ✗ 有消息、未 abort" },
-        { rule: 2, hit: true, text: "R3 ✓ isRetryableError && prepareRetry（:68-70）→ 指数退避后续跑", kind: "tool" },
+        { rule: 2, hit: true, text: "R3 ✓ isRetryableError && prepareRetry→ 指数退避后续跑", kind: "tool" },
       ],
       verdict: "continue",
       tail: "退避会尊重 provider 的 Retry-After 下界，再由本层预算决定是否续跑。",
@@ -115,7 +115,7 @@ function initDecisionMatrix(): void {
         { rule: 2, hit: false, text: "R3 ✗ prepareRetry 失败：该层恢复预算已耗尽", kind: "warn" },
         { rule: 3, hit: true, text: "R4 ✓ 发 auto_retry_end、清理该层计数 → 落入 R5", kind: "tool" },
         { rule: 4, hit: false, text: "R5 ✗ 无需压缩" },
-        { rule: 5, hit: false, text: "R6 ✗ 无排队（:85）→ settled" },
+        { rule: 5, hit: false, text: "R6 ✗ 仍是错误，排队输入由执行所有者处理 → settled" },
       ],
       verdict: "settled",
       tail: "成功响应会清零会话重试连击；是否还要继续由收束裁决统一决定。",
@@ -125,12 +125,12 @@ function initDecisionMatrix(): void {
       trace: [
         { rule: 0, hit: false, text: "R1 ✗ 非 handoff" },
         { rule: 1, hit: false, text: "R2 ✗ 有消息、未 abort" },
-        { rule: 2, hit: false, text: "R3 ✗ 上下文溢出不算 retryable，交给 compaction（:18-21 注释）" },
+        { rule: 2, hit: false, text: "R3 ✗ 上下文溢出交给 compaction" },
         { rule: 3, hit: false, text: "R4 ✗ 不经过重试" },
         { rule: 4, hit: true, text: "R5 ✓ overflow 进入自动压缩恢复 → continue", kind: "tool" },
       ],
       verdict: "continue",
-      tail: "溢出恢复有独立尝试上限；触顶必须显形报错，不能静默再次压缩。",
+      tail: "会话拥有 overflow 恢复时最多三次。若由外层 attempt 接管，使用对应外层策略。",
     },
     queued: {
       intro: "输入：agent_end 钩子排了一条消息",
@@ -143,7 +143,7 @@ function initDecisionMatrix(): void {
         { rule: 5, hit: true, text: "R6 ✓ 仍有排队消息 → agent.continue()", kind: "tool" },
       ],
       verdict: "continue",
-      tail: "队列空才 settled——会话层的“跑完了吗”永远比内核的 agent_end 晚一步。",
+      tail: "本例响应成功，来自 agent_end 处理器的排队消息会触发会话续跑。",
     },
   };
   let timer = 0;
@@ -204,22 +204,23 @@ function initStateProjection(): void {
     if (type === "reset") { state.retry = 0; state.budget = 0; state.overflow = 0; state.transcript = 0; state.fires = 0; if (log) log.innerHTML = ""; render(); return; }
     if (type === "message") { state.transcript += 1; render("message_in", "user 消息进 transcript_events", "user"); return; }
     if (type === "turn") { state.transcript += 1; render("turn_end", "assistant/tool 结果落库"); return; }
-    if (type === "settle") { state.retry = 0; render("agent_settled", "成功清零 retryCount；持久状态成为事实源，执行进程可以退出"); return; }
-    if (type === "recovery") { state.retry += 1; state.budget += 1; render("失败 attempt / auth", "retryCount+1 · 预算 recovery −1", "warn"); return; }
+    if (type === "settle") { render("agent_settled", "这里只显示会话收束。已提交的事件在这之前已有各自的落库结果。"); return; }
+    if (type === "session-retry") { state.retry += 1; render("auto_retry_start", "会话 retryCount +1", "warn"); return; }
+    if (type === "recovery") { state.budget += 1; render("外层失败 attempt", "外层计数 +1", "warn"); return; }
     if (type === "progress") { render("progress_continuation", "有进展的续跑不占用失败恢复预算", "model"); return; }
     if (type === "overflow") {
       if (state.overflow >= 3) { render("overflow 再压缩", "溢出恢复上限已到 → 显形报错，阻止压缩死循环", "warn"); return; }
-      state.overflow += 1; state.budget += 1; render("溢出压缩后重试", "压缩 +1 · 预算 −1（recovery）", "warn"); return;
+      state.overflow += 1; render("会话溢出压缩后重试", "会话溢出恢复计数 +1", "warn"); return;
     }
     if (type === "intent") {
-      if (state.fires >= 3) { render("standing intent 命中", "DEFAULT_INTENT_MAX_FIRES=3 封顶，不再唤醒", "warn"); return; }
+      if (state.fires >= 3) { render("standing intent 命中", "示例意图已到默认 3 次上限，本次不再注入", "warn"); return; }
       state.fires += 1; render("standing intent 命中", "fires+1（24h cooldown / 90 天过期）", "model"); return;
     }
     if (type === "crash") {
       state.retry = 0; state.budget = 0; state.overflow = 0;
-      render("进程崩溃", "内存计数归零；transcript / intents / automations 在 SQLite 里原样保留", "warn"); return;
+      render("进程崩溃", "进程计数丢失，已提交的转录事件和意图状态可读。未决工具的外部结果还需确认。", "warn"); return;
     }
-    if (type === "restart") { render("重启读账本", "新 run 读旧账本 + 唤醒源再点火——不是续跑半截 run", "sys"); return; }
+    if (type === "restart") { render("重启读账本", "符合条件的孤立运行可从持久 run 标记恢复，Gateway 发出一条恢复输入，先核实未决动作。", "sys"); return; }
   }));
 }
 
@@ -261,22 +262,27 @@ function initBudgetBreaker(): void {
     const evt = button.dataset.evt;
     if (evt === "reset") { used = 0; rlStreak = 0; idleStreak = 0; halted = false; if (log) log.innerHTML = ""; render(); return; }
     if (blocked()) return;
-    if (evt === "ok") { rlStreak = 0; idleStreak = 0; render("attempt 成功：会话重试与 idle 连击复位", "model"); return; }
+    if (evt === "ok") { used = 1; rlStreak = 0; idleStreak = 0; render("已完成的模型响应：外层连续计数重置为 1，限流与空闲连击清零", "model"); return; }
     if (evt === "rate") {
       rlStreak += 1;
-      if (rlStreak <= 3) { render(`同模型 rate-limit 恢复 ${rlStreak}/3 · 等待至少 ${rlStreak * 10}s，并尊重 Retry-After 下界`, "warn"); return; }
-      render("原地重试超 3 次 → 进入 profile 轮换"); rlStreak = 0; charge("profile 轮换：recovery −1"); return;
+      if (rlStreak < 16) {
+        charge(`第 ${rlStreak} 次限流失败。若允许同模型重试，指数退避加抖动，并以 Retry-After 为下界。`);
+        return;
+      }
+      charge("原地限流分支已到示例上限。策略可轮换凭证、切候选模型或返回错误。");
+      rlStreak = 0;
+      return;
     }
     if (evt === "auth") { charge("auth 失败：消耗一次 recovery 预算"); return; }
-    if (evt === "switch") { charge("profile 轮换：recovery −1"); return; }
-    if (evt === "compact") { charge("溢出压缩后重试：recovery −1（溢出走 compaction，不进会话重试）"); return; }
+    if (evt === "switch") { charge("profile 轮换：后续 attempt 计入外层预算"); return; }
+    if (evt === "compact") { charge("外层溢出恢复：重试 attempt 计入外层预算"); return; }
     if (evt === "progress") { render("progress_continuation：有进展的推进，不占用失败恢复预算", "model"); return; }
     if (evt === "idle") {
       idleStreak += 1;
       if (idleStreak >= 5) { halted = true; render(`idle 连击 ${idleStreak}/5 → 活性断路器跳闸，停止继续消耗`, "warn"); return; }
       render(`idle 无输出 ${idleStreak}/5（断路器尚未跳闸）`, "warn"); return;
     }
-    if (evt === "wall") { halted = true; render("run 墙钟上限到达 → 终止；这是超时边界，不是任务时长承诺", "warn"); return; }
+    if (evt === "wall") { halted = true; render("此模拟启用 48 小时默认墙钟。到达时结束 run。", "warn"); return; }
   }));
   qsa<HTMLButtonElement>(root, "[data-profile] [data-v]").forEach((button) => button.addEventListener("click", () => {
     profiles = Number(button.dataset.v) || 1;
@@ -296,47 +302,47 @@ function initWakeSources(): void {
   const data: Record<string, WakeSourceInfo> = {
     chat: {
       title: "通道消息：最常见的那次唤醒",
-      status: "Gateway 发出 · 新 run",
+      status: "通道入口 · 会话准入",
       rows: [
-        ["是不是唤醒", "是：通道输入由 Gateway 路由到目标会话，创建新的有界 run"],
-        ["进入哪条队列", "先经过每会话串行队列，再进入全局并发 lane，避免同一会话自相踩踏"],
-        ["怎么计预算", "新 run 领取自己的预算；健康的进度续跑不占用失败恢复配额"],
+        ["是不是唤醒", "Gateway 将通道输入路由到目标会话。空闲时可起跑，活跃时按会话策略 steering 或排队。"],
+        ["进入哪条队列", "同一物理会话共享 mailbox，独立回合再争取全局并发容量。"],
+        ["怎么计预算", "新 run 建自己的 attempt 账本。插话复用活跃 run 的预算。"],
       ],
     },
     heartbeat: {
-      title: "heartbeat：活着就定期看一眼",
-      status: "Gateway 发出 · 独立 run",
+      title: "Proactive check：普通巡检作业",
+      status: "Automations · 默认禁用",
       rows: [
-        ["是不是唤醒", "是：心跳在近似节奏上发起独立检查，不要求精确到某一分钟"],
-        ["进入哪条队列", "与消息 run 共用会话串行与全局并发约束，不拥有隐形快车道"],
-        ["怎么计预算", "每次心跳是独立 run；单次超时跟随心跳节奏并有上界"],
+        ["是不是唤醒", "启用后由 Automations 按约定节奏触发，首次设置通常提供 30 分钟间隔。"],
+        ["进入哪条队列", "默认巡检等主会话空闲；旧 heartbeat monitor 已迁为普通作业。"],
+        ["怎么计预算", "按照作业类型、会话和 timeoutSeconds 配置应用普通自动化预算。"],
       ],
     },
     cron: {
       title: "automations（旧名 cron）：到点再点火",
       status: "Gateway 发出 · 独立 run",
       rows: [
-        ["是不是唤醒", "是：持久计划到点后被调度器取出，启动独立 run"],
-        ["进入哪条队列", "到点不等于立即并发；仍要通过会话队列与全局 lane"],
-        ["怎么计预算", "每次触发领取新 run 预算，作业墙钟另有独立安全阀"],
+        ["是不是唤醒", "是：持久计划到点后被调度器认领。agentTurn 执行模型回合，command/script 作业走自己的入口。"],
+        ["进入哪条队列", "到期作业仍须取得调度容量。模型型作业按配置使用主会话或专用会话。"],
+        ["怎么计预算", "模型型作业的 run 有自身治理。默认作业墙钟是 agentTurn 60 分钟，其它作业 10 分钟。"],
       ],
     },
     intent: {
-      title: "standing intent：不点火，只搭车",
-      status: "既非发出也非订阅 · 不点火",
+      title: "Standing intent：在用户回合中匹配",
+      status: "提示词钩子 · 复用当前回合",
       rows: [
-        ["是不是唤醒", "通常不是：它在已有的用户 run 里匹配，命中后追加到当前 prompt"],
-        ["进入哪条 lane", "不入队、不开新 run；命中结果 prepend 进当前用户消息 run 的 prompt"],
+        ["是不是唤醒", "对符合条件的用户触发回合做关键词匹配，命中后把提示放入当前上下文。"],
+        ["进入哪条 lane", "与当前回合共用会话和执行位置。"],
         ["怎么计预算", "不另开 run，因此不领取新预算；它有自己的冷却、触发次数与过期限制"],
       ],
     },
     tick: {
-      title: "tick：连接的心跳，不是助理的心跳",
-      status: "客户端订阅 · 不点火",
+      title: "tick：Gateway 连接活性",
+      status: "Gateway 广播 · 客户端订阅",
       rows: [
-        ["是不是唤醒", "不是：<code>tick</code> 是客户端观察连接节奏的订阅信号，不是 agent 工作事件"],
-        ["进入哪条 lane", "不入 lane：它只是 WS 客户端订阅的节奏事件，用来感知连接活性"],
-        ["run 预算", "永不点火：tick 不产生 run，也就永远碰不到预算"],
+        ["是不是唤醒", "Gateway 定期广播 <code>tick</code>，客户端用它观察连接活性。"],
+        ["进入哪条 lane", "走 WebSocket 事件流。"],
+        ["run 预算", "连接维护没有 agent attempt 预算。"],
       ],
     },
   };
@@ -358,11 +364,11 @@ function initApprovalGates(): void {
   const status = qs<HTMLElement>(root, "[data-status]");
   const led = qs<HTMLElement>(root, "[data-led]");
   const gates = [
-    { ev: "telegram inbound", kind: "user", text: "陌生 DM 按不可信输入处理；会话路由定位 conversation，排进 run。" },
+    { ev: "telegram inbound", kind: "user", text: "已获通道访问权限的发送者发来消息。会话路由定位目标会话，再准入 run。" },
     { ev: "agent → dangerous exec proposal", kind: "model", text: "模型只提出动作；真正进入实现体前必须通过统一工具策略壳。" },
-    { ev: "approval policy evaluates", kind: "sys", text: "询问时机与安全级别共同决定直放、拒绝还是转发人审；超时默认不放行。" },
-    { ev: "forward → user channel", kind: "sys", text: "审批请求可以沿当前用户通道送达，用户不必切换到本机弹窗。" },
-    { ev: "await reaction ✓ / ✗", kind: "warn", text: "等用户在 Telegram 点 reaction——现在轮到你批：点「✓ 批复执行」或「✗ 批复拒绝」。" },
+    { ev: "approval policy evaluates", kind: "sys", text: "此例的宿主 exec 策略要求人审，审批管理器登记请求。若超时，默认拒绝。" },
+    { ev: "forward → user channel", kind: "sys", text: "此例已配置 Telegram 审批目标，并有授权审批人。" },
+    { ev: "await authorized decision", kind: "warn", text: "请模拟授权人在 Telegram 批复，选择「✓ 批复执行」或「✗ 批复拒绝」。" },
     { ev: "resolution → execute / block", kind: "sys", text: "决议回注，闸门开或关。" },
   ];
   let cursor = 0;
@@ -381,7 +387,7 @@ function initApprovalGates(): void {
     cursor += 1;
     if (cursor === 4) { emit(4, gates[4].text); cursor = 4; }
     draw();
-    if (note) note.textContent = cursor === 4 ? "六道闸只欠一个 reaction。点 ✓ 或 ✗ 给出批复。" : gates[Math.min(cursor, 3)].text;
+    if (note) note.textContent = cursor === 4 ? "审批待授权人决定。点 ✓ 或 ✗ 给出批复。" : gates[Math.min(cursor, 3)].text;
     if (status) status.textContent = `闸门 ${Math.min(cursor + 1, 6)}/6 · ${cursor === 4 ? "等待批复" : "推进中"}`;
     led?.classList.add("is-run");
     led?.classList.remove("is-done", "is-halt");
@@ -392,8 +398,8 @@ function initApprovalGates(): void {
     decided = kind;
     cursor = 5;
     emit(5, kind === "allow"
-      ? "批复 ✓：放行，工具执行，结果作为 tool result 回注 transcript。"
-      : "批复 ✗：策略返回 block 与 reason，循环代投一条 error tool result——动作从未执行，模型只看到终局拒绝。");
+      ? "批复 ✓：按当前策略和请求绑定复核后尝试执行，实际结果记进转录。"
+      : "批复 ✗：宿主拒绝执行，工具结果携带失败原因。");
     steps.forEach((item, i) => { item.classList.toggle("is-done", i <= 4); item.classList.toggle("is-now", i === 5); });
     if (note) note.textContent = kind === "allow" ? "闸门全开：危险的不是 shell 本身，是没有裁决的 shell。" : "闸门落下：拒绝也是回注进 loop 的一等公民，模型会换路或认输。";
     if (status) status.textContent = kind === "allow" ? "闸门 6/6 · 已放行" : "闸门 6/6 · 已拒绝";
@@ -437,7 +443,7 @@ function initMemoryResume(): void {
   let wake = "";
   const wakeRow: Record<string, [string, string]> = {
     chat: ["本次点火", "用户消息开启 run；standing intent 只有匹配成功才追加到当前 prompt"],
-    heartbeat: ["本次点火", "心跳 prompt 带专用响应工具；心跳说明文件只是可选启动上下文"],
+    heartbeat: ["本次点火", "启用的 Proactive check 读取作业 prompt 与 scratch，满足空闲条件后执行。"],
     dream: ["本次点火", "夜间记忆晋升完成后的第一次醒来：检索语料已包含新晋升的耐久事实"],
   };
   const render = () => {
@@ -449,7 +455,7 @@ function initMemoryResume(): void {
     let chars = "";
     if (carrier === "sqlite") {
       rows.push(
-        ["账本事实", "最后确认的转录事件与活跃 leaf——崩溃恢复先从这里重建"],
+        ["账本事实", "会话记录和已提交的转录事件提供事实。重启还要检查持久 run 身份与未决副作用。"],
         ["检索索引", "全文与向量索引共同提供候选，再经去冗余和时间衰减排序"],
         ["常驻意图", "意图记录自带冷却、触发次数和过期状态，避免永久反复插入"],
         ["全局审计", "关键控制动作进入独立审计事件面，不依赖聊天文字猜测"],
@@ -458,16 +464,16 @@ function initMemoryResume(): void {
       chars = "注入按需";
     } else {
       rows.push(
-        ["文件上下文", "规则、用户偏好与记忆文件按固定顺序、在明确预算内装配"],
-        ["字符预算", "超限时保留开头、策略摘要与结尾，并提示模型按需补读"],
-        ["边界", "SQLite 账本仍是事实源；文件面只解决“醒来第一眼看到什么”"],
+        ["文件上下文", "工作区规则与记忆按启动策略装配。示例日记预载默认近 2 天。"],
+        ["字符预算", "默认日记预载每份 1,200 字符、总计 2,800 字符，完整文件可按需读取。"],
+        ["边界", "日记文件提供提示词材料，会话进度由持久转录记录。"],
       );
       tables = 0;
       chars = "≤2800 字符";
     }
     rows.push(wakeRow[wake]);
     const projection: MemoryProjection = {
-      title: `${carrier === "sqlite" ? "SQLite 账本" : "文件记忆"} × ${wake === "chat" ? "通道消息" : wake === "heartbeat" ? "heartbeat" : "dreaming 之后"}`,
+      title: `${carrier === "sqlite" ? "会话账本（SQLite 示例）" : "文件记忆"} × ${wake === "chat" ? "通道消息" : wake === "heartbeat" ? "Proactive check" : "dreaming 之后"}`,
       status: "唤醒 = 新 run：旧预算零消耗",
       rows, parts: rows.length, tables, chars,
     };
@@ -520,17 +526,17 @@ function boot(): void {
   initApprovalGates();
   initMemoryResume();
   initSurface("#oclaw-surface", {
-    telegram: [["协议角色", "Gateway 宿主侧通道扩展（grammY）"], ["消息进出", "inbound debounce → 会话路由 → run；outbound 走通道插件"], ["审批与交互", "exec 审批转发进聊天，文本 / reaction 批复"], ["断线语义", "Gateway 在则助理在“睡”，run 仍由唤醒驱动"]],
-    discord: [["协议角色", "Gateway 通道扩展"], ["消息进出", "同 Telegram + reaction 审批"], ["审批与交互", "频道内批复与 reaction"], ["断线语义", "同左：断的是通道，不是内核"]],
+    telegram: [["协议角色", "Gateway 宿主侧通道扩展（grammY）"], ["消息进出", "inbound debounce → 会话路由 → run；outbound 走通道插件"], ["审批与交互", "已配置的审批目标可由授权人批复"], ["断线语义", "Gateway 在则助理在“睡”，run 仍由唤醒驱动"]],
+    discord: [["协议角色", "Gateway 通道扩展"], ["消息进出", "会话路由与通道输出使用对应集成"], ["审批与交互", "在支持且按配置可达的审批面批复"], ["断线语义", "同左：断的是通道，不是内核"]],
     ui: [["协议角色", "Gateway 的 WebSocket 客户端"], ["消息进出", "聊天与历史通过统一协议读写"], ["审批与交互", "审批面板 + ask_user 回答框"], ["断线语义", "纯客户端，断线不应删除 Gateway 持久状态"]],
-    cli: [["协议角色", "WS 客户端"], ["消息进出", "同左，TUI 渲染器复用会话工具"], ["审批与交互", "交互式提示"], ["断线语义", "同左：状态在 Gateway 与 SQLite，不在这个进程"]],
+    cli: [["协议角色", "WS 客户端"], ["消息进出", "同左，TUI 渲染器复用会话工具"], ["审批与交互", "交互式提示"], ["断线语义", "同左：持久会话可在 Gateway 重连后继续查看"]],
     macos: [["协议角色", "WS 客户端（control-plane）"], ["消息进出", "同左 + canvas.* 部件命令"], ["审批与交互", "系统通知 + 审批"], ["断线语义", "node 配对重连（device pairing store）"]],
   });
   initChoiceDetail("#oclaw-atlas", {
-    silent: { title: "先分清死亡与长眠", body: "跨天存活本来就靠“不跑”实现：有界 run 结束后落盘等待。先验证 Gateway 是否在线、精确定时是否进入待执行队列，再看 heartbeat 是否处在允许时段。", status: "先查唤醒" },
-    expensive: { title: "先找正在计费的预算主人", body: "区分单请求重试、run 内 recovery、跨 run 探测与凭证冷却；再检查副作用证据。健康推进与失败恢复不该记在同一个计数器上。", status: "先分账" },
+    silent: { title: "先分清死亡与长眠", body: "跨天存活本来就靠“不跑”实现：有界 run 结束后落盘等待。先验证 Gateway 是否在线、精确定时是否进入待执行队列，再看 Proactive check 作业是否启用，是否进入允许时段或在等会话空闲。", status: "先查唤醒" },
+    expensive: { title: "先找正在计费的预算主人", body: "区分单请求重试、run 内 recovery、跨 run 探测与凭证冷却；再检查副作用证据。外层连续计数遇到完整模型响应会回到 1。", status: "先分账" },
     dreaming: { title: "记忆晋升与手工内容要分开看", body: "夜间任务会把满足分数、召回次数、查询多样性和时效门槛的碎片晋升；回收器只删除能确认由系统生成的自动分节。", status: "先看来源" },
-    loopy: { title: "判断是重复、轮询还是参数空转", body: "循环检测先规范化易变 id 和时间戳，再区分未知工具、同参同果、乒乓与参数 churn；首次临界给自纠机会，再犯才终止。", status: "看进展证据" },
+    loopy: { title: "检查同名同参是否连续重复", body: "重复守卫默认开启。连续同名同参第 3 次提示，第 20 次执行前拦截。换调用或新用户输入重置连击，声明可重复的轮询豁免。", status: "查看 tool_repeat_limit" },
   });
   initChapterReader();
 }

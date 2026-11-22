@@ -1,6 +1,6 @@
 # Pi coding-agent 能力地图（源码快照）
 
-> 快照：本地 `pi` 源码，`a470b121bf683b4c2b9fc0b3a7c807de7e0cfe9c`（2026-08-25）。本文只基于本地源码、包 README 和相关 docs；没有联网、安装依赖、运行真实模型或修改源仓。
+> 源码基线为 [Pi `9c465268`](https://github.com/earendil-works/pi/tree/9c4652688590abb836b40ebd1e4725ecf9a7c7d1)。Coding Agent 包版本为 1.6.0（发布于 2026-11-20，快照含发布后修订）。案例以本地源码、上游文档和现有测试为依据。
 
 ## 阅读方式与证据等级
 
@@ -16,17 +16,17 @@
 
 ### 1.1 分层
 
-**Implemented fact**：Pi monorepo 把能力拆成统一模型 API、agent loop、coding-agent CLI/SDK、TUI，以及独立的协议/服务/客户端层。`Agent` 保存消息和工具状态；`AgentSession` 把它与 `SessionManager`、模型运行时、资源加载器和扩展运行器组合起来；CLI 只选择入口并驱动运行时。
+**Implemented fact**：Pi monorepo 把能力拆成统一模型 API、agent loop、coding-agent CLI/SDK、TUI，以及独立的 Pi Durable 和 Chord 应用运行时。`Agent` 保存消息和工具状态；`AgentSession` 把它与 `SessionManager`、模型运行时、资源加载器和扩展运行器组合起来；CLI 只选择入口并驱动运行时。
 
 `Agent` 的核心循环是 `AgentMessage[] -> transformContext -> convertToLlm -> provider stream`，每个 turn 发出消息/工具生命周期事件；默认并行执行同一 assistant 消息中的工具调用，但可切换为 sequential。
 
 Source: `packages/agent/src/agent.ts` (`Agent`, `AgentOptions`), `packages/agent/src/agent-loop.ts` (`runAgentLoop`, `runAgentLoopContinue`), `packages/coding-agent/src/core/agent-session.ts` (`AgentSession`), `packages/coding-agent/src/core/sdk.ts` (`createAgentSession`), `README.md`（All Packages）。
 
-**Inference**：要嵌入 Pi，优先 SDK；要跨语言或需要进程边界，使用 RPC；不要把 TUI、RPC 和 server protocol 混称为同一个协议。
+**Inference**：要嵌入 Pi，优先 SDK；要跨语言或需要进程边界，使用 RPC；需要任务在进程重启后续跑时评估 Durable。
 
 ### 1.2 入口模式
 
-**Implemented fact**：coding-agent 提供四类运行方式：
+**Implemented fact**：coding-agent 提供四种 CLI 入口与同进程 SDK：
 
 | 入口 | 事实 | 适用边界 |
 |---|---|---|
@@ -36,7 +36,7 @@ Source: `packages/agent/src/agent.ts` (`Agent`, `AgentOptions`), `packages/agent
 | RPC | `runRpcMode` 从 stdin 接收命令、向 stdout 输出响应/事件 | 进程集成、IDE、跨语言客户端 |
 | SDK | `createAgentSession` / `AgentSessionRuntime` 直接嵌入 Node | 类型安全、同进程、可替换 session |
 
-`-p/--print` 与 `--mode json` 走 single-shot print driver；`--mode rpc` 走严格 JSONL 的长期进程。RPC 的响应表示“已接受/排队/立即处理”，接受之后的模型或工具错误通过事件流报告，而不是重复响应同一 request id。
+`-p/--print` 与 `--mode json` 走 single-shot print driver；`--mode rpc` 走严格 JSONL 的长期进程。RPC 响应的 `data.disposition` 表示命令如何处理。接受之后的模型或工具错误由事件流报告；`agent_settled` 表示会话层已结束自动续跑，详见第 5 章。
 
 Source: `packages/coding-agent/src/cli/args.ts` (`Mode`, `parseArgs`), `packages/coding-agent/src/modes/print-mode.ts` (`runPrintMode`), `packages/coding-agent/src/modes/json-event.ts` (`toJsonEvent`, `JsonAgentSessionEvent`), `packages/coding-agent/src/modes/rpc/rpc-mode.ts` (`runRpcMode`), `packages/coding-agent/src/modes/rpc/rpc-types.ts` (`RpcCommand`, `RpcResponse`), `packages/coding-agent/docs/rpc.md`（Protocol Overview）。
 
@@ -58,11 +58,11 @@ Source: `packages/coding-agent/src/core/session-manager.ts` (`CURRENT_SESSION_VE
 
 ### 2.2 Entry 与上下文投影
 
-**Implemented fact**：entry 类型包括 `message`、`model_change`、`thinking_level_change`、`compaction`、`branch_summary`、`custom`、`custom_message`、`label` 和 `session_info`。`custom` 只持久化扩展状态，不进入 LLM context；`custom_message` 会进入 context，可用 `display` 控制 TUI 是否显示；`model_change` 和 thinking entry 影响当前 session 设置。
+**Implemented fact**：entry 类型包括 `message`、`model_change`、`thinking_level_change`、`compaction`、`context_edit`、`branch_summary`、`custom`、`custom_message`、`label` 和 `session_info`。`custom` 只持久化扩展状态，不进入 LLM context；`custom_message` 会进入 context，可用 `display` 控制 TUI 是否显示；`model_change` 和 thinking entry 影响当前 session 设置。
 
-`getBranch()` 返回 leaf 到 root 的路径；`buildContextEntries()` 先按树路径取 active branch，再把最近 compaction 前的旧段替换为 summary 与保留段；`buildSessionContext()` 将 entry 投影为实际 `AgentMessage[]`。
+`getBranch()` 返回从根到当前 leaf 的路径。`buildSessionProjection()` 选中路径与压缩保留段，按目标 ID 应用最新的 `context_edit`，同时保留模型消息的来源；`replacement: null` 让目标消息从模型视图省略，原 entry 仍可回读。首条 `system` 消息声明 prompt sections 与工具。后续 `sections` 变更和 `toolsAdded` / `toolsRemoved` 随上下文重放。
 
-Source: `packages/coding-agent/src/core/session-manager.ts` (`SessionEntry`, `CustomEntry`, `CustomMessageEntry`, `getBranch`, `buildContextEntries`, `buildSessionContext`, `sessionEntryToContextMessages`), `packages/coding-agent/docs/session-format.md`（Entry Types、Context Building）。
+Source: `packages/coding-agent/src/core/session-manager.ts` (`SessionEntry`, `CustomEntry`, `CustomMessageEntry`, `getBranch`, `buildContextEntries`, `buildSessionProjection`, `buildSessionContext`, `sessionEntryToContextMessages`), `packages/coding-agent/docs/session-format.md`（Entry Types、Context Building）。
 
 ### 2.3 `/tree`、`/fork`、`/clone`
 
@@ -79,9 +79,9 @@ Source: `packages/coding-agent/src/core/session-manager.ts` (`branchWithSummary`
 
 ### 2.4 Compaction 与 branch summary
 
-**Implemented fact**：auto-compaction 默认开启，触发条件是 `contextTokens > contextWindow - reserveTokens`；默认 `reserveTokens=16384`、`keepRecentTokens=20000`。`findCutPoint()` 从后向前按估算 token 选择 cut point，不在 tool result 上切断；如果一个 turn 过大，会生成 split-turn 的前缀摘要。摘要调用通过 `completeSummarization()`，使用 `toolChoice: "none"`、`cacheRetention: "none"` 和独立 routing/session id，并遵守重试策略。
+**Implemented fact**：auto-compaction 默认开启，触发条件是 `contextTokens > contextWindow - reserveTokens`；默认 `reserveTokens=16384`、`keepRecentTokens=20000`。`findCutPoint()` 从后向前按估算 token 选择 cut point，不在 tool result 上切断；如果一个 turn 过大，会生成 split-turn 的前缀摘要。自动检查可发生在 prompt 前及工具结果落定后的 `prepareNextTurn`，可恢复的 overflow 或早期 `length` 走一次 compact-and-retry。含 tool call 的截断响应先记录合成失败结果。摘要请求省略工具声明、使用 `cacheRetention: "none"`，沿用传入的 routing/session ID 或生成新 ID，并遵守重试策略。
 
-`CompactionEntry` 保存 summary、`firstKeptEntryId`、`tokensBefore`、可选 usage/details/fromHook；默认 details 累积 read/modified 文件。`BranchSummaryEntry` 保存 `fromId` 和摘要，同样可保存 usage/details。
+`CompactionEntry` 保存 summary、`firstKeptEntryId`、`tokensBefore`、可选的 `systemMessage` 检查点及 usage/details/fromHook；默认 details 累积 read/modified 文件。`BranchSummaryEntry` 保存 `fromId` 和摘要，同样可保存 usage/details。
 
 Source: `packages/coding-agent/src/core/compaction/compaction.ts` (`DEFAULT_COMPACTION_SETTINGS`, `shouldCompact`, `findCutPoint`, `completeSummarization`, `CompactionResult`), `packages/coding-agent/src/core/compaction/branch-summarization.ts` (`collectEntriesForBranchSummary`, `prepareBranchEntries`, `generateBranchSummary`), `packages/coding-agent/src/core/session-manager.ts` (`CompactionEntry`, `BranchSummaryEntry`), `packages/coding-agent/docs/compaction.md`（When It Triggers、Split Turns）。
 
@@ -89,15 +89,15 @@ Source: `packages/coding-agent/src/core/compaction/compaction.ts` (`DEFAULT_COMP
 
 Source: `packages/coding-agent/src/core/compaction/utils.ts` (`serializeConversation`, `TOOL_RESULT_MAX_CHARS`), `packages/coding-agent/docs/compaction.md`（Message Serialization）。
 
-**Uncertainty**：`packages/coding-agent/docs/session-format.md` 还描述了 harness-generated `retainedTail` checkpoint，但当前 `packages/coding-agent/src/core/session-manager.ts:CompactionEntry` 类型和 `buildContextEntries()` 仅直接实现 `firstKeptEntryId` 路径。Pi coding-agent v3 与独立 `packages/agent/src/harness/*` 的格式不能无条件互换；解析器应按实际 entry shape 做兼容测试，不应把 retainedTail 当作当前 coding-agent 的稳定保证。
+`systemMessage` 保存压缩边界的 prompt 与工具快照，新投影用它替代保留段中的 system 消息。压缩后的 system 增量照常重放。保留段可以开始于 user、assistant、bash execution 或特定 custom 消息；成对的 tool call/result 一起保留。相关测试可从 `packages/coding-agent/test/session-context-edit.test.ts` 和 `test/suite/agent-session-compaction.test.ts` 开始。
 
 ## 第 3 章：工具与可编程扩展——能力由资源和 hooks 组合出来
 
 ### 3.1 内建工具
 
-**Implemented fact**：全量内建工具是 `read`、`bash`、`edit`、`write`、`grep`、`find`、`ls`。coding-agent 默认 active 的是前四个；`tools` 是 allowlist，`excludeTools` 之后再禁用，`--no-builtin-tools` 仅关闭内建默认而保留扩展/custom tools，`--no-tools` 关闭全部默认工具。
+**Implemented fact**：全量内建工具是 `read`、`bash`、`edit`、`write`、`grep`、`find`、`ls`。coding-agent 默认 active 的是前四个；`tools` 可指定工具集合或用 `+name/-name` 修改默认集合，`excludeTools` 再排除匹配项，`--no-builtin-tools` 仅关闭内建默认而保留扩展/custom tools，`--no-tools` 关闭全部默认工具。
 
-工具由 `create*ToolDefinition()` / `create*Tool()` 构造；读、grep、find、ls 尊重 `.gitignore`，输出有默认 50 KiB / 2000 行级别的截断（find/grep/ls 另有结果数限制），bash 在截断时保存完整输出路径。`withFileMutationQueue()` 为 custom mutation 与内建 edit/write 提供同文件串行队列，避免并行 tool call 的 read-modify-write 丢更新。
+工具由 `create*ToolDefinition()` / `create*Tool()` 构造；grep、find 的遍历尊重忽略规则，read 按传入路径读文件，输出有默认 50 KiB / 2000 行级别的截断（find/grep/ls 另有结果数限制），bash 在截断时保存完整输出路径。`withFileMutationQueue()` 为 custom mutation 与内建 edit/write 提供同文件串行队列，避免并行 tool call 的 read-modify-write 丢更新。
 
 Source: `packages/coding-agent/src/core/tools/index.ts` (`ToolName`, `allToolNames`, `createAllTools`, `createCodingTools`, `createReadOnlyTools`), `packages/coding-agent/src/core/sdk.ts` (`CreateAgentSessionOptions.tools`, `noTools`, `excludeTools`), `packages/coding-agent/src/core/tools/truncate.ts` (`DEFAULT_MAX_BYTES`, `DEFAULT_MAX_LINES`, `truncateHead`, `truncateTail`), `packages/coding-agent/src/core/tools/file-mutation-queue.ts` (`withFileMutationQueue`), `packages/coding-agent/docs/extensions.md`（Output Truncation、Remote Execution）。
 
@@ -119,9 +119,9 @@ Source: `packages/coding-agent/src/core/extensions/types.ts` (`ExtensionAPI`, ev
 
 Source: `packages/coding-agent/src/core/extensions/runner.ts` (`bindExtensions`, event dispatch), `packages/coding-agent/src/modes/rpc/rpc-mode.ts` (`createExtensionUIContext`, `RpcExtensionUIRequest`), `packages/coding-agent/docs/extensions.md`（Mode Behavior、Custom UI）。
 
-**Optional / experimental**：sub-agents、plan mode、MCP、permission gates、remote SSH/sandbox tools 都不是 Pi 核心内建能力；官方路线是由 extension/package 实现。dynamic tool loading 是可选扩展机制：新增 tool 会在后一个 provider request 可见，但不能当成静态 tool schema 永远稳定的保证。
+内建 CLI 提供 MCP、Tool Search 与 Codemode；subagent 可通过示例扩展启动单次子进程，权限 gate 也可通过扩展挂入工具流水线。SDK 的 resource loader 如需 MCP、Tool Search 或 Codemode，应显式装配对应扩展。
 
-Source: `packages/coding-agent/README.md`（Philosophy、Extensions）、`packages/coding-agent/docs/extensions.md`（Dynamic Tool Loading、Remote Execution）。
+Source: `packages/coding-agent/docs/sdk.md`（Codemode and MCP）、`packages/coding-agent/examples/extensions/subagent/README.md`。
 
 ### 3.3 Skills、prompt templates、themes、packages
 
@@ -136,13 +136,28 @@ Source: `packages/coding-agent/src/core/resource-loader.ts` (`DefaultResourceLoa
 
 **Inference**：资源是“可审计的 prompt/code supply chain”，不是无害配置。应锁定 package ref、审查 `SKILL.md` 和 extension source，并在不信任项目时保持 `--no-extensions --no-skills --no-prompt-templates --no-themes` 或使用显式可信路径。
 
+### 3.4 MCP、Tool Search 与 Codemode
+
+MCP 从 stdio 或 Streamable HTTP server 发现工具，注册成 `mcp__<server>__<tool>`。以下配置控制模型如何找到某个工具。
+
+| Exposure | 模型如何调用 |
+|---|---|
+| `codemode`（默认） | 通过 QuickJS 脚本发现与调用。该工具不直接声明给模型 |
+| `deferred` | `tool_search` 用 BM25 排序并激活匹配项，下一次模型请求可直接调用 |
+| `direct` | server 就绪时直接声明给模型，脚本也可调用 |
+| `hidden` | 在工具库中注册，模型和脚本均不可调用 |
+
+`toolExposure` 可为工具名指定覆盖规则。延迟激活的工具随 system 消息的 tool loadout 写进当前分支，后续请求和恢复按该分支读取。Codemode 脚本可通过 `tools` 获取结构化结果、过滤多次调用的输出，成功脚本也能把小型 JSON 存为分支内的 `codemode-store` 状态。QuickJS 不提供 Node 文件或网络 API；授权的宿主工具仍执行真实操作，嵌套调用带 `parentToolCallId` 并经过工具 hooks。MCP 工具调用不会自动重试，因为 server 可能已经执行了操作。
+
+Source: `packages/coding-agent/src/extensions/mcp/index.ts`（`createMcpExtension`）、`extensions/mcp/tools.ts`（`createMcpToolDefinition`）、`extensions/tool-search/tool.ts`（`Bm25Ranker`、`createToolSearchToolDefinition`）、`extensions/codemode/execute.ts`（`readCodemodeStore`）、`packages/coding-agent/docs/mcp.md`、`codemode.md`、`packages/coding-agent/test/suite/agent-session-mcp.test.ts`。
+
 ## 第 4 章：交互层——TUI 是差分渲染器，不是业务状态机
 
 ### 4.1 regular 与 fullscreen
 
-**Implemented fact**：`TuiMainScreen` 使用主屏和 terminal-owned scrollback；`TuiAltScreen` 使用 alternate screen、固定高度 viewport 和 application-owned `ScrollView`。coding-agent 的 `--tui-mode regular|fullscreen` 选择它们；fullscreen 是 CLI 标记为 experimental 的可选模式。
+**Implemented fact**：`TuiMainScreen` 使用主屏和 terminal-owned scrollback；`TuiAltScreen` 使用 alternate screen、固定高度 viewport 和 application-owned `ScrollView`。coding-agent 的 `--tui-mode regular|fullscreen` 选择它们；fullscreen 从 1.0.0 起是默认模式。
 
-Source: `packages/coding-agent/src/modes/interactive/interactive-mode.ts` (`createInteractiveTui`, `InteractiveMode`), `packages/tui/src/tui-main-screen.ts` (`TuiMainScreen`), `packages/tui/src/tui-alt-screen.ts` (`TuiAltScreen`), `packages/coding-agent/docs/tui.md`（Rendering modes）。
+Source: `packages/coding-agent/src/modes/interactive/interactive-mode.ts` (`createInteractiveTui`, `InteractiveMode`), `packages/tui/src/tui-main-screen.ts` (`TuiMainScreen`), `packages/tui/src/tui-alt-screen.ts` (`TuiAltScreen`), `packages/coding-agent/docs/tui.md`与 `packages/coding-agent/CHANGELOG.md`（1.0.0、1.6.0）。
 
 ### 4.2 Differential rendering 的实际算法
 
@@ -154,15 +169,17 @@ Source: `packages/tui/src/tui-main-screen.ts` (`doRender`, `fullRender`, `firstC
 
 Source: `packages/tui/src/tui.ts` (`Component`, `TuiBase`), `packages/tui/src/utils.ts` (`visibleWidth`, `truncateToWidth`, `wrapTextWithAnsi`), `packages/tui/README.md`（Component Interface、Caching）。
 
+1.6.0 改为 `Component.render(width): readonly string[]`。子组件输出未变时，`Container` 返回同一缓存数组，扩展要在改动前复制。版本同时修复长会话全屏滚动反复渲染完整 transcript。
+
 ### 4.3 可用 UI 组件
 
 **Implemented fact**：TUI 提供 `Text`、`Markdown`、`Editor`、`Input`、`Loader`、`CancellableLoader`、`SelectList`、`SettingsList`、`Container`、`Box`、`VStack/HStack`、`ScrollView`、`Image` 和 overlays；Focusable/`CURSOR_MARKER` 支持 IME 硬件光标定位。
 
 Source: `packages/tui/src/tui.ts` (`Component`, `Focusable`, `OverlayHandle`, `TUI`), `packages/tui/src/components/*.ts`, `packages/tui/README.md`（Built-in Components、Focusable Interface）。
 
-**Inference**：TUI 的“实时性”来自受限重绘和组件缓存，不等于模型流、工具执行或 session 持久化已经完成；要做自动化验收应读 JSON/RPC/Session snapshot，而不是只看终端截图。
+**Inference**：TUI 的“实时性”来自受限重绘和组件缓存，不等于模型流、工具执行或 session 持久化已经完成；要做自动化验收应读 JSON/RPC 完成事件或 Session 投影，而不是只看终端截图。
 
-## 第 5 章：远程协议——RPC JSONL 与 experimental server protocol 的边界
+## 第 5 章：子进程 RPC、Pi Durable 与 Chord 应用
 
 ### 5.1 coding-agent RPC
 
@@ -174,31 +191,19 @@ Source: `packages/coding-agent/src/modes/rpc/jsonl.ts` (`serializeJsonLine`, `at
 
 Source: `packages/coding-agent/src/modes/json-event.ts` (`toJsonEvent`), `packages/coding-agent/src/modes/rpc/rpc-mode.ts` (`createExtensionUIContext`), `packages/coding-agent/docs/json.md`、`rpc.md`。
 
-### 5.2 protocol 包
+成功响应表示命令已处理。低层 `agent_end` 后还能有重试、压缩或续跑。调用方先订阅事件再发 prompt，等待 `agent_settled` 后读取终态；`handled` 表示扩展处理了请求且未开启 run。Pi 按 stdout backpressure 写协议记录，stderr 供诊断。通过关闭 stdin 请求正常退出。
 
-**Implemented fact**：`@earendil-works/pi-protocol` 是 runtime-neutral wire layer，不携带 transport。版本 1 的 frame 是四字节 big-endian 长度 + definite-length CBOR item；第一个 client message 必须是 `hello` + `PROTOCOL_VERSION`。`FrameDecoder` 接受任意 fragmentation/coalescing，`ClientMessageDecoder`/`ServerMessageDecoder` 做 framing + CBOR + schema validation；协议拒绝 unknown properties、indefinite-length CBOR、超限 frame/nesting/unsafe number 等。
+### 5.2 Pi Durable 的任务恢复
 
-Source: `packages/protocol/src/framing.ts` (`FrameDecoder`, `encodeFrame`, `DEFAULT_MAX_FRAME_LENGTH`), `packages/protocol/src/codec.ts` (`encodeClientMessage`, `encodeServerMessage`, decoders), `packages/protocol/src/schemas.ts` (`PROTOCOL_VERSION`, `ClientMessageSchema`, `ServerMessageSchema`), `packages/protocol/README.md`。
+`Harness.open()` 打开持久存储。一次 `conversation.commit()` 可原子追加 transcript、修改 JSON 文档并创建任务。模型请求作为 `pi.generation` 任务执行，它拥有工具调用的子 `pi.tool` 任务。工具可持久化 checkpoint 或 park 等待任务、计时器或信号。进程重启后打开同一存储并调用 `resume()`；同一 conversation 的重复 `requestId` 返回原 submission。checkpoint 写入与外部服务效果各有提交点，外部效果要使用自己的幂等键。
 
-**Implemented fact**：协议将 session list 的 `SessionMetadata` 与 acquire 后的 `SessionSnapshot` 分开；snapshot/response snapshot 是 authoritative，`TranscriptProgress`/`session_progress` 是 transient UI hint，不应降低为状态。
+Source: `packages/durable/README.md`（Persist and Resume、Tools that park、Failures and Recovery）、`packages/durable/src/harness/harness.ts`（`HarnessImpl.resume`）、`packages/durable/src/harness/submissions.ts`（`Submissions.submit`）、`packages/durable/test/harness-tasks-recovery.test.ts`、`packages/durable/test/harness-tool-parks.test.ts`。
 
-Source: `packages/protocol/src/schemas.ts` (`SessionMetadataSchema`, `SessionSnapshotSchema`, `TranscriptProgressSchema`, `ServerEventSchema`), `packages/protocol/README.md`。
+### 5.3 Chord、p2 与 p3
 
-### 5.3 server 与 client
+Chord 定义跨进程对象的 contract、可订阅引用、文档事务和插件 facet；调用链接绑定 principal，plugin reload 可以在运行时替换 facet。应用负责对象级授权与宿主能力范围。p2 是实验性自托管 Pi Durable UI，owner 有服务器和 worker 的 agent/shell 权限。后继 p3 基于 Chord v2，在该快照为 headless server，通过每会话 worker 运行 Durable；默认 CLI 仍使用 AgentSession 与自身的 JSONL 格式。
 
-**Optional / experimental**：`@earendil-works/pi-server` README 明确标为实验性，且没有 standalone CLI/coding-agent service；应用必须提供 `PiServerService`，server 只管理 protocol、live runtime 和 connections。listener 在交给 `PiServer` 前负责 transport-specific authentication/authorization；Unix listener 主要依赖 socket filesystem permissions。
-
-Source: `packages/server/src/server.ts` (`PiServer`, `accept`, `finishHandshake`), `packages/server/src/types.ts` (`PiServerService`, `PiSessionRuntime`), `packages/server/src/listener.ts` (`PiServerListener`), `packages/server/README.md`。
-
-**Implemented fact**：server 要求 hello、支持 handshake timeout、按 request id 回 response、广播 server/session snapshots 和 transient progress；`LiveSessionManager` 对同一 live runtime 做 acquire/attach、operation count 与 idle dispose，冲突/不合法请求返回结构化 `PiServerError`。
-
-Source: `packages/server/src/server.ts` (`dispatchMessage`, `handleRequest`, `failProtocol`), `packages/server/src/sessions.ts` (`LiveSessionManager.executeCommand`, `runOperation`, `requireAttached`, `maybeDispose`), `packages/server/src/errors.ts`。
-
-**Implemented fact**：`PiClient` 不自动 reconnect；断线后调用 `reconnect()`。它将 request 按 id 关联，将 snapshot 当权威状态，并以 `SessionLease` 表达 shared/exclusive acquisition：exclusive 与任何现有 lease 冲突，shared 与 exclusive 冲突；最后一个 lease 释放后才发送 detach，断线/removed 会使 lease invalidated。
-
-Source: `packages/client/src/client.ts` (`PiClient`, `acquireSession`, `#request`, `#handleConnectionStateChange`), `packages/client/src/session-handle.ts` (`SessionLease`, `SessionLeaseMode`), `packages/client/README.md`（Limits and security、Leases）。
-
-**Inference**：protocol/server/client 不是“远端 Pi CLI 的即插即用安全服务”。需要自建 listener、认证、`PiServerService` 和持久 runtime；网络 transport 的认证也不会由 protocol 包自动完成。
+Source: `packages/chord/README.md`、`apps/p2/README.md`、`apps/p2/src/runtime/durable.ts`、`apps/p3/README.md`、`apps/p3/src/server.ts` 和 `apps/p3/src/worker.ts`。早期课程中的独立 `packages/protocol`、`packages/server` 和 `packages/client` 已不在此快照的 Git 树。
 
 ## 第 6 章：Telemetry——两条用途不同的线
 
@@ -206,19 +211,19 @@ Source: `packages/client/src/client.ts` (`PiClient`, `acquireSession`, `#request
 
 **Implemented fact**：coding-agent 的 install/update ping 是独立于业务 span 的启动功能：新安装或 changelog 检测到更新时，`InteractiveMode.reportInstallTelemetry()` 请求 `https://pi.dev/api/report-install?version=...`；`PI_TELEMETRY=0/false/no` 或 settings 的 `enableInstallTelemetry=false` 关闭它。`PI_OFFLINE` 关闭 startup network operations；`PI_SKIP_VERSION_CHECK` 只关闭 latest-version 检查。启用状态还控制部分 provider attribution headers。
 
-Source: `packages/coding-agent/src/modes/interactive/interactive-mode.ts` (`getChangelogForDisplay`, `reportInstallTelemetry`), `packages/coding-agent/src/core/telemetry.ts` (`isInstallTelemetryEnabled`), `packages/coding-agent/src/utils/version-check.ts` (`checkForNewPiVersion`), `packages/coding-agent/src/core/provider-attribution.ts` (`mergeProviderAttributionHeaders`), `packages/coding-agent/docs/environment-variables.md`。
+Source: `packages/coding-agent/src/modes/interactive/interactive-mode.ts` (`getChangelogForDisplay`, `reportInstallTelemetry`), `packages/coding-agent/src/core/telemetry.ts` (`isInstallTelemetryEnabled`), `packages/coding-agent/src/utils/version-check.ts` (`checkForNewPiVersion`), `packages/coding-agent/src/core/sdk.ts`（运行时 request identity）, `packages/coding-agent/docs/environment-variables.md`。
 
 ### 6.2 可注入的 vendor-neutral spans
 
-**Implemented fact**：`@earendil-works/pi-telemetry` 提供 callback-managed `TelemetryContext`/`TelemetrySpan`、共享 `NOOP_TELEMETRY_CONTEXT`、`InMemoryTelemetryContext`、serializable schema helpers 和 adapter conformance suite；不提供 exporter、global current span 或 backend 依赖。`@earendil-works/pi-agent-core` 的 `startAiSpan()`/`startHarnessSpan()` 绑定 AI-request 与 harness schema，`pi-ai` 的 provider request options 接受显式 `telemetryContext`。
+**Implemented fact**：`@earendil-works/pi-telemetry` 提供 callback-managed `TelemetryContext`/`TelemetrySpan`、共享 `NOOP_TELEMETRY_CONTEXT`、`InMemoryTelemetryContext`、serializable schema helpers 和 adapter conformance suite；不提供 exporter、global current span 或 backend 依赖。Pi Durable 通过 `DURABLE_TELEMETRY_SCHEMA` 记录任务 phase 指标，会话嵌入方可注入 telemetry；Pi AI 的 provider request options 也接受显式 `telemetryContext`。
 
-Source: `packages/telemetry/src/index.ts` (`TelemetryContext`, `TelemetrySpan`, `createTypedSpanStarter`), `packages/telemetry/src/noop.ts` (`NOOP_TELEMETRY_CONTEXT`), `packages/telemetry/src/memory.ts` (`InMemoryTelemetryContext`), `packages/agent/src/harness/telemetry.ts` (`AI_TELEMETRY_SCHEMA`, `HARNESS_TELEMETRY_SCHEMA`, `startAiSpan`, `startHarnessSpan`), `packages/ai/src/types.ts` (`telemetryContext`), `packages/telemetry/README.md`。
+Source: `packages/telemetry/src/index.ts` (`TelemetryContext`, `TelemetrySpan`, `createTypedSpanStarter`), `packages/telemetry/src/noop.ts` (`NOOP_TELEMETRY_CONTEXT`), `packages/telemetry/src/memory.ts` (`InMemoryTelemetryContext`), `packages/durable/src/harness/telemetry.ts` (`DURABLE_TELEMETRY_SCHEMA`), `packages/ai/src/types.ts` (`telemetryContext`), `packages/telemetry/README.md`。
 
 **Implemented fact**：Telemetry adapter 必须保持业务 callback 的返回/异常语义，span 直到 callback promise settle 才结束；recording 应被动且不抛错，敏感内容默认不应进入 attributes。当前 coding-agent CLI 的 install ping 与这些 library span 不应混为同一“Pi 已经全链路埋点”的证明。
 
 Source: `packages/telemetry/src/index.ts` (`TelemetryContext` contract), `packages/telemetry/src/memory.ts` (`InMemoryTelemetryContext`), `packages/telemetry/README.md`（Adapter Contract、Security and Portability）。
 
-**Uncertainty**：本 checkout 没有证据表明默认 coding-agent CLI 会自动配置外部 exporter 或把所有 CLI turns 接到 `startHarnessSpan()`；能确认的是 telemetry API 和 install/update ping。若需要生产 tracing，必须显式注入 adapter/context 并单独制定脱敏策略。
+**Uncertainty**：本 checkout 没有证据表明默认 coding-agent CLI 会自动配置外部 exporter 或把所有 CLI turns 接到 Durable telemetry；能确认的是 telemetry API 和 install/update ping。若需要生产 tracing，必须显式注入 adapter/context 并单独制定脱敏策略。
 
 ## 第 7 章：权限、安全与容器——事实边界必须写在设计里
 
@@ -230,7 +235,7 @@ Source: `README.md`（Permissions & Containerization）, `packages/coding-agent/
 
 ### 7.2 Project trust 的真实作用
 
-**Implemented fact**：project trust 只决定是否加载 project-local `.pi/settings.json`、`.pi` resources、project packages/extensions 和 `.agents/skills`；context files 可在 trust 前加载。非交互 `-p`/JSON/RPC 不弹 prompt，而采用 `defaultProjectTrust` 或 `--approve/--no-approve`。trust 不会限制模型随后调用已加载的 bash/write，也不阻止 prompt injection。
+**Implemented fact**：project trust 只决定是否加载 project-local `.pi/settings.json`、`.pi` resources、project packages/extensions、`.pi/mcp.json` 和 `.agents/skills`。普通 `AGENTS.md` 等 context 文件仍可加载，`sessionDir` 初始化也先于 trust。非交互 `-p`/JSON/RPC 不弹 prompt，而采用 `defaultProjectTrust` 或 `--approve/--no-approve`。trust 不会限制模型随后调用已加载的 bash/write，也不阻止 prompt injection。
 
 Source: `packages/coding-agent/src/core/project-trust.ts` (`resolveProjectTrusted`), `packages/coding-agent/src/core/trust-manager.ts` (`hasTrustRequiringProjectResources`, `ProjectTrustStore`), `packages/coding-agent/src/core/resource-loader.ts` (`loadProjectContextFiles`, `DefaultResourceLoader.reload`), `packages/coding-agent/docs/security.md`（Project Trust）。
 
@@ -266,9 +271,9 @@ Source: `packages/coding-agent/docs/containerization.md`（Choose a pattern、Go
 
 **目标**：看到“append-only entry tree”与“发送给 LLM 的 context”不同。
 
-1. 用 SDK 创建 `SessionManager.inMemory()`，追加 user/assistant/toolResult，记录 `getEntries()`、`getBranch()` 和 `buildSessionContext()`。
+1. 用 SDK 创建 `SessionManager.inMemory()`，追加 user/assistant/toolResult，记录 `getEntries()`、`getBranch()` 和 `buildSessionProjection()`。
 2. 调 `branch(entryId)` 后追加另一条 user/assistant，比较 `getTree()`：原分支仍在，leaf 已移动。
-3. 用假的 summary callback 走 `findCutPoint()`/`appendCompaction()`，比较 `getEntries()`（全历史）与 `buildContextEntries()`（compaction-aware projection）。
+3. 用假的 summary callback 走 `findCutPoint()`/`appendCompaction()`，比较 `getEntries()`（全历史）与 `buildSessionProjection()`。追加指向一条普通消息的 `context_edit`，分别检查原始内容与投影中的省略。
 
 **预期观察**：compaction 是上下文投影，不是擦除；`toolResult` 不是合法 cut point；当前 coding-agent entry shape 以 `firstKeptEntryId` 为准。证据：`SessionManager`、`findCutPoint`、`buildContextEntries`。
 
@@ -276,43 +281,33 @@ Source: `packages/coding-agent/docs/containerization.md`（Choose a pattern、Go
 
 **目标**：展示 permission gate 只能由扩展/外部策略实现。
 
-1. 写临时 extension，注册 `tool_call`；对 `bash` 的 command 包含 `rm -rf` 返回 `{ block: true, reason: "..." }`，对普通命令只记录事件。
+1. 写临时 extension，注册 `tool_call`；注册一个无副作用的 `read_fixture` 测试工具，根据参数是允许还是拒绝返回 `{ block: true, reason: "..." }`，用执行计数器核实拒绝时工具没有运行。
 2. 注册一个 TypeBox custom tool，并在 `tool_result` 中追加无敏感的 audit detail；运行 `pi -e ./gate.ts --no-session`（faux provider）。
 3. 关闭 extension 或换成 project-local extension，观察 trust/load 顺序；验证没有 extension 时 Pi 不会自行弹出权限窗口。
 
 **预期观察**：hook 可以阻断/改写单次 tool call，但不改变宿主进程的根权限，也不能防止恶意 extension 自己调用 `fs`/`child_process`。证据：`ExtensionAPI`、`ExtensionRunner`、`tool_call` event type、security docs。
 
-### 实验 4：RPC 与 protocol snapshot 的权威性
+### 实验 4：RPC 的响应、结束与结算
 
-**目标**：比较 coding-agent 子进程 RPC 和实验性 server/client wire protocol。
+1. 用 faux provider 启动 `pi --mode rpc --no-session`。发送有请求 ID 的 prompt，先记 response 的 disposition，再记 `message_end`、`agent_end`、`agent_settled`。
+2. 让 faux provider 第一次返回可恢复的错误，确认首个 `agent_end` 后仍能读到重试。再令扩展直接处理 prompt，确认 disposition 为 `handled` 时没有新 run。
+3. 将带 U+2028/U+2029 的合法字符串放进 JSONL 记录，确认只能按 LF 分帧。
 
-1. 用 faux provider 启动 `pi --mode rpc --no-session`；严格按 LF 写入 `get_state`、`get_commands`、`prompt`，只按 `\n` 读回，并同时记录 `message_update` 与 `message_end`。
-2. 用 `packages/server/src/testing` 的 `createTestServer` 和 `ProtocolTestClient`，使用 in-memory `ByteTransport` 分片发送 hello/frame；故意把一个 frame 拆成多块并合并两帧。
-3. 比较：RPC 是 coding-agent command/event stream；protocol 是 4-byte length + CBOR + schema envelope，server snapshot/session snapshot 权威，progress 只是 hint；client lease 释放后才 detach。
+预期证据在 `packages/coding-agent/test/rpc-jsonl.test.ts` 和 `packages/coding-agent/test/rpc-prompt-response-semantics.test.ts`。
 
-**预期观察**：两者都能驱动/观察 session，但 wire shape、认证责任和生命周期完全不同。证据：`attachJsonlLineReader`、`ClientMessageDecoder`、`PiServer.accept`、`PiClient.acquireSession`。
+### 实验 5：用同一个 MCP 工具比较四种暴露
 
-## 明确安全边界与禁止误读
+为 faux provider 和 stub server 定义只读 `search_review`。依次改为 `direct`、`deferred`、`codemode`、`hidden`，记录模型请求中的声明集合和宿主工具执行次数。用 `tool_search` 激活 deferred 工具后检查下一次请求与 session 的 system 记录；Codemode 中则用 `searchTools()` 发现并在脚本里调用。确认两条执行路径都触发宿主 hooks。
 
-以下说法在当前源码中不成立：
+### 实验 6：重开 Durable 存储
 
-1. “`--tools read,...` 就是沙箱。”——不成立；扩展、子进程和宿主环境仍是同一权限边界。
-2. “project trust 等于批准后只允许安全操作。”——不成立；它是资源加载 gate。
-3. “JSONL session 是可逆文件事务。”——不成立；它是 append-only tree；文件回滚需外部机制。
-4. “TUI 截图证明模型/工具已完成。”——不成立；使用 authoritative session/RPC snapshot 和 `message_end`。
-5. “server protocol 自带网络认证。”——不成立；listener 必须在 protocol bytes 前完成认证授权。
-6. “Pi 默认已配置 OpenTelemetry exporter。”——未证实；当前能确认的是显式 telemetry API 与独立 install/update ping。
-7. “docs 中 retainedTail 一定被当前 coding-agent 实现支持。”——存在 docs/source 不一致，应按当前 `SessionManager` 源码和兼容测试判定。
+在测试 storage 上用固定 `requestId` 提交任务。提交一次 checkpoint 后关闭 harness，重新打开并调用 `resume()`。比较重提获得的 submission ID 和任务 checkpoint；stub 外部服务以任务 ID 做幂等键，确认重做时只落一个效果。
 
-## 状态、不确定点与复核入口
+来源：[Durable 恢复测试](https://github.com/earendil-works/pi/blob/9c4652688590abb836b40ebd1e4725ecf9a7c7d1/packages/durable/test/harness-tasks-recovery.test.ts)。
 
-**源仓状态**：`git status --short --branch` 为 `main...origin/main`，工作树干净；HEAD 为 `a470b121bf68`，本任务没有写入源仓，也没有运行 tests/build/真实模型。唯一产物是本文件。
+## 证据核对清单
 
-**最值得在后续复核的不确定点**：
-
-- coding-agent v3 `CompactionEntry` 与 `packages/agent/src/harness/*` 的 retainedTail/耐久 operation 设计是否会统一，当前不能从两套类型推断兼容。
-- `@earendil-works/pi-server` README 明确实验性；应用侧的 runtime/storage/auth 实现不属于该包，部署前必须检查 listener 与 `PiServerService` 的实际实现。
-- telemetry schema 的存在不等于 CLI 默认发 span；要证明端到端 tracing，需显式 adapter、transcript、provider request 和 exporter 证据。
-- interactive/fullscreen 的可视行为需真实 terminal 或 `VirtualTerminal`/测试证据；本文只引用 renderer 的实现分支，没有宣称已做视觉验收。
-
-**推荐复核路径**：先读 `packages/coding-agent/src/core/session-manager.ts`、`packages/coding-agent/src/core/agent-session.ts`，再读 `packages/coding-agent/src/core/extensions/types.ts`、`packages/coding-agent/src/modes/rpc/rpc-types.ts`；远程集成再读 `packages/protocol/src/schemas.ts`、`packages/server/src/server.ts`、`packages/client/src/client.ts`。这些路径是本能力地图的事实所有者。
+- [版本与破坏性变更](https://github.com/earendil-works/pi/blob/9c4652688590abb836b40ebd1e4725ecf9a7c7d1/packages/coding-agent/CHANGELOG.md#160---2026-11-20)
+- [Session 投影与 system 重放](https://github.com/earendil-works/pi/blob/9c4652688590abb836b40ebd1e4725ecf9a7c7d1/packages/coding-agent/docs/session-format.md)
+- [项目加载与执行权限](https://github.com/earendil-works/pi/blob/9c4652688590abb836b40ebd1e4725ecf9a7c7d1/packages/coding-agent/docs/security.md)
+- [已实现的 Durable 恢复契约](https://github.com/earendil-works/pi/blob/9c4652688590abb836b40ebd1e4725ecf9a7c7d1/packages/durable/README.md#persist-and-resume)

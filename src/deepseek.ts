@@ -34,19 +34,37 @@ function initLoop(): void {
   const root = document.querySelector("#dsh-loop");
   if (!root) return;
   const steps = qsa<HTMLElement>(root, "[data-steps] li");
-  const events = ["turn/start", "agent/inbox/claimed", "step/start", "user/message", "request/header + runtime snapshot", "assistant/chunk*", "assistant/message", "tool/call → tool/result", "step/end → turn/end"];
-  const notes = ["先记录持久 Turn，再开始认领输入。", "Inbox 用两条持久队列保存下一步与下一轮输入。", "一个 Step 对应一次模型请求及其工具批次。", "本步领取的消息成为可投影 Surface 节点。", "记录实际生效配置；变化的运行时政策作为历史快照进入。", "Chunk 保留回放证据，但不直接进入模型历史。", "完整或中断的输出收束为 assistant message。", "工具经过策略管线，唯一结果按模型顺序写回日志。", "只有没有欠下的 next-step 工作时，Turn 才关闭。"];
+  const events = [
+    ["turn/start", "Turn 先于输入认领打开。"],
+    ["agent/inbox/spliced + live claim", "持久 splice 记录认领。pre-step 可以改写或拒绝输入。"],
+    ["step/start", "接纳输入后才开始 Step。重试仍归这个 Step。"],
+    ["system/message + user/message", "固定 adapter 后，将 system 和本步用户输入记入历史。"],
+    ["request/header + request/context", "按需记录有效模型与工具配置、上下文窗口等，再冻结实际请求。"],
+    ["agent/assistant-stream · live chunk", "UI 先收到临时增量。此刻可能还没有持久的助手消息。"],
+    ["assistant/message", "结算事件同时携带已组装消息与 compact stream。"],
+    ["tool/call → tool/result", "Native 执行器把工具调用与结果写入日志，结果按模型调用顺序提交。"],
+    ["step/end", "当前 Step 结束，本例还欠一次读取工具结果的模型请求。"],
+    ["step/start → assistant/message → step/end", "第二个 Step 读取已记录的工具结果并总结，本次没有新工具调用。"],
+    ["turn/end", "收尾时没有新的 next-step 输入，回合结束。"],
+  ];
   let index = -1;
   let timer = 0;
   const log = qs<HTMLElement>(root, "[data-log]");
   const note = qs<HTMLElement>(root, "[data-note]");
   const phase = qs<HTMLElement>(root, "[data-phase]");
   const led = qs<HTMLElement>(root, "[data-led]");
-  const draw = () => {
-    steps.forEach((item, i) => { item.classList.toggle("is-now", i === index); item.classList.toggle("is-done", i < index); });
-    if (index >= 0) {
-      log?.insertAdjacentHTML("beforeend", `<span class="ev"><span class="t">${String(index + 1).padStart(2, "0")}</span> <span class="k-${index === 7 ? "tool" : "sys"}">${events[index]}</span></span>`);
-      if (note) note.textContent = notes[index];
+  const draw = (blocked = false) => {
+    steps.forEach((item, i) => {
+      item.classList.toggle("is-now", i === index);
+      item.classList.toggle("is-done", i < index && (!blocked || i < 2));
+    });
+    const frame = blocked
+      ? ["turn/end · blocked", "pre-step 拒绝了输入。这次 Turn 保留回合边界和 Inbox 认领记录，没有 Step 或模型调用。"]
+      : events[index];
+    if (frame) {
+      const [event, explanation] = frame;
+      log?.insertAdjacentHTML("beforeend", `<span class="ev"><span class="t">${String(log.childElementCount + 1).padStart(2, "0")}</span> <span class="k-${index === 7 ? "tool" : "sys"}">${event}</span></span>`);
+      if (note) note.textContent = explanation;
     }
     if (phase) phase.textContent = index < 0 ? "idle" : index === steps.length - 1 ? "done" : `event ${index + 1}/${steps.length}`;
     led?.classList.toggle("is-run", index >= 0 && index < steps.length - 1);
@@ -55,6 +73,13 @@ function initLoop(): void {
   const reset = () => { clearInterval(timer); index = -1; if (log) log.innerHTML = ""; if (note) note.textContent = "逐步观察“活的控制”怎样留下“持久事实”。"; draw(); };
   const step = () => { if (index < steps.length - 1) { index += 1; draw(); } else clearInterval(timer); };
   qs<HTMLButtonElement>(root, "[data-step]")?.addEventListener("click", step);
+  qs<HTMLButtonElement>(root, "[data-blocked]")?.addEventListener("click", () => {
+    reset();
+    step();
+    step();
+    index = steps.length - 1;
+    draw(true);
+  });
   qs<HTMLButtonElement>(root, "[data-run]")?.addEventListener("click", () => { clearInterval(timer); if (index === steps.length - 1) reset(); step(); timer = window.setInterval(step, 560); });
   qs<HTMLButtonElement>(root, "[data-reset]")?.addEventListener("click", reset);
   window.addEventListener("pagehide", () => clearInterval(timer), { once: true });
@@ -67,18 +92,48 @@ function initSessionProjection(): void {
   let surface = 0;
   let messages = 0;
   const log = qs<HTMLElement>(root, "[data-log]");
-  const render = (name?: string, note?: string) => {
+  const render = (name?: string, note?: string, live = false) => {
     const set = (selector: string, value: number) => { const el = qs<HTMLElement>(root, selector); if (el) el.textContent = String(value); };
     set("[data-events]", events); set("[data-surface]", surface); set("[data-messages]", messages);
-    if (name) log?.insertAdjacentHTML("beforeend", `<span class="ev"><span class="t">e${events}</span> <span class="k-sys">${name}</span>${note ? ` <span class="t">${note}</span>` : ""}</span>`);
+    if (name) {
+      const position = live ? "LIVE" : `e${events}`;
+      log?.insertAdjacentHTML("beforeend", `<span class="ev"><span class="t">${position}</span> <span class="k-sys">${name}</span> <span class="t">${note ?? ""}</span></span>`);
+    }
   };
   qsa<HTMLButtonElement>(root, "[data-event]").forEach((button) => button.addEventListener("click", () => {
     const type = button.dataset.event;
-    if (type === "reset") { events = 0; surface = 0; messages = 0; if (log) log.innerHTML = ""; render(); return; }
-    if (type === "compact") { events += 3; surface = surface > 0 ? 1 : 0; messages = surface; render("compaction/start → replacement → end", "原事件保留"); return; }
+    if (type === "reset") {
+      events = 0;
+      surface = 0;
+      messages = 0;
+      if (log) log.innerHTML = "";
+      render();
+      return;
+    }
+    if (type === "chunk") {
+      render("agent/assistant-stream · chunk", "实时通知，三个计数均不增加", true);
+      return;
+    }
+    if (type === "compact") {
+      if (surface === 0) {
+        render("等待可压缩消息", "当前没有 Surface 节点", true);
+        return;
+      }
+      events += 4;
+      surface = 1;
+      messages = 1;
+      render("compaction/start → summary → replacement → end", "原事件保留，当前视图折叠为摘要。第 9 章演示具体选区。");
+      return;
+    }
     events += 1;
-    if (type === "chunk") render("assistant/chunk", "log only");
-    else { surface += 1; messages += 1; render(type === "user" ? "user/message" : type === "assistant" ? "assistant/message" : "tool/result", "surface + model"); }
+    if (type === "attempt") {
+      render("assistant/attempt", "记录一次尝试及 compact stream，模型消息不变");
+    } else {
+      surface += 1;
+      messages += 1;
+      if (type === "assistant") render("assistant/message", "compact stream 随消息结算");
+      else render(type === "user" ? "user/message" : "tool/result", "进入 Surface 和模型历史");
+    }
   }));
 }
 
@@ -96,16 +151,31 @@ function initSafety(): void {
   const evaluate = () => {
     if (!op || !mode || !approval) return;
     const sandboxAllows = op === "read" || mode === "dfa" || (mode === "ww" && op === "write");
-    const label = sandboxAllows ? "Sandbox 允许" : "Sandbox 拒绝";
+    const explicitRetry = approval !== "ordinary";
+    const validRetry = explicitRetry && !sandboxAllows;
+    const granted = validRetry && approval === "approved";
+    const allowed = explicitRetry ? granted : sandboxAllows;
     const badge = qs<HTMLElement>(root, "[data-verdict]");
-    if (badge) badge.dataset.verdict = sandboxAllows ? "ok" : "deny";
+    if (badge) badge.dataset.verdict = allowed ? "ok" : "deny";
     const output = qs<HTMLElement>(root, "[data-verdict-label]");
-    if (output) output.textContent = label;
-    const trace = [
-      `文件效果：${mode} × ${op} → ${sandboxAllows ? "allow" : "deny"}`,
-      approval === "ask" ? "审批通道可返回 allowed-once / rejected / cancelled / unavailable" : "无 answerer 或 never：需要人工决定的升级失败关闭",
-      sandboxAllows ? "本实验到此放行；工具仍要经过其余 pre/guard/post 策略" : "Approval 不会自动改写 Sandbox；owner 必须显式设计一次升级请求",
-    ];
+    if (output) {
+      if (granted) output.textContent = "仅本次按获批策略放行";
+      else if (allowed) output.textContent = "按当前策略放行";
+      else if (validRetry) output.textContent = "升级被拒绝";
+      else output.textContent = explicitRetry ? "请改选普通调用" : "当前策略拒绝";
+    }
+    const trace = [`按当前策略评估文件效果：${sandboxAllows ? "允许" : "拒绝"}。`];
+    if (!explicitRetry) {
+      trace.push(sandboxAllows ? "直接尝试执行，文件策略保持不变。" : "普通写入返回 FS_SANDBOX_DENIED；可另行发起显式升级请求。");
+    } else if (!validRetry) {
+      trace.push("本实验只对普通策略已拒绝的写入模拟升级。");
+    } else {
+      const outcome = granted ? "allowed-once" : approval === "never" ? "rejected（策略禁止询问）" : "unavailable（无可用 answerer）";
+      trace.push(`审批日志：approval/asked → approval/decided（${outcome}）。`);
+      trace.push(granted
+        ? `本次按 ${op === "write" ? "workspace-write" : "danger-full-access"} 尝试，下一次仍沿用当前 Session 策略。`
+        : "未获得一次性授权，写入未执行。");
+    }
     const list = qs<HTMLElement>(root, "[data-trace]");
     if (list) list.innerHTML = trace.map((line) => `<li>${line}</li>`).join("");
   };
@@ -117,12 +187,12 @@ function initPromptAssembly(): void {
   if (!root) return;
   type Sec = { name: string; order: number; text: string };
   const identity: Sec = { name: "harness:identity", order: -1000, text: "You are an AI agent powered by DeepSeek Harness." };
-  const personaText = (rewritten: boolean): Sec => ({ name: "deployment:persona", order: 0, text: rewritten ? "改写后的 persona" : "默认部署 persona" });
+  const personaText = (rewritten: boolean): Sec => ({ name: "deployment:persona-prefix", order: 0, text: rewritten ? "改写后的 persona" : "默认部署 persona" });
   const optional: Record<string, Sec> = {
     repo: { name: "repo-rules", order: 10, text: "仓库规则" },
     shell: { name: "shell-rules", order: 10, text: "Shell 规则" },
     audit: { name: "audit-note", order: 100, text: "审计说明" },
-    early: { name: "urgent-hint", order: -200, text: "高优先级提示（identity 之后、常规 persona 之前）" },
+    early: { name: "urgent-hint", order: -1100, text: "高优先级提示" },
   };
   const mounted = new Set<string>();
   let personaRewritten = false;
@@ -145,17 +215,17 @@ function initPromptAssembly(): void {
     const lines = sections.map((section, i) => {
       const sig = `${section.name}:${section.text}`;
       const tag = i < boundary
-        ? `<span class="t">缓存命中</span>`
+        ? `<span class="t">前缀相同</span>`
         : before.includes(sig)
-          ? `<span class="k-warn">前缀失效 ←</span>`
+          ? `<span class="k-warn">前缀改变 ←</span>`
           : before.some((line) => line.startsWith(`${section.name}:`))
             ? `<span class="k-warn">内容变更 · 触发断裂</span>`
             : pureAppend
-              ? `<span class="t">新增 · 不动已缓存前缀</span>`
+              ? `<span class="t">新增 · 保留稳定前缀</span>`
               : `<span class="k-warn">插队新增 · 触发断裂</span>`;
       return `<span class="ev"><span class="t">sys${String(i + 1).padStart(2, "0")}</span> <span class="k-sys">order ${section.order} · ${section.name}</span> ${tag}</span>`;
     });
-    lines.push(`<span class="ev"><span class="k-tool">tool schemas · 按 Agent scope 排序追加</span> <span class="t">request/header 记录顺序，可重建</span></span>`);
+    lines.push(`<span class="ev"><span class="k-tool">tool schemas · 按 Agent scope 排序追加</span> <span class="t">工具顺序记入 Header，system 文本记入历史</span></span>`);
     if (snapshot) lines.push(`<span class="ev"><span class="k-user">user snapshot · runtime policy state</span> <span class="t">变化时追加，不碰 system 前缀</span></span>`);
     else lines.push(`<span class="ev"><span class="t">runtime context：未注入。注入时以 user-role 加入，不进 system</span></span>`);
     if (log) log.innerHTML = lines.join("");
@@ -166,10 +236,10 @@ function initPromptAssembly(): void {
     if (status) status.textContent = !previous && baseline
       ? "基线：两段 system"
       : pureAppend
-        ? now.length > before.length ? "前缀稳定 · 新增不破坏缓存" : "与上次一致 · 缓存不动"
+        ? now.length > before.length ? "前缀稳定 · 末尾追加片段" : "与上次片段一致"
         : pureTrim
           ? `前缀稳定 · tail 收缩至 ${boundary} 行`
-          : `前缀断裂 @第 ${boundary + 1} 行 · 已缓存 ${boundary} 行仍命中，此后 ${sections.length - boundary} 行重算`;
+          : `前缀断裂 @第 ${boundary + 1} 行 · 前 ${boundary} 个片段一致`;
     previous = signature;
   };
   qsa<HTMLButtonElement>(root, "[data-toggle]").forEach((button) => button.addEventListener("click", () => {
@@ -195,11 +265,11 @@ function initContextProjection(): void {
   type Evt = { label: string; tok: number; visible: boolean; pair?: "call" | "result" };
   const events: Evt[] = [
     { label: "user/message · 检查配置为何超时", tok: 40, visible: true },
-    { label: "assistant/chunk ×12 · 流式证据", tok: 0, visible: false },
-    { label: "assistant/message · 结论 + tool-call read_file", tok: 180, visible: true, pair: "call" },
-    { label: "tool/result · read_file 文件内容", tok: 300, visible: true, pair: "result" },
-    { label: "assistant/message · 需要修改 + tool-call write_file", tok: 200, visible: true, pair: "call" },
-    { label: "tool/result · write ok", tok: 60, visible: true, pair: "result" },
+    { label: "assistant/attempt · 结算失败的流", tok: 0, visible: false },
+    { label: "assistant/message · 结论 + tool-call read", tok: 180, visible: true, pair: "call" },
+    { label: "tool/result · read 文件内容", tok: 300, visible: true, pair: "result" },
+    { label: "assistant/message · 需要修改 + tool-call edit", tok: 200, visible: true, pair: "call" },
+    { label: "tool/result · edit ok", tok: 60, visible: true, pair: "result" },
     { label: "user/message · 再跑一遍测试", tok: 30, visible: true },
     { label: "assistant/message · 测试输出（长文本）", tok: 500, visible: true },
   ];
@@ -207,6 +277,11 @@ function initContextProjection(): void {
   let replayed = 0;
   let budget = 0;
   let tailStart = -1;
+  let replacements = 0;
+  const replacementEnd = (visible: Evt[]): number => {
+    const candidate = visible.length - 2;
+    return visible[candidate]?.pair === "result" ? candidate - 1 : candidate;
+  };
   const status = qs<HTMLElement>(root, "[data-status]");
   const render = () => {
     const visible = events.slice(0, replayed).filter((event) => event.visible);
@@ -217,8 +292,10 @@ function initContextProjection(): void {
       : visible.reduce((sum, event) => sum + event.tok, 0);
     let verdict = "ask";
     let label = "等待选择";
-    const foldableMore = visible.length - (compacted ? tailStart : 0) > 2; // recent tail 之外还有可折叠的稳定段
-    if (!budget) label = "先选预算";
+    const foldableMore = replacementEnd(visible) > Math.max(tailStart, 0);
+    const compactButton = qs<HTMLButtonElement>(root, "[data-compact]");
+    if (compactButton) compactButton.disabled = !budget || usage <= budget || !foldableMore;
+    if (!budget) label = "选择历史预算";
     else if (replayed === 0) label = "等待重放";
     else if (usage <= budget) { verdict = "ok"; label = `可发起请求 ${usage}/${budget}`; }
     else if (!compacted) label = `超预算 ${usage}/${budget} · compaction 候选`;
@@ -230,19 +307,19 @@ function initContextProjection(): void {
     if (out) out.textContent = label;
     if (status) status.textContent = label;
     const trace = [
-      `LOG：${replayed}/${events.length} 条事件已重放${replayed >= events.length ? "（turn/end 后 idle）" : ""}`,
+      `日志：已读取 ${replayed}/${events.length} 条原事件${replacements ? `；另追加 ${replacements * 4} 条压缩记录` : ""}`,
       `SURFACE：${nodes} 个节点 · deriveMessages 投影${compacted ? "（含 summary 节点）" : ""}`,
       `model-visible：${usage} tok / 预算 ${budget || "?"}`,
     ];
-    if (replayed >= 2) trace.push("assistant/chunk 计入日志，不入历史：投影时 0 成本。");
+    if (replayed >= 2) trace.push("assistant/attempt 的 stream 留在日志，模型历史跳过整个尝试。");
     if (compacted) {
       trace.push(`选区 = 最早 ${tailStart} 个稳定节点 → summary(${summaryTokens} tok)；replacement 引用原事件 seq，原事件保留。`);
       const kept = visible[tailStart];
-      if (kept) trace.push(`tail 自 “${kept.label.slice(0, 24)}” 保留；tool-call / result 配对未切断。`);
-      if (foldableMore) trace.push("回合压力还在：recent tail 之外的稳定段可再折叠——再次 compaction 会推进选区边界。");
+      if (kept) trace.push(`保留区从 “${kept.label.slice(0, 24)}” 开始，工具调用与结果保持成对。`);
+      if (foldableMore) trace.push("还有可折叠的节点。若超出预算，再次压缩会推进选区边界。");
     } else if (budget && replayed > 0 && usage > budget) {
-      trace.push("选区规则：最早连续稳定段 + 保留 recent tail；被切断的 call / result 对整对后移。");
-      if (!foldableMore) trace.push("选区为空：日志尚短，没有可替换的稳定前缀——这正是锁外的正常拒绝。");
+      trace.push("选取最早的连续稳定段。若切点落在 call 与 result 之间，两者都留在 tail。");
+      if (!foldableMore) trace.push("当前没有可替换的稳定前缀。");
     }
     const list = qs<HTMLElement>(root, "[data-trace]");
     if (list) list.innerHTML = trace.map((line) => `<li>${line}</li>`).join("");
@@ -255,19 +332,20 @@ function initContextProjection(): void {
   qs<HTMLButtonElement>(root, "[data-replay]")?.addEventListener("click", () => { if (replayed < events.length) replayed += 1; render(); });
   qs<HTMLButtonElement>(root, "[data-compact]")?.addEventListener("click", () => {
     const visible = events.slice(0, replayed).filter((event) => event.visible);
-    const from = tailStart >= 0 ? tailStart : 0; // 已有 summary 时，在旧边界之上继续推进
-    let next = Math.max(from, visible.length - 2);
-    if (visible[next]?.pair === "result") next += 1;
-    if (next > from && next < visible.length) tailStart = next;
+    const next = replacementEnd(visible);
+    if (next > Math.max(tailStart, 0)) {
+      tailStart = next;
+      replacements += 1;
+    }
     render();
   });
   qs<HTMLButtonElement>(root, "[data-reset]")?.addEventListener("click", () => {
-    replayed = 0; budget = 0; tailStart = -1;
+    replayed = 0; budget = 0; tailStart = -1; replacements = 0;
     qsa<HTMLButtonElement>(root, "[data-budget] button").forEach((candidate) => candidate.setAttribute("aria-pressed", "false"));
     render();
-    if (status) status.textContent = "选择 context 预算";
+    if (status) status.textContent = "选择历史预算";
     const list = qs<HTMLElement>(root, "[data-trace]");
-    if (list) list.innerHTML = "<li>重放 = 往 append-only log 追加事件；投影 = <code>deriveMessages()</code>。</li>";
+    if (list) list.innerHTML = "<li>按序读取现有事件，观察 <code>deriveMessages()</code> 的结果。</li>";
   });
   render();
 }
@@ -314,15 +392,16 @@ function boot(): void {
     base: { title: "共享基础 Bundle", body: "进程级基础插件层；改变它会影响所有使用该组合的新启动实例。", status: "BUNDLE" },
     surface: { title: "运行表面 Bundle", body: "不同表面在共享基础上增加自己的宿主能力；差异属于组合，不属于 Loop 分支。", status: "SURFACE BUNDLE" },
     profile: { title: "用户 Profile Patch", body: "用户层按行标识替换整份配置，不做字段级深合并；先导出最终组合再判断。", status: "PROFILE PATCH" },
-    preset: { title: "Agent 作用域组合", body: "只影响加入该组合的 Agent；人格遮蔽、工具限制与子代理继承都在这层收口。", status: "AGENT PRESET" },
+    preset: { title: "AgentPresetRegistry", body: "修改 dsh-agent-preset 的 config.plugins。已经开始首个 Turn 的 Session 会拒绝切换。子 Agent 可以显式继承父代组合。", status: "AGENT PRESET" },
   });
   initSurface("#dsh-capabilities", {
     local: [["Definition", "文件与子进程的稳定能力接口"], ["Provider", "本地文件系统与本地进程"], ["Consumers", "Bash、PTY、LSP、文件工具"], ["判断", "执行发生在宿主工作区与进程树"]],
     sandbox: [["Definition", "仍是同一组能力接口"], ["Provider", "平台沙箱 runner + 进程内写围栏"], ["Consumers", "上层工具无需分叉"], ["判断", "只承诺文件效果；runner 不可用时失败关闭"]],
-    e2b: [["Definition", "进程外仍遵守同一窄接口"], ["Provider", "远程或外部运行时"], ["Consumers", "工具只消费能力，不识别后端名"], ["判断", "先核对能力广告、凭据剥离与结算语义"]],
+    ssh: [["Definition", "ctx.fs、ctx.subprocess 与 ctx.sandbox"], ["Provider", "fs-ssh、subprocess-ssh、sandbox-ssh 共用一个远端 helper"], ["Consumers", "文件工具、Bash 和 PTY 依赖同一服务接口"], ["执行位置", "文件与进程在远端，Harness、模型调用和 Session 存储在宿主"]],
   });
   initSurface("#dsh-surfaces", {
-    web: [["消费者", "人类开发者"], ["交互", "Web UI、审批、问题、命令"], ["组合", "base + web-app Bundle"], ["状态", "从 session/event 投影"]],
+    web: [["消费者", "人类开发者"], ["交互", "Web UI、审批、问题、命令"], ["组合", "base + web-app Bundle"], ["状态", "持久事件页与实时助手帧"]],
+    desktop: [["消费者", "桌面开发者"], ["交互", "Electron 窗口加载 Web 应用"], ["组合", "打包的 Host 与保留的 Desktop Profile"], ["传输", "本地 carrier 连接 Host，继续使用 Web RPC 与流"]],
     headless: [["消费者", "一次性脚本 / CI"], ["输入", "一个普通 user message"], ["输出", "idle 后最后非空 assistant 文本"], ["网络", "不启动 HTTP Server"]],
     acp: [["消费者", "自动化 Agent Client"], ["传输", "JSON-RPC stdio"], ["输出", "committed assistant message updates"], ["限制", "automation-only；不等于 Web UI"]],
     sdk: [["消费者", "TypeScript 产品集成"], ["传输", "newline-delimited JSON-RPC"], ["运行", "启动完整 runtime 子进程"], ["生命周期", "initialize settle / shutdown flush"]],

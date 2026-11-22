@@ -36,14 +36,14 @@ function initTurn(): void {
   if (!root) return;
   const steps = qsa<HTMLElement>(root, "[data-steps] li");
   const logs = [
-    "authoritative_queue.push(user_prompt)", "assemble(stable prompt + effective tools)", "sampling.request(messages, tools)",
-    "stream event → client + usage ledger", "tool proposal: run command", "hook → plan gate → permission",
-    "terminal result paired and appended", "TurnOutcome → round decision",
+    "session/prompt → queue", "round → 当前会话状态", "采样请求 → messages + tools",
+    "session/update → agent_message_chunk", "tool_use → run_terminal_command", "准备 → 审批 → 执行",
+    "tool_result ↔ call ID", "采样步 → TurnOutcome → round 裁决",
   ];
   const notes = [
-    "输入先进入唯一权威队列。", "稳定前缀、现场上下文与裁剪后的工具面在这里汇合。", "宿主发起一次可取消的流式采样。",
-    "增量先被消费；终端确认到达后才允许提交响应。", "模型只提出结构化动作，不直接碰执行世界。", "动作依次经过 hook、计划模式与权限闸门。",
-    "每个 tool_use 都得到配对结果，再进入下一次采样。", "模型提出结束，harness 再检查插话、待办与外层续跑条件。",
+    "SessionActor 接纳普通 prompt，按会话队列安排。", "这一轮使用会话当前的模型、工具和对话状态。", "宿主启动一次可取消的流式采样。",
+    "客户端可先显示增量，宿主仍需检查该采样的提交权。", "工具请求带调用 ID，后面的结果用同一 ID 配对。", "批准的调用进入执行，实际进程和文件状态由 Workspace 管理。",
+    "工具结果进入对话，可供下一次采样读取。", "获得候选终态后，round 再检查 Stop hook、goal 等是否续跑。取消或重复动作硬停走独立分支。",
   ];
   let index = -1;
   let timer = 0;
@@ -70,10 +70,11 @@ function initEvents(): void {
   const root = document.querySelector("#grok-events");
   if (!root) return;
   const events = [
-    ["client", "session/new { cwd, mcpServers }"], ["sys", "session created + capabilities"], ["client", "session/prompt { content }"],
-    ["model", "AgentMessageChunk: 我先检查…"], ["model", "AgentThoughtChunk: locating owner"], ["tool", "ToolCall: grep → pending"],
-    ["warn", "permission request"], ["tool", "ToolCallUpdate: in_progress"], ["tool", "ToolCallUpdate: completed"],
-    ["model", "AgentMessageChunk: 根因位于…"], ["sys", "SessionInfoUpdate: title/usage"], ["sys", "PromptResponse: end_turn"],
+    ["client", "initialize"], ["sys", "ACP capabilities"], ["client", "session/new"], ["sys", "sessionId: s1"],
+    ["client", "session/prompt → s1"], ["model", "session/update · agent_message_chunk"],
+    ["model", "session/update · agent_thought_chunk"], ["client", "session/cancel → s1"],
+    ["warn", "宿主撤销采样的提交权"], ["sys", "PromptResponse · stopReason: cancelled"],
+    ["sys", "旧采样结果到达"], ["warn", "宿主丢弃旧结果"],
   ];
   let cursor = 0;
   let timer = 0;
@@ -98,14 +99,33 @@ function initSafety(): void {
   qsa<HTMLButtonElement>(root, "[data-mode] button").forEach((b) => b.addEventListener("click", () => select("mode", b.dataset.v ?? "", b)));
   const evaluate = () => {
     if (!op || !mode) return;
-    let verdict: "ok" | "ask" | "deny" = "ask"; let label = "请求批准"; const trace: string[] = [];
-    trace.push(`Agent permission mode = ${mode}`);
-    if (mode === "plan" && op !== "read") { verdict = "deny"; label = "计划模式拒绝副作用"; trace.push("plan 只保留分析与只读能力"); }
-    else if (op === "read") { verdict = "ok"; label = "允许读取"; trace.push("只读操作通过基础策略"); }
-    else if (mode === "acceptEdits" && op === "edit") { verdict = "ok"; label = "允许编辑"; trace.push("acceptEdits 预先接受文件修改"); }
-    else if (mode === "dontAsk") { verdict = "deny"; label = "无法询问则拒绝"; trace.push("dontAsk 不是自动允许，遇到需审批能力时失败关闭"); }
-    else { trace.push("PermissionManager 生成交互请求"); }
-    trace.push("即使获批，sandbox 仍独立限制 OS 能力");
+    let verdict: "ok" | "ask" | "deny" = "ask";
+    let label = "请求批准";
+    const trace = [`审批模式 ${mode} · 按无额外规则、授权或 Hooks 推演`];
+
+    if (op === "read") {
+      verdict = "ok";
+      label = "审批层放行";
+      trace.push("普通只读文件调用按内置规则放行。");
+    } else if (mode === "always-approve") {
+      verdict = "ok";
+      label = "跳过普通询问";
+      trace.push("always-approve 放行普通调用。真实会话仍需检查拒绝规则和组织策略。");
+    } else if (mode === "dontAsk") {
+      verdict = "deny";
+      label = "拒绝未获准的调用";
+      trace.push("dontAsk 拒绝原本必须询问的操作。");
+    } else if (mode === "auto") {
+      label = "等待分类器";
+      trace.push("根据分类结果和会话是否可交互，调用可以放行、拒绝或进入确认。");
+    } else {
+      trace.push("default 模式下，未提前授权的副作用进入审批。");
+    }
+    if (verdict !== "deny") {
+      trace.push(op === "network"
+        ? "获批后仍检查子进程网络策略。沙箱默认 off；启用 read-only 或 strict 时按该 profile 约束。"
+        : "获批后仍检查生效的沙箱 profile 和路径。");
+    }
     const badge = qs<HTMLElement>(root, "[data-verdict]"); if (badge) badge.dataset.verdict = verdict;
     const out = qs<HTMLElement>(root, "[data-verdict-label]"); if (out) out.textContent = label;
     const list = qs<HTMLElement>(root, "[data-trace]"); if (list) list.innerHTML = trace.map((line) => `<li>${line}</li>`).join("");
@@ -114,26 +134,73 @@ function initSafety(): void {
 
 function initSession(): void {
   const root = document.querySelector("#grok-session"); if (!root) return;
-  let session = 1; let updates = 0; let checkpoint: number | null = null;
   const log = qs<HTMLElement>(root, "[data-log]");
-  const render = (message?: string) => { const set = (s: string, v: string) => { const el = qs<HTMLElement>(root, s); if (el) el.textContent = v; }; set("[data-session]", String(session)); set("[data-updates]", String(updates)); set("[data-checkpoint]", checkpoint === null ? "—" : `u${checkpoint}`); if (message) log?.insertAdjacentHTML("beforeend", `<span class="ev"><span class="t">u${updates}</span> <span class="k-sys">${message}</span></span>`); };
+  const sessionOutput = qs<HTMLElement>(root, "[data-session]");
+  const updatesOutput = qs<HTMLElement>(root, "[data-updates]");
+  const checkpointOutput = qs<HTMLElement>(root, "[data-checkpoint]");
+  let session = 1;
+  let updates = 0;
+  let prompts = 0;
+  let checkpoint: number | null = null;
+
+  const render = (message?: string) => {
+    if (sessionOutput) sessionOutput.textContent = String(session);
+    if (updatesOutput) updatesOutput.textContent = String(updates);
+    if (checkpointOutput) checkpointOutput.textContent = checkpoint === null ? "—" : `P${checkpoint}`;
+    if (message) log?.insertAdjacentHTML("beforeend", `<span class="ev"><span class="t">P${prompts}</span> <span class="k-sys">${message}</span></span>`);
+  };
+
   qsa<HTMLButtonElement>(root, "[data-action]").forEach((button) => button.addEventListener("click", () => {
-    const action = button.dataset.action;
-    if (action === "prompt") { updates += 3; render("prompt → message chunks → end_turn"); }
-    if (action === "checkpoint") { checkpoint = updates; render("recoverable boundary persisted"); }
-    if (action === "rewind") { if (checkpoint !== null) { updates = checkpoint; render("conversation restored to the recorded boundary"); } else render("rewind ignored: no checkpoint"); }
-    if (action === "fork") { session += 1; updates += 1; render("new session derived without a second active writer"); }
-    if (action === "resume") { updates += 1; render("persisted conversation repaired and resumed"); }
-    if (action === "reset") { session = 1; updates = 0; checkpoint = null; if (log) log.innerHTML = ""; render(); }
+    switch (button.dataset.action) {
+      case "prompt":
+        prompts += 1;
+        updates += 1;
+        render("追加一轮对话与工具事件（演示合为一条）。");
+        break;
+      case "checkpoint":
+        if (prompts === 0) {
+          render("先添加一轮对话。");
+          break;
+        }
+        checkpoint = prompts;
+        updates += 1;
+        render("写入压缩历史文件，追加 CompactionCheckpoint 引用。");
+        break;
+      case "rewind":
+        if (prompts === 0) {
+          render("当前没有可回退的对话。");
+          break;
+        }
+        prompts -= 1;
+        if (checkpoint !== null && checkpoint > prompts) checkpoint = null;
+        updates += 1;
+        render("追加 RewindMarker。当前对话少一轮，文件保持原状。");
+        break;
+      case "fork":
+        session += 1;
+        render("派生新 Session，继承当前可见历史；后续追加到新会话。");
+        break;
+      case "resume":
+        render("从既有记录恢复视图，过滤已放弃的对话分支。");
+        break;
+      case "reset":
+        session = 1;
+        updates = 0;
+        prompts = 0;
+        checkpoint = null;
+        log?.replaceChildren();
+        render();
+        break;
+    }
   }));
 }
 
 function initContext(): void {
   const root = document.querySelector("#grok-context"); if (!root) return; let percent = 42;
-  const render = (note?: string) => { const fill = qs<HTMLElement>(root, "[data-fill]"); if (fill) fill.style.width = `${percent}%`; const p = qs<HTMLElement>(root, "[data-percent]"); if (p) p.textContent = `${percent}%`; const s = qs<HTMLElement>(root, "[data-status]"); if (s) s.textContent = `${percent}%`; const policy = qs<HTMLElement>(root, "[data-policy]"); if (policy) policy.textContent = percent >= 85 ? "触发 auto compact" : percent >= 72 ? "接近阈值" : "继续采样"; if (note) { const n = qs<HTMLElement>(root, "[data-note]"); if (n) n.textContent = note; } };
+  const render = (note?: string) => { const fill = qs<HTMLElement>(root, "[data-fill]"); if (fill) fill.style.width = `${percent}%`; const p = qs<HTMLElement>(root, "[data-percent]"); if (p) p.textContent = `${percent}%`; const s = qs<HTMLElement>(root, "[data-status]"); if (s) s.textContent = `${percent}%`; const policy = qs<HTMLElement>(root, "[data-policy]"); if (policy) policy.textContent = percent >= 85 ? "达到演示阈值" : "继续采样"; if (note) { const n = qs<HTMLElement>(root, "[data-note]"); if (n) n.textContent = note; } };
   qsa<HTMLButtonElement>(root, "[data-add]").forEach((b) => b.addEventListener("click", () => { percent = Math.min(100, percent + Number(b.dataset.add)); render(); }));
-  qs<HTMLButtonElement>(root, "[data-compact]")?.addEventListener("click", () => { percent = 31; render("旧历史被摘要替换；规则、最新请求与运行态随后显式重建。"); });
-  qs<HTMLButtonElement>(root, "[data-reset]")?.addEventListener("click", () => { percent = 42; render("85% 是该快照的默认触发值，实际值可被配置覆盖。"); });
+  qs<HTMLButtonElement>(root, "[data-compact]")?.addEventListener("click", () => { percent = 31; render("用摘要、保留的约束和运行态重建对话，记录压缩历史引用。"); });
+  qs<HTMLButtonElement>(root, "[data-reset]")?.addEventListener("click", () => { percent = 42; render("本实验采用 85% 默认阈值，百分比变化是示意。"); });
 }
 
 function initSurface(id: string, data: Record<string, Array<[string, string]>>): void {
@@ -163,25 +230,25 @@ function boot(): void {
   initChoiceDetail("#grok-tools", {
     hidden: { title: "Agent capability selection", body: "读取最终 tool definitions，确认工具没有被 allowlist、denylist、mode 或 feature gate 裁掉。" },
     schema: { title: "Tool schema validation", body: "比较模型发出的参数与 canonical schema；名称映射不应改变内部身份。" },
-    permission: { title: "PermissionManager", body: "查看当前 permission mode、记忆授权、组织要求与 pending interaction。" },
+    permission: { title: "PermissionManager", body: "检查审批模式、有效规则、组织策略和待审批调用。用户拒绝可中止后续准备；单条策略拒绝后，准备阶段可以继续。" },
     output: { title: "Normalization / truncation", body: "命令可能成功，但关键 stdout 被截断、折叠或转换错误，导致回注证据不完整。" },
   });
   initChoiceDetail("#grok-workspace", {
     file: { title: "ToolBridge → Workspace filesystem", body: "路径校验、权限、编辑实现、diff 通知与 checkpoint 共同形成可恢复证据。" },
     command: { title: "Permission → PTY/process", body: "命令获得会话上下文和取消句柄，stdout/stderr 流式产生 ToolNotification。" },
     background: { title: "ProcessManager → BackgroundHandle", body: "启动后返回任务句柄；后续通过 task log、get output 与 kill 跟踪，而不是阻塞回合。" },
-    rewind: { title: "Checkpoint → VCS/filesystem restore", body: "回退应以已记录边界恢复副作用，再用 Session update 让客户端重建视图。" },
+    rewind: { title: "预览冲突与文件恢复", body: "工作区先列出可能被恢复的文件和外部修改冲突。执行后分别核对文件、可选 Git 与 hunk 恢复，可能出现部分成功。" },
   });
   initChoiceDetail("#grok-extensions", {
     rules: { title: "AGENTS.md · 行为约束", body: "规则以独立的项目指令项注入，并在压缩后逐字重建；它不新增可执行工具。" },
     skills: { title: "Skills · 渐进式流程知识", body: "SKILL.md 提供专门工作流；同名项按来源优先级去重，执行仍依赖已有工具。" },
-    mcp: { title: "MCP · 外部能力协议", body: "工具先注册和索引，模型再通过 search/use 两段式发现；调用仍经过权限与结果归一化。" },
+    mcp: { title: "MCP · 外部能力协议", body: "注册服务器工具后，可直接暴露或经搜索延迟发现。派发仍经过信任和权限检查。" },
     plugins: { title: "Plugins · 可分发扩展包", body: "把 agents、Skills、Hooks 与 MCP 组合为分发单元；项目来源仍要过目录信任。" },
-    hooks: { title: "Hooks · 确定性生命周期代码", body: "在明确事件上裁决、改写或补充上下文；改写工具参数后必须重新通过 schema。" },
-    memory: { title: "Memory · 跨会话证据层", body: "markdown 保存可审计真相，检索索引可重建；旧命中必须用当前现场复核。" },
+    hooks: { title: "Hooks · 确定性生命周期代码", body: "PreToolUse 可拒绝、请求审批或改写参数。超时和崩溃通常放行，改写后的输入未通过 schema 则阻断。" },
+    memory: { title: "Memory · 跨会话证据层", body: "V2 在启用时把观察写进收件箱，再独立整理为主题与汇总。检索所得信息仍需和当前工作区核对。" },
   });
   initSurface("#grok-surfaces", {
-    tui: [["消费者", "开发者"], ["输入", "全屏 Prompt / slash commands"], ["输出", "Scrollback、diff、modal"], ["共享内核", "Session + Agent + Workspace"]],
+    tui: [["承载", "进程内嵌 Agent"], ["输入", "全屏 Prompt / slash commands"], ["输出", "Scrollback、diff、modal"], ["关键边界", "沙箱约束与启动进程绑定"]],
     headless: [["消费者", "远端与无人值守客户端"], ["输入", "relay 会话消息"], ["输出", "流式会话事件"], ["关键边界", "ping、半开检测与重连"]],
     acp: [["消费者", "IDE 与 Agent 客户端"], ["输入", "ACP PromptRequest"], ["输出", "SessionUpdate / ToolCallUpdate"], ["关键边界", "客户端不拥有运行时状态"]],
     serve: [["消费者", "可信远端执行消费者"], ["输入", "JSON-RPC 工具调用"], ["输出", "本地工作区工具结果"], ["关键边界", "完整提示与工具结果可能离开本机"]],

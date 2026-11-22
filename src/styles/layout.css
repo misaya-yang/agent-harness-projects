@@ -1006,3 +1006,90 @@ footer.site a {
   .reader-actions button { inline-size: auto; min-width: 40px; padding-inline: 12px; }
   .reader-actions button > span:not(.chk-box) { display: inline; }
 }
+
+/* Shared editorial reader. Keep the navigation and experiment controls on raised paper. */
+body[data-agent]:not(.home-page) {
+  --accent: var(--atlas-ink-accent);
+  --accent-vivid: var(--atlas-line-accent);
+  --accent-glow: #e5b36c;
+  --accent-wash: color-mix(in srgb, var(--accent) 12%, transparent);
+  --accent-line: color-mix(in srgb, var(--accent) 52%, var(--line));
+  --focus-ring: var(--accent);
+}
+body[data-agent] .topbar {
+  display:flex; height:58px; padding:8px 24px; justify-content:flex-start;
+  background:var(--paper-nav); border-color:var(--line); backdrop-filter:none;
+}
+.topbar .topbar-actions {margin-left:auto}
+.topbar .brand {color:var(--text);font:600 1.05rem var(--ff-display);display:inline-flex;align-items:center;gap:8px}
+.topbar .brand img{width:27px;height:27px}
+.topbar .series-nav-top{display:block}
+.topbar .theme-btn,.topbar .menu-btn,.topbar .series-menu>summary{border-radius:8px;border-color:var(--line);background:var(--paper-panel)}
+.topbar .menu-btn{padding:5px 9px;color:var(--text-2)}
+.topbar .theme-btn{font-family:var(--ff-body);font-size:.83rem}
+.reader-mode .reader-main {grid-template-rows:minmax(0,1fr);padding-block-start:58px}
+.reader-mode .reader-main>.series-nav-tabs {display:none}
+body[data-agent] .chapter-nav{inset:58px auto auto 0;max-height:calc(100dvh - 64px);width:min(292px,86vw);padding:12px;border-radius:0 0 12px 0;background:var(--paper-panel)}
+body[data-agent] .series-panel{max-height:calc(100dvh - 74px);overflow:auto;background:var(--paper-panel)}
+.reader-stage>.reader-view.shell,.reader-stage>.reader-view>.shell,.reader-stage .reader-toolbar.shell {
+  width:min(100%,890px);max-width:890px;margin-inline:auto;padding-inline:clamp(20px,4vw,48px);
+}
+.reader-stage>.reader-view{background:var(--canvas)}
+.reader-stage>.reader-view.chapter{padding-block:clamp(23px,3vw,45px)}
+.reader-stage .chapter-head{margin-bottom:clamp(16px,2.5vw,30px)}
+.reader-stage .chapter-head h2,.reader-mode .hero h1{
+  color:var(--text);font:600 clamp(1.72rem,2.65vw,2.5rem)/1.44 var(--ff-display);max-width:26em;
+}
+.reader-stage .hero h1 .alt{color:var(--text)}
+.reader-stage .chapter-head .lede,.reader-stage .hero .sub{font:400 1.04rem/1.82 var(--ff-body);color:var(--text-2);max-width:43em}
+.reader-stage .hero .eyebrow,.reader-stage .chapter-head .label-mono{font:500 .74rem/1.6 var(--ff-mono);color:var(--accent);letter-spacing:.035em}
+.reader-stage .hero .hero-cta a,.reader-stage .reader-actions button{border-radius:9px}
+.reader-stage .hero-cta .btn-primary{background:var(--accent);color:var(--on-accent)}
+.reader-stage .prose{max-width:43em;color:var(--text-2);font-size:1.02rem;line-height:1.85}
+.reader-stage .prose h3,.reader-stage .lesson-brief h3,.reader-map-head h2{font-family:var(--ff-display);font-weight:600;color:var(--text)}
+.reader-mode .reader-map{gap:14px;margin-top:28px;padding-block:22px 26px}
+.reader-phase{border:1px solid var(--line);border-radius:12px;padding:15px;background:var(--paper-panel)}
+.reader-phase-list{margin-top:10px;gap:1px}
+.reader-phase-list a{padding:6px 8px;min-height:44px}
+.reader-mode .reader-map-summary{border:0;background:var(--paper-panel)}
+.reader-stage .machine {border-radius:15px;border:1px solid var(--line-strong);overflow-x:clip}
+.reader-stage .machine-bar{background:var(--o-console-raised);border-radius:14px 14px 0 0}
+.reader-stage .machine .cbtn{border-radius:7px}
+.reader-stage :is(.fact-boundary,.lesson-brief,.lesson-result,.course-update,.source-notes,.course-evidence){border-radius:12px}
+.reader-stage :is(.source-notes,.course-evidence) a{text-decoration:underline;text-underline-offset:3px;color:var(--accent);overflow-wrap:anywhere}
+.course-evidence{background:var(--paper-panel);border:1px solid var(--line);padding:12px 16px;margin-block:16px;font-size:.86rem}
+.course-evidence summary {cursor:pointer;color:var(--text);font-weight:600}
+.course-evidence li,.course-evidence p{margin-block:6px;color:var(--text-2)}
+.reader-stage .reader-toolbar {padding-inline:0;margin-top:32px}
+.reader-stage .reader-actions button,.reader-stage .reader-map-link{font-family:var(--ff-body)}
+body[data-agent] .rail .rail-theme{display:none}
+.rail .rail-course{color:var(--text);font:600 1.27rem var(--ff-display);padding:5px 9px 14px}
+@media(min-width:1150px){
+  .topbar .menu-btn{display:none}
+  body[data-agent] .rail{display:flex;inset-block:58px 0;justify-content:flex-start;overflow:auto;padding:17px 12px;inline-size:clamp(190px,17vw,240px);background:var(--paper-panel);border-right:1px solid var(--line);scrollbar-width:thin}
+  .rail .brand{display:none}
+  .rail a[data-spy-link]{font:400 .86rem/1.5 var(--ff-body);color:var(--text-2);border-radius:7px;min-height:32px;align-items:center;padding:5px 8px}
+  .rail a[data-spy-link][aria-current=true]{color:var(--accent);background:var(--accent-wash);border-left-color:var(--accent)}
+  .reader-mode main.reader-main {padding-left:clamp(190px,17vw,240px)}
+  .reader-mode .reader-stage>.reader-view {padding-inline-end:max(18px,calc((100vw - 1000px)*.36))}
+  .reader-mode .reader-stage>.reader-view.shell{width:min(calc(100% - 30px),890px);padding-inline:clamp(22px,3vw,42px);left:max(-13vw,calc(1000px - 100vw))}
+  .reader-mode .reader-stage>.reader-view>.shell{position:relative;left:clamp(-35px,calc(1250px - 100vw),0px)}
+  .rail-progress{padding:18px 8px 4px}
+}
+@media(max-width:1149px){
+  body[data-agent] .rail{display:none}
+  body[data-agent] main.reader-main{padding-left:0}
+}
+@media(max-width:600px){
+  body[data-agent] .topbar {gap:6px;padding:7px 9px;height:53px}
+  body[data-agent] .topbar .brand{font-size:.92rem;gap:5px}.topbar .brand img{width:23px;height:23px}
+  .topbar-actions{gap:3px}.topbar .series-menu>summary{min-height:34px;padding:3px 7px}
+  .topbar .theme-btn{width:33px;min-height:34px}.topbar .menu-btn{min-height:34px}
+  body[data-agent] .chapter-nav{inset-block-start:53px}
+  .reader-mode .reader-main{padding-top:53px}
+  .reader-stage>.reader-view.shell,.reader-stage>.reader-view>.shell{padding-inline:17px}
+  .reader-stage .chapter-head h2,.reader-mode .hero h1{font-size:1.72rem}
+  .reader-stage .hero-outcomes,.reader-stage .lesson-brief,.reader-stage .machine-body{padding-inline:13px}
+}
+.reader-stage>.reader-view:focus-visible {outline:0}
+@media(max-width:600px){body[data-agent] .topbar{min-height:53px}}

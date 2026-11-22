@@ -49,24 +49,24 @@ describe("published course contract", () => {
 
   it("teaches from engineering scenarios without turning source locations into the lesson", () => {
     const snapshots = {
-      "codex.html": "498d40b29f60",
-      "grok.html": "72a61251fcff",
-      "deepseek.html": "49a606bc5b59",
-      "pi.html": "4e69b0c28060",
-      "opencode.html": "b578b7261fc9",
-      "openclaw.html": "5e9875ab56a8",
-      "hermes.html": "97f3229dfdc0",
+      "codex.html": "6fd58416e313",
+      "grok.html": "2bdd1d6a6369",
+      "deepseek.html": "2e39e70496aa",
+      "pi.html": "9c4652688590",
+      "opencode.html": "73a0eae88de4",
+      "openclaw.html": "3c8c7bf781fb",
+      "hermes.html": "c7a3fe245d6b",
     };
     const entries = ["src/main.ts", "src/grok.ts", "src/deepseek.ts", "src/pi.ts", "src/opencode.ts", "src/openclaw.ts", "src/hermes.ts"];
     const html = ["index.html", ...pages].map((page) => {
       const source = read(page);
-      if (page === "index.html") return source.replace(/<script[\s\S]*?<\/script>/g, "");
+      if (page === "index.html") return source.replace(/<script[\s\S]*?<\/script>/g, "").replace(/<[^>]+>/g, " ");
       const hero = source.match(/<ul class="hero-outcomes"[\s\S]*?<\/ul>/)?.[0] ?? "";
       assert.ok((hero.match(/<li>/g) ?? []).length >= 3, `${page} needs concrete learning outcomes`);
       assert.ok((source.match(/lesson-result|CHAPTER CHECK|CHECKPOINT \d+|本章小结|小结 ·|本章过关|课程完成|毕业练习/g) ?? []).length >= 10, `${page} needs chapter checks`);
       assert.match(source, new RegExp(snapshots[page]), `${page} needs its reviewed snapshot`);
       assert.match(source, /https:\/\/harness\.lvy-u\.chatgpt\.site/, `${page} needs the current canonical host`);
-      return source.replace(/<script[\s\S]*?<\/script>/g, "");
+      return source.replace(/<script[\s\S]*?<\/script>/g, "").replace(/<[^>]+>/g, " ");
     }).join("\n");
     const interactiveCopy = entries.map(read).join("\n");
     const publishedCopy = `${html}\n${interactiveCopy}`;
@@ -124,5 +124,19 @@ describe("published course contract", () => {
       .join("\n");
     assert.doesNotMatch(sourceNotes, /\/Users\//);
     assert.doesNotMatch(`${sourceNotes}\n${pages.map(read).join("\n")}`, /github\.com\/openclaw\/openclaw\/(?:blob|tree)\/main\//);
+  });
+});
+
+describe("independent Agent site", () => {
+  it("shows every course in the searchable catalogue and exposes each reviewed revision", () => {
+    const home = read("index.html");
+    for (const page of pages) {
+      const course = page.replace(/\.html$/, "");
+      const card = home.match(new RegExp('<a class="project-card" href="/' + course + '"[\\s\\S]*?</a>'))?.[0];
+      assert.ok(card, course);
+      const revision = card.match(/<code>([a-f0-9]{10})<\/code>/)?.[1];
+      assert.ok(revision && read(page).includes(revision), page);
+    }
+    assert.equal((home.match(/data-step-key=/g) ?? []).length, 3);
   });
 });

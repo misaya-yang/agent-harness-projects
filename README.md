@@ -1,25 +1,37 @@
-# Agent Harness 工程课
+# Agent 工程手册
 
 面向已有编程经验、希望通过开源实现提升 **Agent 设计能力与架构面试表达** 的学习网站。首页按运行循环、状态协议、工具、安全、上下文、记忆、扩展、多代理、客户端和可靠性十个能力模块组织，再深入七个真实项目：
 
-- **Codex 内核图谱**：Agent Loop、状态与协议、工具、安全、提示词工程、压缩、记忆管理、恢复、多代理与客户端集成。
-- **Grok Build 内核图谱**：Rust crate 分层、Session actors、ACP、Tools、Workspace、权限/沙箱、压缩、扩展与子代理。
-- **DeepSeek Harness 内核图谱**：Cordis 插件树、Turn / Step、Session Log、工具管线、能力缝、安全隔离与运行表面。
-- **Pi Agent 内核图谱**：Agent State、统一 Provider 流、工具批次、JSONL Session Tree、扩展、TUI 与协议表面。
-- **OpenCode 内核图谱**：服务器即内核、HTTP/SSE 协议面、事件投影、审批与子代理、压缩续跑与资源治理。
-- **OpenClaw 内核图谱**：三层循环、有界 run 预算、双 SQLite 状态、记忆/自动化唤醒、多通道网关与人格扩展。
-- **Hermes Agent 内核图谱**：Python 单体内核、学习闭环、窄腰工具、七个执行后端、状态库、网关与两代演化谱系。
+- **Codex**：ThreadStore、双向 App Server 请求与权限配置；压缩工作集和持久历史分开。
+- **Grok Build**：单写者会话 Actor；工具规则拒绝和用户拒绝影响批次的方式不同。
+- **DeepSeek Harness**：实时帧与持久结算分开；POSIX SSH Provider 可组成远程执行环境。该版本是开发者预览。
+- **Pi Agent**：JSONL 分支会话、MCP、Tool Search 与 Codemode；Durable、SDK 和 RPC 各有边界。
+- **OpenCode**：持久 Inbox 和会话协调器推进 Step；实时 SSE 与事件恢复分开。
+- **OpenClaw**：会话邮箱、按标记恢复与 Automations；SQLite 默认，可按存储家族配置 PostgreSQL。
+- **Hermes Agent**：持久回合租约、分阶段循环与后台 review；六个内置执行后端支持插件扩展。
 
 主题路径从具体任务进入：先预测运行轨迹，再读项目机制，完成迁移练习与面试自测。Agent 案例保留完整模块和交互实验；正文不要求学生追文件路径或行号，版本与证据映射保留在独立索引。阅读器支持模块直达、前后切换与浏览器返回；JS 失效时仍保留完整静态长文。
 
 ## 运行
 
 ```bash
-npm install
+npm ci
 npm run dev        # http://127.0.0.1:5173
 npm run build      # 类型检查 + 产物构建（dist/）
-npm run preview    # 预览构建产物
+npm run build:netlify # 静态产物（dist-netlify/）
+npm run preview    # 预览 Sites 构建产物
 ```
+
+## 仓库和发布
+
+共享仓库的根目录是 AI 算法学习站，本课程位于 `ai-agent/`。从根目录执行 `npm --prefix ai-agent ci` 和 `npm --prefix ai-agent run dev` 可启动 Agent 站。算法站继续在根目录执行原有命令。两个站点独立安装依赖、构建并发布。
+
+| 站点 | 构建目录 | 发布产物 | 公网入口 |
+|---|---|---|---|
+| 算法学习站 | 仓库根目录 | `dist/` | [Netlify](https://misaya-academy.netlify.app) · [Sites](https://ai-algorithm-academy.lvy-u.chatgpt.site) |
+| Agent 工程手册 | `ai-agent/` | Netlify 使用 `dist-netlify/`，Sites 使用 `dist/` 中的 Worker | [Netlify](https://misaya-agent-atlas.netlify.app) · [Sites](https://harness.lvy-u.chatgpt.site) |
+
+本次采用手动发布，Netlify 只上传目标站点的静态目录。如接入 Git 构建，Agent 项目的 base 设为 `ai-agent`，构建命令和发布目录见 `netlify.toml`。Sites 用各站自己的 `.openai/hosting.json`，更新 Agent Sites 源仓时以 `ai-agent/` 子树作为独立项目根。
 
 ## 结构
 
@@ -27,7 +39,7 @@ npm run preview    # 预览构建产物
 - `codex.html` —— Codex 课程（12 个模块、12 个交互实验）
 - `grok.html` —— Grok Build 课程（12 章、10 个交互实验）
 - `deepseek.html` —— DeepSeek Harness 课程（12 章、10 个交互实验）
-- `pi.html` —— Pi Agent 课程（12 章、11 个交互实验）
+- `pi.html` —— Pi Agent 课程（12 章、12 个交互实验）
 - `opencode.html` —— OpenCode 课程（12 章、9 个交互实验）
 - `openclaw.html` —— OpenClaw 课程（12 章、9 个交互实验）
 - `hermes.html` —— Hermes Agent 课程（12 章、9 个交互实验）
@@ -42,7 +54,7 @@ npm run preview    # 预览构建产物
 | 回合循环步进机 | 第一章 | 一轮对话从提交到完成的九个阶段 |
 | 协议事件流 | 第二章 | Submission / Event 的 JSONL 观感 |
 | 工具管线步进器 | 第三章 | 一次工具调用从发现到回注的六个检查点 |
-| 沙箱 × 审批模拟器 | 第四章 | SandboxPolicy × ApprovalPolicy 决策矩阵 |
+| 沙箱 × 审批模拟器 | 第四章 | 有效权限配置、审批与执行隔离 |
 | Prompt 分层检查器 | 第五章 | Base Instructions、动态上下文、活跃历史、工具与输出约束 |
 | Transcript × Active Context 实验台 | 第五章 | 独立 rollout、replacement history 与 checkpoint 替换 |
 | 平台架构图 | 第六章 | HTTP → 能力/审批/工具 → 内核 → 事件存储 → 租约 |
@@ -66,7 +78,7 @@ Hermes Agent 课程另含回合生命周期步进机、Footprint Ladder 判定�
 
 ## 事实边界
 
-- 原课程主体依据 2026-09-03 的预整理分析资料。2026-09-23 的源码增量与本机七个 HEAD 逐项记录在 [源码增量审校](docs/source-audit-2026-09-23.md)；新增内容标记为“源码更新”或“源码复核”，不将旧主体冒称为最新完整快照。
+- [2026 年 11 月的源码核对](docs/source-audit-2026-11-21.md)列出了七个提交、关键更新与教学边界。[9 月核对记录](docs/source-audit-2026-09-23.md)作为历史资料保留。
 - 网页只呈现学生需要的机制、运行轨迹、取舍与练习；源码文件、行号和证据映射不再混入课程正文。
 - 数字默认值、实验特性和迁移中能力只对对应快照与入口成立；页面会明确区分当前实现、实验能力与教学简化。
 - 交互装置用于解释状态变化，不模拟官方 API，也不构成性能、安全或产品能力承诺。

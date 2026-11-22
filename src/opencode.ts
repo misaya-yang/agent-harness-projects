@@ -10,23 +10,23 @@ import { initChapterReader } from "./modules/chapter-reader";
 import { initTheme } from "./modules/theme";
 import { initHeroPause } from "./modules/hero-pause";
 
-type Detail = { title: string; body: string; status?: string };
 type SurfaceData = Record<string, Array<[string, string]>>;
+type Verdict = { state: "ok" | "deny" | "ask"; label: string; trace: string[] };
 
 const qs = <T extends Element>(root: ParentNode, selector: string): T | null => root.querySelector<T>(selector);
 const qsa = <T extends Element>(root: ParentNode, selector: string): T[] => Array.from(root.querySelectorAll<T>(selector));
 
-function initChoiceDetail(id: string, data: Record<string, Detail>): void {
-  const root = document.querySelector(id);
-  if (!root) return;
-  const detail = qs<HTMLElement>(root, "[data-detail]");
-  const status = qs<HTMLElement>(root, "[data-status]");
-  qsa<HTMLButtonElement>(root, "[data-key]").forEach((button) => button.addEventListener("click", () => {
-    const item = data[button.dataset.key ?? ""];
-    if (!item || !detail) return;
-    qsa<HTMLButtonElement>(root, "[data-key]").forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === button)));
-    detail.innerHTML = `<span class="label-mono">FIRST EVIDENCE</span><h3>${item.title}</h3><p>${item.body}</p>`;
-    if (status) status.textContent = item.status ?? button.textContent ?? "selected";
+function element(tag: string, value: string): HTMLElement {
+  const node = document.createElement(tag);
+  node.textContent = value;
+  return node;
+}
+
+function onPick(root: Element, selector: string, onSelect: (button: HTMLButtonElement) => void): void {
+  const buttons = qsa<HTMLButtonElement>(root, selector);
+  buttons.forEach((button) => button.addEventListener("click", () => {
+    buttons.forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === button)));
+    onSelect(button);
   }));
 }
 
@@ -35,42 +35,75 @@ function initSurface(id: string, data: SurfaceData): void {
   if (!root) return;
   const detail = qs<HTMLElement>(root, "[data-detail]");
   const status = qs<HTMLElement>(root, "[data-status]");
-  qsa<HTMLButtonElement>(root, "[data-key]").forEach((button) => button.addEventListener("click", () => {
+  onPick(root, "[data-key]", (button) => {
     const item = data[button.dataset.key ?? ""];
     if (!item || !detail) return;
-    qsa<HTMLButtonElement>(root, "[data-key]").forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === button)));
-    detail.innerHTML = item.map(([term, value]) => `<div><dt>${term}</dt><dd>${value}</dd></div>`).join("");
-    if (status) status.textContent = button.textContent ?? "selected";
+    detail.replaceChildren(...item.map(([term, value]) => {
+      const row = document.createElement("div");
+      row.append(element("dt", term), element("dd", value));
+      return row;
+    }));
+    if (status) status.textContent = button.textContent;
+  });
+}
+
+function initMatrix(
+  id: string,
+  groups: string[],
+  evaluate: (choices: Record<string, string>) => Verdict,
+): void {
+  const root = document.querySelector(id);
+  if (!root) return;
+  const badge = qs<HTMLElement>(root, "[data-verdict]");
+  const label = qs<HTMLElement>(root, "[data-verdict-label]");
+  const trace = qs<HTMLElement>(root, "[data-trace]");
+  const status = qs<HTMLElement>(root, "[data-status]");
+  const choices: Record<string, string> = {};
+  groups.forEach((group) => onPick(root, `[data-${group}] button`, (button) => {
+    const value = button.dataset.v;
+    if (!value) return;
+    choices[group] = value;
+    const selected = Object.keys(choices).length;
+    if (selected < groups.length) {
+      if (status) status.textContent = `已选 ${selected}/${groups.length} 个维度`;
+      return;
+    }
+    const result = evaluate(choices);
+    if (badge) badge.dataset.verdict = result.state;
+    if (label) label.textContent = result.label;
+    trace?.replaceChildren(...result.trace.map((line) => element("li", line)));
+    if (status) status.textContent = result.label;
   }));
+}
+
+function appendEvent(log: HTMLElement | null, index: number, name: string, note = ""): void {
+  if (!log) return;
+  const entry = document.createElement("span");
+  entry.className = "ev";
+  const order = element("span", String(index).padStart(2, "0"));
+  const event = element("span", name);
+  order.className = "t";
+  event.className = "k-sys";
+  entry.append(order, " ", event, note ? ` · ${note}` : "");
+  log.append(entry);
+  log.scrollTop = log.scrollHeight;
 }
 
 function initLoop(): void {
   const root = document.querySelector("#oc-loop");
   if (!root) return;
   const steps = qsa<HTMLElement>(root, "[data-steps] li");
-  const events = [
-    "message.updated (user)",
-    "session.status → busy",
-    "filterCompacted · 历史重建",
-    "终止判定 · 三条件合取",
-    "SessionTools.resolve · 装工具",
-    "message.part.updated (text/reasoning delta)",
-    "permission.asked",
-    "message.part.updated (step-finish)",
-    "message.updated (assistant, mode:\"compaction\")",
-    "session.idle",
-  ];
-  const notes = [
-    "先清理撤销后的残留，再把用户消息与附件写成可恢复的 parts。",
-    "同一会话只允许一条活动循环；新的调用等待当前执行，不另开一套状态。",
-    "从最近一次压缩边界之后重建有效历史，让循环只面对一条合法时间线。",
-    "三条合取：正常结束 ∧ 没有本地工具 part ∧ 回复属于最新用户；孤儿中断工具只告警，不阻断退出。",
-    "汇入内建、自定义、插件与 MCP 工具，再按模型、agent 与权限生成本轮视图。",
-    "稳定指令与动态上下文组装完成后开流，provider 事件被统一为可结算的 LLMEvent。",
-    "工具解析出真实资源后发起 ask；等待只挂起该工作单元，不冻结整个进程。",
-    "把 usage 与 cost 记入回复，同时判断上下文是否需要压缩。",
-    "摘要与近期原文形成新历史；当前 v1 可能注入一条合成“继续”消息再跑。",
-    "退出后异步修剪旧输出，状态转 idle，并通过事件流通知所有表面。",
+  const walkthrough = [
+    ["session.inbox.enqueued", "受理写入持久 Inbox。客户端此时已能收到成功响应。"],
+    ["session.execution.started", "唤醒按 Session ID 合并。在同一进程中，同一个 Session 由一个协调器负责运行。"],
+    ["session.inbox.delivered", "安全边界中移除 Inbox 待处理项并写入用户消息。"],
+    ["SessionContext.load", "按 Location 加载工具视图、指令与本模型兼容的历史。"],
+    ["session.step.started", "Runner 用一次 llm.stream 发起这个模型 Step。"],
+    ["session.tool.called", "先发布调用，再启动本地工具。需要审批时，工具挂在自己的 Deferred。"],
+    ["session.step.streamed", "Provider 流已读完，Step 仍要等工具结算。这个示例的等待跨过模型输出边界。"],
+    ["session.tool.success → session.step.ended", "审批放行，工具结算，记录模型用量。本地调用使结果需要回注。"],
+    ["session.step.started → session.step.ended", "第二个 Step 重读历史并读取工具结果。本例的模型答复无需再调用工具。"],
+    ["session.execution.succeeded", "Runner 检查 Inbox 和适用的 idle hook。无后续工作，结束该轮执行。"],
   ];
   let index = -1;
   let timer = 0;
@@ -78,20 +111,39 @@ function initLoop(): void {
   const note = qs<HTMLElement>(root, "[data-note]");
   const phase = qs<HTMLElement>(root, "[data-phase]");
   const led = qs<HTMLElement>(root, "[data-led]");
+  const initialNote = note?.textContent ?? "";
   const draw = () => {
-    steps.forEach((item, i) => { item.classList.toggle("is-now", i === index); item.classList.toggle("is-done", i < index); });
-    if (index >= 0) {
-      log?.insertAdjacentHTML("beforeend", `<span class="ev"><span class="t">${String(index + 1).padStart(2, "0")}</span> <span class="k-${index === 4 || index === 6 ? "tool" : "sys"}">${events[index]}</span></span>`);
-      if (note) note.textContent = notes[index];
-    }
-    if (phase) phase.textContent = index < 0 ? "idle" : index === steps.length - 1 ? "done" : `step ${index + 1}/${steps.length}`;
-    led?.classList.toggle("is-run", index >= 0 && index < steps.length - 1);
-    led?.classList.toggle("is-done", index === steps.length - 1);
+    steps.forEach((item, i) => {
+      item.classList.toggle("is-now", i === index);
+      item.classList.toggle("is-done", i < index);
+    });
+    const current = walkthrough[index];
+    if (current) appendEvent(log, index + 1, current[0]);
+    if (note) note.textContent = current?.[1] ?? initialNote;
+    const done = index === steps.length - 1;
+    if (phase) phase.textContent = index < 0 ? "idle" : done ? "完成" : `进度 ${index + 1}/${steps.length}`;
+    led?.classList.toggle("is-run", index >= 0 && !done);
+    led?.classList.toggle("is-done", done);
   };
-  const reset = () => { clearInterval(timer); index = -1; if (log) log.innerHTML = ""; if (note) note.textContent = "逐步观察一个请求如何展开为多个轮次。"; draw(); };
-  const step = () => { if (index < steps.length - 1) { index += 1; draw(); } else clearInterval(timer); };
+  const reset = () => {
+    clearInterval(timer);
+    index = -1;
+    log?.replaceChildren();
+    draw();
+  };
+  const step = () => {
+    if (index >= steps.length - 1) return;
+    index += 1;
+    draw();
+    if (index === steps.length - 1) clearInterval(timer);
+  };
   qs<HTMLButtonElement>(root, "[data-step]")?.addEventListener("click", step);
-  qs<HTMLButtonElement>(root, "[data-run]")?.addEventListener("click", () => { clearInterval(timer); if (index === steps.length - 1) reset(); step(); timer = window.setInterval(step, 560); });
+  qs<HTMLButtonElement>(root, "[data-run]")?.addEventListener("click", () => {
+    clearInterval(timer);
+    if (index === steps.length - 1) reset();
+    step();
+    if (index < steps.length - 1) timer = window.setInterval(step, 700);
+  });
   qs<HTMLButtonElement>(root, "[data-reset]")?.addEventListener("click", reset);
   window.addEventListener("pagehide", () => clearInterval(timer), { once: true });
 }
@@ -99,277 +151,177 @@ function initLoop(): void {
 function initProjection(): void {
   const root = document.querySelector("#oc-projection");
   if (!root) return;
-  let rows = 0;
-  let sse = 0;
+  const events: Record<string, { name: string; note: string; durable?: true; pending?: number; cost?: number }> = {
+    enqueued: { name: "session.inbox.enqueued", note: "受理后有待处理 Inbox 行", durable: true },
+    delivered: { name: "session.inbox.delivered", note: "同事务消费待处理项并写入用户消息", durable: true },
+    delta: { name: "session.text.delta", note: "实时文本片段" },
+    ended: { name: "session.text.ended", note: "完整文本进入投影", durable: true },
+    asked: { name: "permission.asked", note: "待批项在进程内", pending: 1 },
+    replied: { name: "permission.replied", note: "本例仅答复一条 once 审批", pending: -1 },
+    stepfinish: { name: "session.step.ended", note: "写入结算及用量，示意成本加 $0.05", durable: true, cost: 0.05 },
+    idle: { name: "session.execution.succeeded", note: "投影显示本次执行达到成功终态", durable: true },
+  };
+  let durable = 0;
+  let frames = 0;
   let pending = 0;
   let cost = 0;
   const log = qs<HTMLElement>(root, "[data-log]");
-  const render = (name?: string, note?: string) => {
-    const set = (selector: string, value: string) => { const el = qs<HTMLElement>(root, selector); if (el) el.textContent = value; };
-    set("[data-sqlite]", String(rows)); set("[data-sse]", String(sse)); set("[data-pending]", String(pending)); set("[data-cost]", `¥${cost.toFixed(2)}`);
-    if (name) log?.insertAdjacentHTML("beforeend", `<span class="ev"><span class="t">e${sse}</span> <span class="k-${name.startsWith("permission") ? "tool" : "sys"}">${name}</span>${note ? ` <span class="t">${note}</span>` : ""}</span>`);
-  };
+  const counters = ["[data-sqlite]", "[data-sse]", "[data-pending]", "[data-cost]"].map((name) =>
+    qs<HTMLElement>(root, name),
+  );
+  const render = () => [String(durable), String(frames), String(pending), `$${cost.toFixed(2)}`]
+    .forEach((value, i) => {
+      const node = counters[i];
+      if (node) node.textContent = value;
+    });
+
   qsa<HTMLButtonElement>(root, "[data-event]").forEach((button) => button.addEventListener("click", () => {
-    const type = button.dataset.event;
-    if (type === "reset") { rows = 0; sse = 0; pending = 0; cost = 0; if (log) log.innerHTML = ""; render(); return; }
-    if (type === "created") { rows += 1; sse += 1; render("session.created", "建立可查询的会话状态"); return; }
-    if (type === "user") { rows += 1; sse += 1; render("message.updated (user)", "最新用户与父子关系就绪"); return; }
-    if (type === "part") { sse += 1; render("part.updated (text delta)", "增量服务实时 UI，终态才成为权威 part"); return; }
-    if (type === "stepfinish") { sse += 1; cost += 0.05; render("step-finish", "把 usage/cost 合并进本轮回复"); return; }
-    if (type === "asked") { pending += 1; sse += 1; render("permission.asked", "等待审批；工具尚未结算"); return; }
-    if (type === "replied") { pending = 0; sse += 1; render("permission.replied (always)", "级联放行同 session pending"); return; }
-    if (type === "idle") { sse += 1; render("session.idle", "所有表面都可恢复可输入状态"); }
+    const type = button.dataset.event ?? "";
+    if (type === "reset") {
+      durable = 0;
+      frames = 0;
+      pending = 0;
+      cost = 0;
+      log?.replaceChildren();
+      render();
+      return;
+    }
+    const event = events[type];
+    if (!event) return;
+    if (event.pending === -1 && pending === 0) return;
+    durable += event.durable ? 1 : 0;
+    frames += 1;
+    pending += event.pending ?? 0;
+    cost += event.cost ?? 0;
+    appendEvent(log, frames, event.name, event.note);
+    render();
   }));
 }
 
 function initDecision(): void {
-  const root = document.querySelector("#oc-permission");
-  if (!root) return;
-  let perm = "";
-  let agent = "";
-  let rulepos = "";
-  let reply = "";
-  type Rule = { permission: string; action: "allow" | "deny" };
-  const baseChain = (name: string): Rule[] => {
-    if (name === "plan") return [{ permission: "edit", action: "deny" }];
-    if (name === "explore") return [{ permission: "*", action: "deny" }, ...["read", "grep", "glob", "bash", "webfetch", "websearch"].map((p) => ({ permission: p, action: "allow" as const }))];
-    if (name === "subagent") return [{ permission: "task", action: "deny" }, { permission: "todowrite", action: "deny" }];
-    return [];
-  };
-  const evaluate = () => {
-    const badge = qs<HTMLElement>(root, "[data-verdict]");
-    const label = qs<HTMLElement>(root, "[data-verdict-label]");
-    const trace = qs<HTMLElement>(root, "[data-trace]");
-    const status = qs<HTMLElement>(root, "[data-status]");
-    if (!perm || !agent || !rulepos || !reply) {
-      if (status) status.textContent = `已选 ${[perm, agent, rulepos, reply].filter(Boolean).length}/4 维`;
-      return;
+  initMatrix("#oc-permission", ["perm", "agentgrp", "rulepos", "replygrp"], ({ perm, agentgrp, rulepos, replygrp }) => {
+    const resource = perm === "protected" ? "protected/guide.md" : "docs/guide.md";
+    const denied = agentgrp === "deny" && perm === "protected";
+    const trace = [`请求 action=edit，resource=${resource}。`];
+    if (rulepos === "allow") {
+      trace.push("Session 的资源级 allow 后置，覆盖同资源的其他配置匹配。");
+      return { state: "ok", label: "规则直接放行", trace };
     }
-    const chain = [...baseChain(agent)];
-    if (rulepos === "pre") chain.unshift({ permission: perm, action: "allow" });
-    if (rulepos === "post") chain.push({ permission: perm, action: "allow" });
-    const matched = [...chain].reverse().find((rule) => rule.permission === perm || rule.permission === "*");
-    const action = matched?.action ?? "ask";
-    const lines: string[] = [];
-    if (perm === "bash") lines.push("先把命令归一成可复用的资源 pattern，再决定 always 的授权粒度");
-    lines.push(`规则链 findLast → ${matched ? `命中 ${matched.permission}:${matched.action}` : "无匹配 → 默认 ask"}`);
-    let verdict = "ask";
-    let outcome = "";
-    if (action === "deny") { verdict = "deny"; outcome = "DeniedError 直接回给模型，不弹审批"; }
-    else if (action === "allow") { verdict = "ok"; outcome = "通过，工具执行纤不停留"; }
-    else {
-      lines.push("pending.push(Deferred) → publish permission.asked（SSE 广播）→ 工具纤 await");
-      if (reply === "once") { verdict = "ok"; outcome = "Deferred 解开，仅放行本次"; }
-      if (reply === "always") { verdict = "ok"; outcome = "放行 + 会话级白名单追加，已匹配 pending 级联放行"; }
-      if (reply === "reject") { verdict = "deny"; outcome = "拒绝 + 级联拒绝同 session 全部 pending，CorrectedError 带用户反馈回注"; }
+    if (denied) {
+      trace.push("Agent 的 protected/* deny 是此资源的最后一条配置匹配。先拒绝，已有项目级保存规则也无法覆盖。");
+      return { state: "deny", label: "配置直接拒绝", trace };
     }
-    lines.push(`裁决：${outcome}`);
-    if (verdict === "ok" && action === "ask" && reply === "always") lines.push("下一条匹配同一授权模式的请求会直接放行；范围过宽会放大风险");
-    if (badge) badge.dataset.verdict = verdict;
-    if (label) label.textContent = verdict === "ok" ? "放行" : verdict === "deny" ? "拒绝" : "挂起等待";
-    if (trace) trace.innerHTML = lines.map((line) => `<li>${line}</li>`).join("");
-    if (status) status.textContent = `已选 4/4 · ${verdict === "ok" ? "放行" : verdict === "deny" ? "拒绝" : "挂起等待"}`;
-  };
-  const select = (group: string, value: string, button: HTMLButtonElement) => {
-    qsa<HTMLButtonElement>(root, `[data-${group}] button`).forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === button)));
-    if (group === "perm") perm = value; else if (group === "agentgrp") agent = value; else if (group === "rulepos") rulepos = value; else reply = value;
-    evaluate();
-  };
-  (["perm", "agentgrp", "rulepos", "replygrp"] as const).forEach((group) => qsa<HTMLButtonElement>(root, `[data-${group}] button`).forEach((button) => button.addEventListener("click", () => select(group, button.dataset.v ?? "", button))));
+    trace.push("无匹配，且本例没有已保存的 allow。发布 permission.asked，工具等待 Deferred。");
+    if (replygrp === "always") {
+      trace.push("本例的请求附带可保存资源。持久保存项目级 allow，并重评当前 Location 内待批项。");
+      return { state: "ok", label: "放行并保存", trace };
+    }
+    if (replygrp === "once") {
+      trace.push("仅完成本次 Deferred。");
+      return { state: "ok", label: "放行本次", trace };
+    }
+    trace.push("拒绝同 Session、同来源消息的审批批次。");
+    trace.push(replygrp === "reject" ? "反馈可作为工具失败交给模型。" : "无反馈的拒绝可中断当前 Step。");
+    return { state: "deny", label: "用户拒绝", trace };
+  });
 }
 
 function initTools(): void {
-  const root = document.querySelector("#oc-tools");
-  if (!root) return;
-  let model = "";
-  let agent = "";
-  const trace = qs<HTMLElement>(root, "[data-trace]");
-  const badge = qs<HTMLElement>(root, "[data-verdict]");
-  const label = qs<HTMLElement>(root, "[data-verdict-label]");
-  const status = qs<HTMLElement>(root, "[data-status]");
-  const views: Record<string, { verdict: string; label: string; lines: string[] }> = {
-    build: { verdict: "ok", label: "清单最宽", lines: ["build 没有额外的全局 deny；高风险循环、外部目录和敏感读取仍会进入 ask。"] },
-    plan: { verdict: "deny", label: "edit 现场被拒", lines: ["plan 预置 edit deny。deny 不一定改变广告清单；它也可以在调用现场直接拒绝。"] },
-    explore: { verdict: "deny", label: "白名单只读", lines: ["explore 先全拒绝，再对白名单工具放行；名单外调用直接失败。"] },
-    subagent: { verdict: "deny", label: "禁再派生", lines: ["子代理只继承父级 deny 与外部目录限制，allow 不继承，并默认补上 task 与 todowrite deny。"] },
-  };
-  const evaluate = () => {
-    if (!model || !agent) {
-      if (status) status.textContent = `已选 ${[model, agent].filter(Boolean).length}/2 维`;
-      return;
+  initMatrix("#oc-tools", ["modelgrp", "rulegrp"], ({ modelgrp, rulegrp }) => {
+    const list = modelgrp === "patch" ? "patch" : "edit、write";
+    const trace = [`模型政策选出 ${list}。这组工具都受 edit action 的权限约束。`];
+    if (rulegrp === "deny") {
+      trace.push("最后的 edit 规则为 resource=* 的 deny，工具快照移除整类编辑工具。");
+      return { state: "deny", label: "编辑工具隐藏", trace };
     }
-    const view = views[agent];
-    const lines = ["入口：内建、自定义、插件与 MCP 工具汇入同一装配阶段。"];
-    lines.push(model === "gpt5"
-      ? "模型视图：GPT 新模型拿到 apply_patch，edit/write 在广告前被过滤；模型从未见过它们。"
-      : "模型视图：Claude 系保留 edit/write，并过滤 apply_patch。");
-    lines.push(...view.lines);
-    if (agent === "plan" && model === "gpt5") lines.push("叠加效应：清单里本就没有 edit，因此 edit deny 没有目标；执行权限不能复活不可见工具。");
-    if (agent === "plan") lines.push("task 对特定子代理的 deny 会直接改变 task 描述中的可选名单；可见性与执行控制使用同一份规则。");
-    lines.push("MCP 工具当前通常在每次调用前强制 ask，不能把“出现在清单”理解为“已授权”。");
-    lines.push("装配终点：agent 规则与会话规则合并；工具在执行现场用真实资源再次裁决。");
-    const eff = { verdict: view.verdict, label: view.label };
-    if (agent === "plan" && model === "gpt5") { eff.verdict = "ask"; eff.label = "edit 不在清单 · deny 落空"; }
-    if (trace) trace.innerHTML = lines.map((line) => `<li>${line}</li>`).join("");
-    if (badge) badge.dataset.verdict = eff.verdict;
-    if (label) label.textContent = eff.label;
-    if (status) status.textContent = `${model === "gpt5" ? "GPT-5 系" : "claude 系"} × ${agent} · ${eff.label}`;
-  };
-  const select = (group: string, value: string, button: HTMLButtonElement) => {
-    qsa<HTMLButtonElement>(root, `[data-${group}] button`).forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === button)));
-    if (group === "modelgrp") model = value; else agent = value;
-    evaluate();
-  };
-  (["modelgrp", "agentgrp"] as const).forEach((group) => qsa<HTMLButtonElement>(root, `[data-${group}] button`).forEach((button) => button.addEventListener("click", () => select(group, button.dataset.v ?? "", button))));
-}
-
-function initSystem(): void {
-  const root = document.querySelector("#oc-system");
-  if (!root) return;
-  const detail = qs<HTMLElement>(root, "[data-detail]");
-  const status = qs<HTMLElement>(root, "[data-status]");
-  const base = qs<HTMLElement>(root, "[data-base]");
-  const tail: Array<[string, string]> = [
-    ["② ENV", "环境块每轮重新观察：目录、平台与日期等事实"],
-    ["③ RULES", "项目规则按发现链装入，读到子目录时还可按需追加更近的规则"],
-    ["④ MCP", "只有当前服务提供说明时才出现对应指令段"],
-    ["⑤ SKILLS", "只常驻名称与描述，正文由模型按需加载"],
-    ["段序", "基础指令在前，动态事实随后；插件钩子可在末端变换 system 数组"],
-    ["迁移提醒", "这是当前 v1 的重组模型；v2 把 agent 指令和 context epoch 基线明确分开"],
-  ];
-  const data: Record<string, { base: string; head: Array<[string, string]> }> = {
-    claude: { base: "Anthropic 基础段", head: [["① BASE", "Claude 家族选择对应基础指令；agent 自定义指令存在时可整体替代它"]] },
-    gpt: { base: "GPT 基础段", head: [["① BASE", "GPT 家族选择自己的基础指令；较老模型可能进入另一套兼容指令"]] },
-    codex: { base: "Codex 基础段", head: [["① BASE", "Codex 在 OpenAI 家族内选择专用基础指令；环境和项目规则仍按同一顺序叠加"]] },
-  };
-  qsa<HTMLButtonElement>(root, "[data-key]").forEach((button) => button.addEventListener("click", () => {
-    const item = data[button.dataset.key ?? ""];
-    if (!item || !detail) return;
-    qsa<HTMLButtonElement>(root, "[data-key]").forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === button)));
-    detail.innerHTML = [...item.head, ...tail].map(([term, value]) => `<div><dt>${term}</dt><dd>${value}</dd></div>`).join("");
-    if (base) base.textContent = item.base;
-    if (status) status.textContent = `${button.textContent ?? "已选"} · 只换 BASE 段`;
-  }));
-}
-
-function initModels(): void {
-  const root = document.querySelector("#oc-models");
-  if (!root) return;
-  const detail = qs<HTMLElement>(root, "[data-detail]");
-  const status = qs<HTMLElement>(root, "[data-status]");
-  const data: SurfaceData = {
-    claude: [
-      ["工具面", "Claude 系保留 edit/write，过滤 apply_patch"],
-      ["system 段", "选择 Anthropic 基础指令；动态上下文继续按固定顺序叠加"],
-      ["reasoning 方言", "新模型支持自适应思考档位，旧模型不会收到不兼容参数"],
-      ["判断提示", "行为突变时先比较实际工具视图，再讨论模型偏好"],
-    ],
-    gpt5: [
-      ["工具面", "GPT 新模型只拿 apply_patch；edit/write 在广告前已被过滤"],
-      ["system 段", "选择 GPT 基础指令；部分老模型进入兼容分支"],
-      ["reasoning 方言", "reasoning_effort 会按模型能力裁剪，避免发送不兼容档位"],
-      ["判断提示", "先查清单，再判断模型为何不用某工具"],
-    ],
-    codex: [
-      ["工具面", "Codex 同样使用 apply_patch 视图，edit/write 不进入本轮广告"],
-      ["system 段", "在 GPT 家族内选择 Codex 专用基础指令"],
-      ["reasoning 方言", "沿用 OpenAI 参数方言；认证能力由对应插件接入"],
-      ["判断提示", "工具视图和基础指令会同时变化，排障必须分开比较"],
-    ],
-  };
-  qsa<HTMLButtonElement>(root, "[data-key]").forEach((button) => button.addEventListener("click", () => {
-    const item = data[button.dataset.key ?? ""];
-    if (!item || !detail) return;
-    qsa<HTMLButtonElement>(root, "[data-key]").forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === button)));
-    detail.innerHTML = item.map(([term, value]) => `<div><dt>${term}</dt><dd>${value}</dd></div>`).join("");
-    if (status) status.textContent = `${button.textContent ?? "已选"} · 视图已切换`;
-  }));
+    trace.push("保留在可访问工具快照中。Code Mode 设置决定工具是直接定义还是目录入口。");
+    if (rulegrp === "scoped") {
+      trace.push("调用落到 protected/guide.md 时检查到资源级 deny。其他资源仍按自身匹配裁决。");
+      return { state: "ask", label: "可见 · 路径单独裁决", trace };
+    }
+    trace.push("本例的 edit:* allow 在配置检查时满足所有文件资源。");
+    return { state: "ok", label: "可见 · 示例规则放行", trace };
+  });
 }
 
 function initTaskLab(): void {
-  const root = document.querySelector("#oc-subagent");
-  if (!root) return;
-  let parent = "";
-  let budget = "";
-  const trace = qs<HTMLElement>(root, "[data-trace]");
-  const badge = qs<HTMLElement>(root, "[data-verdict]");
-  const label = qs<HTMLElement>(root, "[data-verdict-label]");
-  const status = qs<HTMLElement>(root, "[data-status]");
-  const parents: Record<string, { lines: string[]; inherited: string[] }> = {
-    clean: { lines: ["父会话无覆盖：没有额外 deny 需要下传；子会话仍按自身规则求值。"], inherited: [] },
-    deny: { lines: ["父含 edit deny：限制会跟进子会话，防止通过派生绕过父级禁令。"], inherited: ["edit:*→deny（继承父）"] },
-    allow: { lines: ["父含 edit allow：能力不会自动下放；子会话仍需依据自身规则获批。"], inherited: [] },
-  };
-  const budgets: Record<string, { verdict: string; label: string; wall: string; lines: string[] }> = {
-    d1sinf: {
-      verdict: "deny", label: "递归封死", wall: "深度墙 depth=1",
-      lines: ["深度墙：默认 depth=1，子会话再派生会在入口失败；即使权限放开，也过不了结构限制。", "步数墙：steps 未设意味着没有有限轮次预算。"],
-    },
-    d2s5: {
-      verdict: "ok", label: "孙会话可派生", wall: "深度墙 depth=2 · steps=5",
-      lines: ["深度墙：depth=2 允许再派生一层，第三层才被拦。", "步数墙：第 5 步进入收尾，要求停止工具并用文本交接。"],
-    },
-    d1s3: {
-      verdict: "deny", label: "递归封死", wall: "深度墙 depth=1 · steps=3",
-      lines: ["深度墙：depth=1，子会话无再派生权。", "步数墙：第 3 步就进入文本收尾，预算更紧。"],
-    },
-  };
-  const evaluate = () => {
-    if (!parent || !budget) {
-      if (status) status.textContent = `已选 ${[parent, budget].filter(Boolean).length}/2 维`;
-      return;
+  initMatrix("#oc-subagent", ["parentgrp", "budgetgrp", "grantgrp"], ({ parentgrp, budgetgrp, grantgrp }) => {
+    const depth = parentgrp === "child" ? 1 : 0;
+    const limit = budgetgrp === "one" ? 1 : 2;
+    const trace = [`沿 parentID 上溯：当前深度 ${depth}，配置上限 ${limit}。`];
+    if (depth >= limit) {
+      trace.push("深度达到上限，在创建或复用子会话前失败。");
+      return { state: "deny", label: "深度已满", trace };
     }
-    const p = parents[parent];
-    const view = budgets[budget];
-    const lines = ["入口：task 沿 parent 链计算深度，再创建普通子会话；子代理不是第二套引擎。"];
-    lines.push(...p.lines);
-    lines.push("派生时默认补上 task 与 todowrite deny，避免子代理继续扩张任务树或改写父级计划。");
-    const chain = [...p.inherited, "task:*→deny", "todowrite:*→deny（general 预置）"];
-    lines.push(`子会话规则集 = [ ${chain.join(" ， ")} ]。`);
-    lines.push(...view.lines);
-    lines.push("子会话递归复用主循环；事件带自己的 session 身份，父界面可折叠观察而不混写状态。");
-    if (trace) trace.innerHTML = lines.map((line) => `<li>${line}</li>`).join("");
-    if (badge) badge.dataset.verdict = view.verdict;
-    if (label) label.textContent = view.label;
-    if (status) status.textContent = `已选 2/2 维 · 规则集 deny×${chain.length} · ${view.wall}`;
+    trace.push("教学示例选择可作子代理的 agent。权限请求是 subagent:<agent ID>。");
+    if (grantgrp === "deny") {
+      trace.push("父会话调用被权限规则拒绝。");
+      return { state: "deny", label: "派生被拒绝", trace };
+    }
+    if (grantgrp === "ask") {
+      trace.push("等待审批回复，获批才启动子任务。");
+      return { state: "ask", label: "等待派生审批", trace };
+    }
+    trace.push(
+      "新 child 继承 Location 和显式父会话权限。子代理的后续工具还要按子 agent/session 规则裁决。",
+      "先受理子输入，再交给后台 Job；工具迅速返回 child ID。",
+      "子任务完成后报告进入父 Inbox，下一安全边界才进入父历史。",
+    );
+    return { state: "ok", label: "启动后台子任务", trace };
+  });
+}
+
+function initAtlas(): void {
+  const root = document.querySelector("#oc-atlas");
+  if (!root) return;
+  const detail = qs<HTMLElement>(root, "[data-detail]");
+  const status = qs<HTMLElement>(root, "[data-status]");
+  const data: Record<string, [string, string]> = {
+    stuck: ["查 Inbox 交付与 Step 边界", "已受理但未交付时，核对 delivery、当前运行与控制项。已出现 session.step.streamed 但缺结算时，检查工具状态和待批请求。"],
+    approve: ["查本次请求资源和保存字段", "检查 action/resource 的末条配置匹配、项目保存范围和客户端回复。没有可保存资源时，always 只完成本次。"],
+    dumb: ["查压缩记录与模型兼容性", "对照旧模型的 native window 和新模型使用的历史边界。模型切换后，视图内保留的数据与准备发送的上下文长度会不同。"],
+    model: ["查未结算的本地或托管调用", "用 Step 与工具终态确定是否卡在旧记录清理。核对执行 claim 的恢复状态及外部工具实际是否已提交。"],
   };
-  const select = (group: string, value: string, button: HTMLButtonElement) => {
-    qsa<HTMLButtonElement>(root, `[data-${group}] button`).forEach((candidate) => candidate.setAttribute("aria-pressed", String(candidate === button)));
-    if (group === "parentgrp") parent = value; else budget = value;
-    evaluate();
-  };
-  (["parentgrp", "budgetgrp"] as const).forEach((group) => qsa<HTMLButtonElement>(root, `[data-${group}] button`).forEach((button) => button.addEventListener("click", () => select(group, button.dataset.v ?? "", button))));
+  onPick(root, "[data-key]", (button) => {
+    const item = data[button.dataset.key ?? ""];
+    if (!item || !detail) return;
+    detail.replaceChildren(element("h3", item[0]), element("p", item[1]));
+    if (status) status.textContent = button.textContent;
+  });
 }
 
 function boot(): void {
-  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
   initTheme();
   initSeriesNav();
-  initReveal(reduced.matches);
+  initReveal(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   initNavMenu();
   initHeroPause();
   initLoop();
   initProjection();
   initDecision();
   initTools();
-  initSystem();
-  initModels();
   initTaskLab();
   initSurface("#oc-surfaces", {
-    tui: [["进程形态", "主线程 UI + Worker 内的 server"], ["传输", "进程内 fetch 与 RPC 事件，不占 TCP 端口"], ["共同内核", "仍经过同一套路由和会话契约"], ["判断提示", "界面卡住先分 Worker、事件桥与会话状态"]],
-    serve: [["进程形态", "独立 headless server"], ["传输", "HTTP + SSE；WebSocket 只服务交互终端"], ["共同内核", "与本地 TUI 使用同一业务路由"], ["安全提示", "局域网绑定与可选认证必须单独核对"]],
-    run: [["进程形态", "一次性 headless CLI"], ["传输", "文本输出或结构化事件行"], ["审批", "无人值守模式必须显式设计批准或拒绝策略"], ["判断提示", "静默退出先查权限、过滤与重试耗尽"]],
-    github: [["进程形态", "自动化进程启动 server 子进程"], ["传输", "生成 SDK 通过 HTTP 调用"], ["触发", "评论提及或工作流输入"], ["判断提示", "先证明事件与退出码契约，再谈自动化成功"]],
-    acp: [["协议", "Agent Client Protocol"], ["角色", "OpenCode 作为 Agent 端"], ["能力", "新建、提示、切换模式、派生会话"], ["判断提示", "编辑器只是协议表面，不拥有另一套循环"]],
-    desktop: [["进程形态", "桌面或 Web 应用"], ["传输", "同一 SDK + SSE"], ["复用", "共享终端 UI 组件与会话状态"], ["判断提示", "只换表面，不应改变持久状态语义"]],
+    tui: [["启动", "默认连接托管本地服务"], ["边界", "TUI 持有视图状态，通过客户端提交 prompt 并监听事件"]],
+    remote: [["启动", "--server 显式指向已有服务"], ["边界", "客户端先查询服务信息，实际执行由目标服务和会话 Location 决定"]],
+    serve: [["启动", "opencode serve 独立提供服务，可指定 STDIO"], ["边界", "服务端运行 Session 与投影，接入端消费响应与状态"]],
+    run: [["启动", "opencode run 是一次性客户端"], ["审批", "非交互模式默认带反馈拒绝；自动通过时回复 once"], ["输出", "由客户端读取状态和事件后输出"]],
+    acp: [["宿主", "IDE 等 ACP 客户端"], ["适配", "ACP 入口通过内部客户端提交会话输入并转换 Step、工具和审批事件"]],
+    desktop: [["宿主", "桌面应用与服务连接"], ["边界", "渲染器使用 sidecar 或已保存的服务器连接，服务端持有 Session"]],
   });
-  initChoiceDetail("#oc-atlas", {
-    stuck: { title: "会话被上一轮占着，或事件流断了", body: "同一会话单飞是设计。先查 idle/busy/retry，再确认客户端是否仍收到心跳与事件；不要先重启模型。", status: "FIRST CHECK · SESSION STATUS" },
-    approve: { title: "默认 ask，后写规则又覆盖了 allow", body: "检查 asked 是否缺 replied，再按从后向前的命中顺序重算规则；always 只应保存必要范围。", status: "FIRST CHECK · PENDING APPROVAL" },
-    dumb: { title: "压缩或修剪丢了当前任务细节", body: "检查最新摘要是否包含目标、阻塞与下一步，再看近期尾部和被清理的旧工具输出；不要把 prune 当 compaction。", status: "FIRST CHECK · MEMORY BOUNDARY" },
-    model: { title: "工具视图、基础指令和参数方言一起变了", body: "先比较模型实际收到的工具清单，再比较基础指令与 reasoning 参数；模型不是不用一个从未看见的工具。", status: "FIRST CHECK · REQUEST SHAPE" },
+  initSurface("#oc-system", {
+    default: [["基础 system", "默认 system.txt 随工具视图渲染专用指导"], ["指令基线", "按通用到会话专有的顺序合并指令"], ["请求", "历史转换后交给会话 hook 与模型路由"]],
+    custom: [["基础 system", "agent.system 替换基础文本"], ["指令基线", "独立保留指令来源与 Session 历史"], ["请求", "同样应用会话 hook"]],
+    changed: [["基础 system", "agent 及工具视图保持时可复用"], ["指令更新", "指令状态记录变化，后续历史可带更新"], ["压缩", "压缩完成后推进指令 epoch"]],
   });
+  initSurface("#oc-models", {
+    compatible: [["工具", "示例模型用 edit、write，隐藏 patch"], ["传输", "利用所选模型的 HTTP 路由"], ["观测", "模型事件规范化后由 Step 归档"]],
+    patch: [["工具", "模型 ID 符合策略时提供 patch；权限仍叫 edit"], ["模型参数", "variant 与 Provider 路由一起解析"], ["观测", "对照请求快照与工具策略分辨不可见还是被拒绝"]],
+    websocket: [["传输", "模型选择和传输配置允许时使用 Session 的 Provider WebSocket"], ["回退", "达到相应的传输条件可换用 HTTP"], ["观测", "客户端收 Agent 事件的 SSE 不受 Provider 通道切换影响"]],
+  });
+  initAtlas();
   initChapterReader();
 }
 
-if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, { once: true }); else boot();
+if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot, { once: true });
+else boot();

@@ -141,7 +141,7 @@ const CX_TOOL_STAGES: ToolStage[] = [
   },
   {
     title: "校验",
-    note: "结构化调用先按 schema 解析。参数不合法时，错误作为可行动文本回给模型，让它修正；只有程序性 Fatal 才终止整个 Turn。",
+    note: "路由器识别模型响应的调用类型，具体 handler 再解析参数。可纠正的解析错误作为工具错误返回模型。",
     trace: "校验：FunctionCall → schema 检查 → 合法调用或可纠正错误",
     log: ["k-warn", "schema check → 参数合法"],
   },
@@ -159,13 +159,13 @@ const CX_TOOL_STAGES: ToolStage[] = [
   },
   {
     title: "归一化",
-    note: "长输出在写入历史时就按预算截断，保留高信号的头尾并明确声明缺失规模。模型后续看到的是归一化后的版本。",
+    note: "写入模型活跃历史时按预算截断长输出。对照时另查客户端 Item 和原始 rollout，它们的保存路径不同。",
     trace: "归一化：控制体积 → 保留头尾 → 标记截断规模",
-    log: ["k-sys", "214 行输出 → 已按预算截断并入档"],
+    log: ["k-sys", "214 行输出 → 已按活跃历史预算截断"],
   },
   {
     title: "回注",
-    note: "工具结果按 call id 与调用配对进入历史，下一次请求再从权威历史派生。取消的调用也必须合成回执，否则恢复时会出现孤儿调用。",
+    note: "工具结果按 call ID 与调用配对。构造下一次请求时检查历史中缺失的回执与孤儿输出，并按路径归一化。",
     trace: "回注：工具输出与 call id 配对 → 历史 → 下一 step",
     log: ["k-sys", "tool output paired → 模型继续判断"],
   },
@@ -252,7 +252,7 @@ type CxTarget = "idle" | "busy" | "evicted";
 function initCxMultiAgent(root: HTMLElement | null): void {
   if (!root) return;
   let task: CxTask = "independent";
-  let fork: CxFork = "2";
+  let fork: CxFork = "all";
   let delivery: CxDelivery = "queue";
   let target: CxTarget = "idle";
 
@@ -282,8 +282,8 @@ function initCxMultiAgent(root: HTMLElement | null): void {
       fork === "none"
         ? "fork_turns=none → 任务描述必须自包含"
         : fork === "2"
-          ? "fork_turns=2 → 只继承最近两轮并洗除工具过程"
-          : "fork_turns=all → 保留完整父历史，但上下文更重",
+          ? "兼容旧值 fork_turns=2 → 按 all 处理，继承筛选后的全部父历史"
+          : "fork_turns=all → 继承筛选后的全部父历史",
     );
     steps.push(
       delivery === "wake"
@@ -363,7 +363,7 @@ const CX_SCENARIOS: CxScenario[] = [
     winner: "flag",
     ladder: [
       "-c model=… → SessionFlags · 优先级 30　← 胜",
-      "项目配置层 → Project · 25",
+      "可信项目配置层 → Project · 25",
       "用户配置层 → User · 20",
       "打包默认 → PackagedDefaults · −10",
     ],
@@ -371,7 +371,7 @@ const CX_SCENARIOS: CxScenario[] = [
   },
   {
     conflict: "sandbox_mode = ?　MDM 也发了一份",
-    question: "MDM 偏好层下发 read-only，用户与项目都写了 workspace-write。谁生效？",
+    question: "MDM 偏好层下发 read-only，用户与可信项目都写了 workspace-write。谁生效？",
     candidates: [
       { id: "mdm", label: "MDM 偏好层下发（Mdm）" },
       { id: "user", label: "用户配置层（User）" },
@@ -379,7 +379,7 @@ const CX_SCENARIOS: CxScenario[] = [
     ],
     winner: "proj",
     ladder: [
-      "项目配置层 → Project · 25　← 胜",
+      "可信项目配置层 → Project · 25　← 胜",
       "用户配置层 → User · 20",
       "MDM 下发偏好 → Mdm · 0",
     ],
@@ -412,12 +412,12 @@ const CX_SCENARIOS: CxScenario[] = [
     ],
     winner: "concat",
     ladder: [
-      "项目根指令（最先加载）",
+      "项目根指令（最先加载的项目文件）",
       "中间目录指令（按目录顺序拼接）",
       "当前目录 override（替换同目录主文件，最后加载）",
-      "总量预算 project_doc_max_bytes，超限截尾而非随机丢弃",
+      "总量预算 project_doc_max_bytes，超限截断，耗尽后跳过后续文件",
     ],
-    why: "项目指令不是跨层覆盖，而是从项目根到当前目录逐层拼接；override 只替换所在目录的主文件，总量超预算时从尾部截断。",
+    why: "可信项目指令从根到当前目录逐层拼接。override 优先于同目录主文件。项目预算用尽后，后续文件可能省略。",
   },
 ];
 

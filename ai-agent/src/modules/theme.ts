@@ -4,17 +4,12 @@ type Theme = "light" | "dark";
 
 export function initTheme(): void {
   const root = document.documentElement;
-  const systemDark = window.matchMedia("(prefers-color-scheme: dark)");
   const buttons = Array.from(
     document.querySelectorAll<HTMLButtonElement>("[data-theme-toggle]"),
   );
   if (buttons.length === 0) return;
 
-  const effectiveTheme = (): Theme =>
-    root.dataset.theme === "dark" ||
-    (!root.dataset.theme && systemDark.matches)
-      ? "dark"
-      : "light";
+  const effectiveTheme = (): Theme => root.dataset.theme === "light" ? "light" : "dark";
 
   const render = (): void => {
     const current = effectiveTheme();
@@ -41,6 +36,5 @@ export function initTheme(): void {
       setTheme(effectiveTheme() === "dark" ? "light" : "dark");
     });
   }
-  systemDark.addEventListener("change", render);
   render();
 }

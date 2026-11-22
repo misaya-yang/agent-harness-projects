@@ -40,11 +40,67 @@ function initLoop(): void {
 }
 
 function initState(): void {
-  const root = document.querySelector("#pi-state"); if (!root) return;
-  let streaming = false; let messages = 0; let tools = 0;
-  const log = qs<HTMLElement>(root, "[data-log]"); const phase = qs<HTMLElement>(root, "[data-phase]"); const led = qs<HTMLElement>(root, "[data-led]");
-  const render = (event?: string, note?: string) => { const set = (selector: string, value: string) => { const el = qs<HTMLElement>(root, selector); if (el) el.textContent = value; }; set("[data-streaming]", streaming ? "YES" : "NO"); set("[data-messages]", String(messages)); set("[data-tools]", String(tools)); if (phase) phase.textContent = streaming ? "running" : "idle"; led?.classList.toggle("is-run", streaming); if (event) log?.insertAdjacentHTML("beforeend", `<span class="ev"><span class="k-sys">${event}</span>${note ? ` <span class="t">${note}</span>` : ""}</span>`); };
-  qsa<HTMLButtonElement>(root, "[data-state-event]").forEach((button) => button.addEventListener("click", () => { const event = button.dataset.stateEvent; if (event === "reset") { streaming = false; messages = 0; tools = 0; if (log) log.innerHTML = ""; render(); return; } if (event === "message_start") { streaming = true; render(event, "partial 进入 streamingMessage"); } if (event === "message_update") render(event, "更新 partial，不追加 transcript"); if (event === "tool_start") { streaming = true; tools += 1; render(event); } if (event === "tool_end") { tools = Math.max(0, tools - 1); render(event); } if (event === "message_end") { messages += 1; render(event, "完成消息追加到 public state"); } if (event === "agent_end") { streaming = false; tools = 0; render(event, "listener barrier 之后才 idle"); } }));
+  const root = document.querySelector("#pi-state");
+  if (!root) return;
+  let phase: "idle" | "running" | "settling" = "idle";
+  let messages = 0;
+  let tools = 0;
+  const log = qs<HTMLElement>(root, "[data-log]");
+  const status = qs<HTMLElement>(root, "[data-phase]");
+  const led = qs<HTMLElement>(root, "[data-led]");
+
+  const render = (event?: string, note?: string) => {
+    const counters = { streaming: phase === "idle" ? "NO" : "YES", messages, tools };
+    for (const [name, value] of Object.entries(counters)) {
+      const counter = qs<HTMLElement>(root, `[data-${name}]`);
+      if (counter) counter.textContent = String(value);
+    }
+    if (status) status.textContent = phase;
+    led?.classList.toggle("is-run", phase !== "idle");
+    if (event && log) {
+      const line = document.createElement("span");
+      line.className = "ev";
+      line.textContent = note ? `${event} · ${note}` : event;
+      log.append(line);
+    }
+  };
+
+  qsa<HTMLButtonElement>(root, "[data-state-event]").forEach((button) => button.addEventListener("click", () => {
+    const event = button.dataset.stateEvent;
+    if (event === "reset") {
+      phase = "idle";
+      messages = 0;
+      tools = 0;
+      log?.replaceChildren();
+      render();
+    } else if (event === "idle") {
+      if (phase === "settling") {
+        phase = "idle";
+        tools = 0;
+        render("idle", "等待型监听器完成，finishRun 清除运行状态");
+      }
+    } else if (event === "agent_end") {
+      phase = "settling";
+      render(event, "消息流结束，等待型监听器仍在结算");
+    } else if (phase === "settling") {
+      render("先等监听器完成");
+    } else if (event === "message_start") {
+      phase = "running";
+      render(event, "partial 进入 streamingMessage");
+    } else if (event === "message_update") {
+      render(event, "更新 partial，transcript 不增加");
+    } else if (event === "tool_start") {
+      phase = "running";
+      tools += 1;
+      render("tool_execution_start");
+    } else if (event === "tool_end") {
+      tools = Math.max(0, tools - 1);
+      render("tool_execution_end");
+    } else if (event === "message_end") {
+      messages += 1;
+      render(event, "完成消息追加到 public state");
+    }
+  }));
 }
 
 function initQueues(): void {
@@ -52,7 +108,7 @@ function initQueues(): void {
   let running = false; let steer = 0; let follow = 0;
   const log = qs<HTMLElement>(root, "[data-log]"); const phase = qs<HTMLElement>(root, "[data-phase]"); const led = qs<HTMLElement>(root, "[data-led]");
   const render = (line?: string) => { const set = (selector: string, value: string) => { const el = qs<HTMLElement>(root, selector); if (el) el.textContent = value; }; set("[data-tool]", running ? "running" : "idle"); set("[data-steer]", String(steer)); set("[data-follow]", String(follow)); if (phase) phase.textContent = running ? "tool running" : steer || follow ? "queued" : "idle"; led?.classList.toggle("is-run", running); if (line) log?.insertAdjacentHTML("beforeend", `<span class="ev"><span class="k-sys">${line}</span></span>`); };
-  qsa<HTMLButtonElement>(root, "[data-queue]").forEach((button) => button.addEventListener("click", () => { const action = button.dataset.queue; if (action === "reset") { running = false; steer = 0; follow = 0; if (log) log.innerHTML = ""; render(); return; } if (action === "start") { running = true; render("tool batch started"); } if (action === "steer") { steer += 1; render("steer queued; current tool keeps running"); } if (action === "follow") { follow += 1; render("follow-up queued behind steering"); } if (action === "abort") { running = false; render("abort signal fired; cooperation still required"); } if (action === "turn") { running = false; if (steer > 0) { steer -= 1; render("drain steer → next turn"); } else if (follow > 0) { follow -= 1; render("no steer/tool → drain follow-up"); } else render("no queued work → agent_end"); } }));
+  qsa<HTMLButtonElement>(root, "[data-queue]").forEach((button) => button.addEventListener("click", () => { const action = button.dataset.queue; if (action === "reset") { running = false; steer = 0; follow = 0; if (log) log.innerHTML = ""; render(); return; } if (action === "start") { running = true; render("tool batch started"); } if (action === "steer") { steer += 1; render("steer queued; current tool keeps running"); } if (action === "follow") { follow += 1; render("follow-up queued behind steering"); } if (action === "abort") { render("abort signal fired; running tool must acknowledge it"); } if (action === "turn") { running = false; if (steer > 0) { steer -= 1; render("drain steer → next turn"); } else if (follow > 0) { follow -= 1; render("no steer/tool → drain follow-up"); } else render("no queued work → agent_end"); } }));
 }
 
 function initTools(): void {
@@ -64,25 +120,111 @@ function initTools(): void {
 }
 
 function initSessionTree(): void {
-  const root = document.querySelector("#pi-session"); if (!root) return;
-  let entries = 0; let branches = 1; let context = 0; const log = qs<HTMLElement>(root, "[data-log]");
-  const render = (line?: string) => { const set = (selector: string, value: number) => { const el = qs<HTMLElement>(root, selector); if (el) el.textContent = String(value); }; set("[data-entries]", entries); set("[data-branches]", branches); set("[data-context]", context); if (line) log?.insertAdjacentHTML("beforeend", `<span class="ev"><span class="t">e${entries}</span> <span class="k-sys">${line}</span></span>`); };
-  qsa<HTMLButtonElement>(root, "[data-tree]").forEach((button) => button.addEventListener("click", () => { const action = button.dataset.tree; if (action === "reset") { entries = 0; branches = 1; context = 0; if (log) log.innerHTML = ""; render(); return; } if (action === "message") { entries += 1; context += 1; render("message appended to current leaf"); } if (action === "tool") { entries += 1; context += 1; render("toolResult appended; source call remains paired"); } if (action === "branch") { entries += 1; branches += 1; context = Math.max(1, Math.ceil(context / 2)); render("leaf moved earlier; old branch remains"); } if (action === "compact") { entries += 1; context = context > 0 ? Math.min(3, context) : 0; render("compaction entry appended; old entries remain"); } }));
+  const root = document.querySelector("#pi-session");
+  if (!root) return;
+
+  type Entry = { id: number; parent: number | null } & (
+    | { kind: "message" | "call" | "result" }
+    | { kind: "context_edit" | "compaction"; target: number }
+  );
+  const entries: Entry[] = [];
+  const tips = new Set<number>();
+  const log = qs<HTMLElement>(root, "[data-log]");
+  let leaf: number | null = null;
+
+  const getPath = (): Entry[] => {
+    const path: Entry[] = [];
+    for (let id = leaf; id !== null; id = entries[id - 1].parent) path.push(entries[id - 1]);
+    return path.reverse();
+  };
+
+  const getProjection = (path: Entry[]): Entry[] => {
+    const omitted = new Set(path.flatMap((entry) => entry.kind === "context_edit" ? [entry.target] : []));
+    const compacted = path.slice().reverse().find((entry) => entry.kind === "compaction");
+    const start = compacted?.kind === "compaction" ? path.findIndex((entry) => entry.id === compacted.target) : 0;
+    const kept = path.slice(start).filter((entry) =>
+      entry.kind !== "context_edit" && entry.kind !== "compaction" && !omitted.has(entry.id),
+    );
+    return compacted ? [compacted, ...kept] : kept;
+  };
+
+  const append = (change: { kind: "message" | "call" | "result" } | { kind: "context_edit" | "compaction"; target: number }) => {
+    const entry = { ...change, id: entries.length + 1, parent: leaf };
+    entries.push(entry);
+    if (leaf !== null) tips.delete(leaf);
+    tips.add(entry.id);
+    leaf = entry.id;
+    return entry.id;
+  };
+
+  const render = (message?: string) => {
+    const projection = getProjection(getPath());
+    const counts = { entries: entries.length, branches: Math.max(1, tips.size), context: projection.length };
+    for (const [name, value] of Object.entries(counts)) {
+      const counter = qs<HTMLElement>(root, `[data-${name}]`);
+      if (counter) counter.textContent = String(value);
+    }
+    if (message && log) {
+      const line = document.createElement("span");
+      line.className = "ev";
+      const visible = projection.map((entry) => entry.kind === "compaction" ? "摘要" : `e${entry.id}`);
+      line.textContent = `${message} · 模型可见 ${visible.join(" → ") || "空"}`;
+      log.append(line);
+    }
+  };
+
+  qsa<HTMLButtonElement>(root, "[data-tree]").forEach((button) => button.addEventListener("click", () => {
+    const action = button.dataset.tree;
+    if (action === "reset") {
+      entries.length = 0;
+      tips.clear();
+      leaf = null;
+      log?.replaceChildren();
+      render();
+      return;
+    }
+    if (action === "message") {
+      render(`e${append({ kind: "message" })} · message 追加到当前 leaf`);
+    } else if (action === "tool") {
+      const call = append({ kind: "call" });
+      const result = append({ kind: "result" });
+      render(`e${call} tool call → e${result} toolResult`);
+    } else if (action === "branch") {
+      const path = getPath();
+      // Only touch the active pointer. A later append creates the new branch.
+      leaf = path[0]?.id ?? null;
+      render(leaf === null ? "先追加一条消息" : `leaf 移到 e${leaf}，原分支仍在`);
+    } else if (action === "omit") {
+      const target = getProjection(getPath()).reverse().find((entry) => entry.kind === "message");
+      render(target
+        ? `e${append({ kind: "context_edit", target: target.id })} · 省略 e${target.id}，原 entry 可回读`
+        : "先追加一条可省略的消息");
+    } else if (action === "compact") {
+      const projection = getProjection(getPath()).filter((entry) => entry.kind !== "compaction");
+      const retained = projection.slice(-2);
+      const firstKept = retained.find((entry) => entry.kind !== "result");
+      render(firstKept && projection.length > retained.length
+        ? `e${append({ kind: "compaction", target: firstKept.id })} · 摘要 + firstKeptEntryId=e${firstKept.id}`
+        : "历史还短，先追加更多消息");
+    }
+  }));
 }
 
 function initCompaction(): void {
   const root = document.querySelector("#pi-compaction"); if (!root) return;
   type CpEntry = { id: string; kind: "user" | "assistant" | "tool"; tokens: number };
   const WINDOW = 65536; const KEEP = 20000; const SUMMARY = 1200; const LABEL = { user: "u", assistant: "a", tool: "tr" };
-  let reserve = 16384; let seq = 0; let entries: CpEntry[] = []; let keptFrom = -1;
+  let reserve = 16384; let seq = 0; let entries: CpEntry[] = []; let keptFrom = -1; let compactions = 0;
   const log = qs<HTMLElement>(root, "[data-log]"); const strip = qs<HTMLElement>(root, "[data-strip]"); const status = qs<HTMLElement>(root, "[data-status]"); const led = qs<HTMLElement>(root, "[data-led]");
   const k = (n: number) => `${(n / 1000).toFixed(1)}k`;
-  const total = () => entries.reduce((sum, entry) => sum + entry.tokens, 0);
+  const tokensFrom = (index: number) => entries.slice(index).reduce((sum, entry) => sum + entry.tokens, 0);
+  const total = () => tokensFrom(0);
+  const projectedTotal = () => keptFrom >= 0 ? SUMMARY + tokensFrom(keptFrom) : total();
   const line = (note: string, cls = "k-sys") => log?.insertAdjacentHTML("beforeend", `<span class="ev"><span class="${cls}">${note}</span></span>`);
   const render = () => {
-    const ctx = total(); const projected = keptFrom >= 0 ? SUMMARY + entries.slice(keptFrom).reduce((sum, entry) => sum + entry.tokens, 0) : ctx;
+    const ctx = total(); const projected = projectedTotal();
     const set = (selector: string, value: string) => { const el = qs<HTMLElement>(root, selector); if (el) el.textContent = value; };
-    set("[data-entries]", String(entries.length)); set("[data-tokens]", k(ctx)); set("[data-projected]", k(projected));
+    set("[data-entries]", String(entries.length + compactions)); set("[data-tokens]", k(ctx)); set("[data-projected]", k(projected));
     if (status) status.textContent = keptFrom >= 0 ? `firstKept ${entries[keptFrom]?.id ?? "-"}` : `阈值 ${k(WINDOW - reserve)}`;
     led?.classList.toggle("is-done", keptFrom >= 0);
     if (strip) strip.innerHTML = (keptFrom >= 0 ? `<span class="pi-chip is-summary">Σ summary ${k(SUMMARY)}</span>` : "") + (entries.length ? entries.map((entry, index) => `<span class="pi-chip is-${entry.kind}${keptFrom >= 0 && index < keptFrom ? " is-cut" : ""}">${LABEL[entry.kind]} ${k(entry.tokens)}</span>`).join("") : `<span class="pi-chip">追加 Turn 后出现 entry 条</span>`);
@@ -94,21 +236,33 @@ function initCompaction(): void {
   }));
   qsa<HTMLButtonElement>(root, "[data-cp]").forEach((button) => button.addEventListener("click", () => {
     const action = button.dataset.cp;
-    if (action === "reset") { reserve = 16384; seq = 0; entries = []; keptFrom = -1; if (log) log.innerHTML = ""; qsa<HTMLButtonElement>(root, "[data-reserve] button").forEach((candidate) => candidate.setAttribute("aria-pressed", "false")); render(); return; }
-    if (action === "heavy" || action === "light") { const tool = action === "heavy" ? 9000 : 2400; entries.push({ id: `e${++seq}`, kind: "user", tokens: 420 }, { id: `e${++seq}`, kind: "assistant", tokens: 1800 }, { id: `e${++seq}`, kind: "tool", tokens: tool }); line(`turn 追加：u 0.4k + a 1.8k + toolResult ${k(tool)}，context=${k(total())}${keptFrom >= 0 ? "（落在 firstKept 之后，投影随之增长）" : ""}`); render(); return; }
+    if (action === "reset") { reserve = 16384; seq = 0; entries = []; keptFrom = -1; compactions = 0; if (log) log.innerHTML = ""; qsa<HTMLButtonElement>(root, "[data-reserve] button").forEach((candidate) => candidate.setAttribute("aria-pressed", "false")); render(); return; }
+    if (action === "heavy" || action === "light") { const tool = action === "heavy" ? 9000 : 2400; entries.push({ id: `e${++seq}`, kind: "user", tokens: 420 }, { id: `e${++seq}`, kind: "assistant", tokens: 1800 }, { id: `e${++seq}`, kind: "tool", tokens: tool }); line(`turn 追加：u 0.4k + a 1.8k + toolResult ${k(tool)}，context=${k(projectedTotal())}${keptFrom >= 0 ? "（落在 firstKept 之后，投影随之增长）" : ""}`); render(); return; }
     if (action === "compact") {
       if (!entries.length) { line("空 transcript，无可压缩段", "k-warn"); return; }
-      const ctx = total(); const threshold = WINDOW - reserve;
+      const ctx = projectedTotal(); const threshold = WINDOW - reserve;
       line(`shouldCompact(${k(ctx)}, ${k(WINDOW)}, reserve ${k(reserve)}) → ${ctx > threshold ? "true" : "false"}`, ctx > threshold ? "k-tool" : "k-warn");
       if (ctx <= threshold) line("未达阈值：auto-compaction 不触发；这次走手动 AgentSession.compact()");
-      let acc = 0; let cut = 0;
-      for (let index = entries.length - 1; index >= 0; index -= 1) { acc += entries[index].tokens; if (acc >= KEEP) { cut = index; while (cut < entries.length && entries[cut].kind === "tool") cut += 1; break; } }
-      if (cut >= entries.length) { line("窗口内只剩 toolResult，切点推至末尾：本次不追加 compaction", "k-warn"); render(); return; }
-      if (cut === 0) { line("全量都在 keep 预算内：无早期段可摘要，投影不变", "k-warn"); render(); return; }
+      const start = Math.max(0, keptFrom);
+      let accumulated = 0;
+      let cut = start;
+      for (let index = entries.length - 1; index >= start; index -= 1) {
+        accumulated += entries[index].tokens;
+        if (accumulated < KEEP) continue;
+        cut = index;
+        while (cut < entries.length && entries[cut].kind === "tool") cut += 1;
+        if (cut === entries.length) {
+          cut = index;
+          while (cut > start && entries[cut].kind === "tool") cut -= 1;
+        }
+        break;
+      }
+      if (cut <= start) { line("没有更早的段可摘要，投影不变", "k-warn"); render(); return; }
       keptFrom = cut;
-      line(`findCutPoint：从后向前累计 ≥ ${k(KEEP)} → cut@${entries[cut].id}（toolResult 不作切点，向后让位）`);
-      line("摘要输入：单个 tool result 截到 2000 字符；独立会话 + toolChoice none + cacheRetention none");
-      line(`appendCompaction：firstKeptEntryId=${entries[cut].id}，tokensBefore=${k(ctx)}；entries 数不变，旧 entry 仍在 JSONL`);
+      compactions += 1;
+      line(`findCutPoint：从后向前累计 ≥ ${k(KEEP)} → cut@${entries[cut].id}（toolResult 不能作切点）`);
+      line("摘要输入：单个 tool result 截到 2000 字符；不声明工具，cacheRetention none");
+      line(`appendCompaction：firstKeptEntryId=${entries[cut].id}，tokensBefore=${k(ctx)}；追加一条 compaction，旧 entry 仍在 JSONL`);
       render(); return;
     }
   }));
@@ -158,9 +312,21 @@ function boot(): void {
   initCompaction();
   initTuiDiff();
   initChoiceDetail("#pi-layers", { provider: { title: "模型适配层", body: "先核对目标 API 的请求形状、认证解析、流事件映射与最终错误消息。", status: "PI AI" }, loop: { title: "Agent 循环层", body: "查看助手消息是否已提交、工具批次是否回填、双队列是否排空，以及最终 stopReason。", status: "AGENT CORE" }, session: { title: "会话投影层", body: "核对当前 leaf、父子关系与压缩边界，确认恢复出的活动路径是否正确。", status: "SESSION TREE" }, render: { title: "终端呈现层", body: "比较前后帧、可用宽度与完整重绘条件；画面异常不等于 Agent 状态异常。", status: "TUI" } });
-  initSurface("#pi-providers", { anthropic: [["统一层", "Model + Context + AssistantMessageEventStream"], ["Adapter", "system block、thinking signature、tool_result"], ["Auth", "Provider auth resolution"], ["Wire", "Anthropic Messages SSE"]], openai: [["统一层", "同一 Agent / Pi AI contracts"], ["Adapter", "system/developer role、image URL、tool ids"], ["Compat", "endpoint-specific stop/toolUse mapping"], ["Wire", "OpenAI-compatible streaming"]], google: [["统一层", "同一 provider-neutral events"], ["Adapter", "Google content parts 与 reasoning options"], ["模型", "catalog 由 Provider 提供"], ["Wire", "Google API-specific payload"]], faux: [["用途", "确定性测试"], ["响应", "scripted tool call / text / error"], ["网络", "不访问真实 Provider"], ["证据", "验证标准事件与最终 Message"]] });
-  initChoiceDetail("#pi-extensions", { tool: { title: "ExtensionAPI.registerTool", body: "注册 TypeBox schema、execute、progress 与 TUI renderers；异常才成为 isError。" }, skill: { title: "ResourceLoader + Skill", body: "System Prompt 先暴露 name/description，模型按需用 read 加载完整 SKILL.md。" }, hook: { title: "tool_call event", body: "执行前可改参数或 block；这是一项 Extension policy，不是 Pi 内建 Sandbox。" }, state: { title: "Session custom entry", body: "custom 持久扩展状态但不进 LLM；custom_message 才会进入 context。" } });
-  initSurface("#pi-surfaces", { sdk: [["消费者", "Node / TypeScript 应用"], ["入口", "createAgentSession"], ["进程", "同进程"], ["状态", "AgentSession + SessionManager"]], json: [["消费者", "日志与轻量观察器"], ["入口", "--mode json"], ["协议", "逐行 Agent events"], ["控制", "没有 RPC command plane"]], rpc: [["消费者", "IDE / 跨语言子进程"], ["Framing", "LF-only JSONL"], ["响应", "accepted / queued"], ["结果", "后续 events / messages"]], protocol: [["消费者", "自建远程服务"], ["Framing", "uint32-be + definite CBOR"], ["状态", "Server / Session snapshots 权威"], ["边界", "experimental；Transport 负责认证"]], client: [["消费者", "远程 Pi session client"], ["连接", "Transport-neutral ByteTransport"], ["所有权", "shared / exclusive SessionLease"], ["恢复", "不自动 reconnect"]] });
+  initSurface("#pi-providers", { anthropic: [["统一层", "Model + Context + AssistantMessageEventStream"], ["Adapter", "system block、thinking signature、tool_result"], ["Auth", "Provider auth resolution"], ["Wire", "支持 Message Threads 时，前缀匹配则只发新消息"]], openai: [["统一层", "同一 Agent / Pi AI contracts"], ["Adapter", "system/developer role、image URL、tool ids"], ["Compat", "endpoint-specific stop/toolUse mapping"], ["Wire", "OpenAI-compatible streaming"]], google: [["统一层", "同一 provider-neutral events"], ["Adapter", "Google content parts 与 reasoning options"], ["模型", "catalog 由 Provider 提供"], ["Wire", "Google API-specific payload"]], faux: [["用途", "确定性测试"], ["响应", "scripted tool call / text / error"], ["网络", "不访问真实 Provider"], ["证据", "验证标准事件与最终 Message"]] });
+  initChoiceDetail("#pi-extensions", { tool: { title: "ExtensionAPI.registerTool", body: "注册 TypeBox schema、execute、progress 与 TUI renderers；异常才成为 isError。" }, skill: { title: "ResourceLoader + Skill", body: "System Prompt 先暴露 name/description，模型按需用 read 加载完整 SKILL.md。" }, hook: { title: "tool_call event", body: "执行前可改参数或 block。文件、网络和进程权限由宿主环境控制。" }, state: { title: "Session custom entry", body: "custom 持久扩展状态但不进 LLM；custom_message 才会进入 context。" } });
+  initSurface("#pi-mcp-exposure", {
+    codemode: [["模型工具清单", "默认没有该 MCP 工具声明"], ["调用路径", "脚本用 searchTools() 或 describeTool() 找到它，经 tools 调用"], ["边界", "脚本受 QuickJS 限制，宿主工具仍按真实权限执行"]],
+    deferred: [["模型工具清单", "开始时没有，tool_search 激活后下一次请求可见"], ["调用路径", "激活后模型可直接调用，脚本也可调用"], ["恢复", "已激活的工具声明跟随当前分支"]],
+    direct: [["模型工具清单", "连接并准备好后直接声明"], ["调用路径", "模型或 Codemode 脚本都可调用"], ["取舍", "模型立即看到 schema，工具越多上下文越长"]],
+    hidden: [["模型工具清单", "没有声明"], ["调用路径", "已注册但模型和脚本均无法调用"], ["配置", "可以用 toolExposure 为单个工具配置不同方式"]],
+  });
+  initSurface("#pi-surfaces", {
+    sdk: [["消费者", "Node / TypeScript 应用"], ["入口", "createAgentSession"], ["进程", "同进程"], ["状态", "AgentSession + SessionManager"]],
+    json: [["消费者", "一次性脚本与观察器"], ["入口", "--mode json"], ["协议", "逐行会话事件"], ["控制", "单次运行，没有命令入口"]],
+    rpc: [["消费者", "IDE / 跨语言子进程"], ["分帧", "LF-only JSONL"], ["响应", "data.disposition 表示命令处理结果"], ["结束信号", "订阅后发 prompt，用 agent_settled 等待会话结算"]],
+    durable: [["消费者", "需要恢复运行的应用"], ["入口", "Harness.open() / resume()"], ["恢复点", "已提交的任务 checkpoint"], ["防重复提交", "同一 requestId 返回原 submission"]],
+    chord: [["消费者", "跨宿主插件与应用"], ["状态", "contract、引用与文档事务"], ["p2", "实验性的自托管 Durable UI"], ["p3", "Chord v2 上的 headless server，按会话开 worker"]],
+  });
   initChapterReader();
 }
 

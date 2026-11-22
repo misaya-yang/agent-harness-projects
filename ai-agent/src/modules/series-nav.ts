@@ -15,49 +15,49 @@ const courses: AgentCourse[] = [
     name: "Codex",
     path: "/codex",
     code: "OPENAI / RUST",
-    description: "提示词分层、记忆分账与可重放 Agent Loop",
+    description: "模型步骤、ThreadStore 与权限配置",
   },
   {
     id: "grok",
     name: "Grok Build",
     path: "/grok",
     code: "XAI / RUST",
-    description: "单写者 Actor、工作区副作用与崩溃恢复",
+    description: "会话 Actor、ACP 和工作区快照",
   },
   {
     id: "deepseek",
     name: "DeepSeek Harness",
     path: "/deepseek",
     code: "DEEPSEEK / TYPESCRIPT",
-    description: "事件日志、插件组合与可替换执行环境",
+    description: "Cordis 插件、事件投影与工具管线",
   },
   {
     id: "pi",
     name: "Pi Agent",
     path: "/pi",
     code: "PI / TYPESCRIPT",
-    description: "纯函数循环、源序回填与可分支会话树",
+    description: "工具批次、会话树与进程内扩展",
   },
   {
     id: "opencode",
     name: "OpenCode",
     path: "/opencode",
     code: "OPENCODE / BUN",
-    description: "持久循环判据、上下文纪元与事件审批",
+    description: "持久收件箱、执行协调与事件流",
   },
   {
     id: "openclaw",
     name: "OpenClaw",
     path: "/openclaw",
     code: "OPENCLAW / TYPESCRIPT",
-    description: "常驻网关、异步回流与跨天记忆",
+    description: "会话邮箱、运行预算与自动化",
   },
   {
     id: "hermes",
     name: "Hermes Agent",
     path: "/hermes",
     code: "HERMES / PYTHON",
-    description: "三段回合、缓存经济与摘要式委派",
+    description: "回合租约、执行后端与后台学习",
   },
 ];
 
@@ -83,7 +83,7 @@ function courseItems(currentId: string): string {
 }
 
 function courseTabs(currentId: string): string {
-  const home = `<a href="/" ${currentId === "home" ? 'aria-current="page"' : ""}>学习路径</a>`;
+  const home = `<a href="/" ${currentId === "home" ? 'aria-current="page"' : ""}>全部课程</a>`;
   return home + courses.map((course, index) => `
     <a href="${course.path}" ${course.id === currentId ? 'aria-current="page"' : ""}>
       <span>${String(index + 1).padStart(2, "0")}</span>${course.name}

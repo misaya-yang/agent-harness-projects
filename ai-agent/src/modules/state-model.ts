@@ -12,9 +12,11 @@ export function initStateModel(root: HTMLElement | null): void {
   if (!root) return;
 
   let state: ThreadState = "new";
+  let thread = 0;
   let turn = 0;
   let item = 0;
   const stateEl = root.querySelector<HTMLElement>("[data-state]");
+  const threadEl = root.querySelector<HTMLElement>("[data-thread-id]");
   const turnEl = root.querySelector<HTMLElement>("[data-turn-count]");
   const itemEl = root.querySelector<HTMLElement>("[data-item-count]");
   const log = root.querySelector<HTMLElement>("[data-log]");
@@ -38,6 +40,7 @@ export function initStateModel(root: HTMLElement | null): void {
       stateEl.textContent = LABELS[state];
       stateEl.dataset.state = state;
     }
+    if (threadEl) threadEl.textContent = thread ? `thread_${thread}` : "—";
     if (turnEl) turnEl.textContent = String(turn).padStart(2, "0");
     if (itemEl) itemEl.textContent = String(item).padStart(2, "0");
     if (note) note.textContent = message;
@@ -46,16 +49,24 @@ export function initStateModel(root: HTMLElement | null): void {
   const act = (action: string): void => {
     switch (action) {
       case "start":
+        if (state === "active" || state === "archived") {
+          render("活跃线程需先结束当前回合。归档后可 Reset 开始新的实验。");
+          return;
+        }
+        if (state === "new") {
+          thread += 1;
+          append("k-user", `thread/start · thread_${thread}`);
+        }
         state = "active";
         turn += 1;
         item += 1;
-        append("k-user", `thread/start → turn/start · turn_${turn}`);
-        append("k-sys", "item/started · userMessage");
-        render("新 Thread 已建立，本轮开始流式产生 Item。现实协议要求连接先完成 initialize 握手。");
+        append("k-user", `turn/start → turn/started · turn_${turn}`);
+        append("k-sys", "item/completed · userMessage");
+        render("已开始一轮。首次 Start 同时创建 Thread，后续 Start 沿用当前 Thread。");
         break;
       case "item":
         if (state !== "active") {
-          render("只有活跃 Turn 才能继续产生 Item；先 start 或 resume。 ");
+          render("先用 Start 启动活跃 Turn，再追加示例 Item。");
           return;
         }
         item += 1;
@@ -67,14 +78,13 @@ export function initStateModel(root: HTMLElement | null): void {
           render("turn/steer 只能追加到正在进行的 Turn。 ");
           return;
         }
-        item += 1;
-        append("k-user", `turn/steer · append item_${item}`);
-        render("Steer 不创建新 Turn，而是向当前在途 Turn 追加用户输入。 ");
+        append("k-user", `turn/steer · expectedTurnId=turn_${turn}`);
+        render("输入已受理，等后续采样采用。回合与 Item 数量暂时保持不变。");
         break;
       case "complete":
         if (state !== "active") return;
         state = "idle";
-        append("k-sys", "turn/completed · status=completed");
+        append("k-sys", "turn/completed · turn.status=completed");
         render("Turn 完成，Thread 保留历史并回到 idle，可继续下一轮或归档。 ");
         break;
       case "interrupt":
@@ -84,29 +94,43 @@ export function initStateModel(root: HTMLElement | null): void {
         render("Interrupt 请求取消在途工作；最终仍以 turn/completed 通知收尾。 ");
         break;
       case "resume":
-        state = "active";
-        turn += 1;
-        item += 1;
-        append("k-sys", `thread/resume → turn/start · turn_${turn}`);
-        render("Resume 重新加载已持久化 Thread，新的 Turn 追加到原历史。 ");
+        if (state === "new") {
+          render("先创建一个可恢复的 Thread。");
+          return;
+        }
+        if (state === "archived") {
+          render("请用未归档线程演示重连，或 Reset 后开始新的实验。");
+          return;
+        }
+        append("k-sys", `thread/resume · thread_${thread}`);
+        render("Resume 读取已有 Thread；需要继续工作时显式发起下一轮。");
         break;
       case "fork":
+        if (state === "new" || state === "active" || state === "archived") {
+          render("本实验在未归档 Thread 的回合边界演示 Fork。");
+          return;
+        }
         state = "idle";
-        turn = Math.max(turn, 1);
-        append("k-tool", "thread/fork · forkedFromId=thread_origin");
-        render("Fork 复制指定历史边界并得到新的 Thread ID；原 Thread 不被修改。 ");
+        append("k-tool", `thread/fork · thread_${thread} → thread_${thread + 1}`);
+        thread += 1;
+        render("Fork 将已有历史复制到新 Thread。观察 Thread ID 变化，历史计数保留。");
         break;
       case "archive":
+        if (state === "new" || state === "active" || state === "archived") {
+          render("本实验在现有 Thread 的回合边界演示归档。");
+          return;
+        }
         state = "archived";
         append("k-sys", "thread/archive → thread/archived");
-        render("Archive 移动持久化日志并发出通知；它与永久删除不是同一件事。 ");
+        render("Thread 已归档，历史计数仍保留。");
         break;
       case "reset":
         state = "new";
+        thread = 0;
         turn = 0;
         item = 0;
         log?.replaceChildren();
-        render("从连接初始化前的状态重新开始。 ");
+        render("握手已完成。用 Start 建立 Thread 并开始首轮。");
         break;
     }
   };
@@ -116,5 +140,5 @@ export function initStateModel(root: HTMLElement | null): void {
     if (button) act(button.dataset.action ?? "");
   });
 
-  render("从连接初始化前的状态重新开始。 ");
+  render("握手已完成。用 Start 建立 Thread 并开始首轮。");
 }

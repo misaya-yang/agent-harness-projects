@@ -1,7 +1,6 @@
 /**
  * 沙箱 × 审批决策模拟器：
- * 操作 × SandboxPolicy × ApprovalPolicy → 判定路径与结果。
- * 语义为教学简化版，忠实于「沙箱决定能不能，审批策略决定要不要问」的分层。
+ * 选定沙箱示例和审批策略，对照有效执行边界与请示路径。
  */
 
 type Op = {
@@ -28,9 +27,9 @@ const OPS: Op[] = [
 ];
 
 const VERDICTS = {
-  allow: { tag: "沙箱内放行", cls: "ok", desc: "操作落在沙箱允许范围内，直接执行，无需打扰用户。" },
-  ask: { tag: "升级请示", cls: "ask", desc: "先在沙箱内尝试；被拦截或策略要求确认时，内核向 UI 发出审批请求，由用户裁决是否越权重跑。" },
-  deny: { tag: "直接拒绝", cls: "deny", desc: "不打扰用户：Granular 未放行的类别自动拒绝，Never 遇阻直接失败返回，回合继续但命令未执行。" },
+  allow: { tag: "当前权限放行", cls: "ok", desc: "示例操作在当前权限内。执行后读取工具结果和命令退出状态。" },
+  ask: { tag: "可请示", cls: "ask", desc: "请查看判定路径。命令规则可以要求执行前确认；按需审批也可由模型另行发起明确的权限申请。" },
+  deny: { tag: "越界失败", cls: "deny", desc: "当前权限不足，普通升级审批已关闭。失败结果回到模型。" },
 } as const;
 
 type VerdictKey = keyof typeof VERDICTS;
@@ -42,22 +41,14 @@ function decide(op: Op, sbx: Sandbox, apr: Approval): { key: VerdictKey; trace: 
     (sbx === "ww" && !op.net && !op.writeOut) ||
     (sbx === "ro" && !op.writeIn && !op.writeOut && !op.net);
 
-  if (sbx === "dfa") {
-    trace.push("sandbox=DangerFullAccess → OS 层无限制");
-    if (apr === "untrusted" && (op.net || op.writeOut)) {
-      trace.push("approval=Untrusted → 非白名单命令仍需用户确认");
-      return { key: "ask", trace };
-    }
-    trace.push("approval 策略不触发（无阻碍）→ 直接执行");
-    return { key: "allow", trace };
+  if (apr === "untrusted" && op.id !== "read") {
+    trace.push("approval=Untrusted → 示例规则未显式放行，执行前请示");
+    trace.push(sandboxAllows ? "当前执行边界覆盖该操作" : "当前边界不足，须查获批尝试使用的权限");
+    return { key: "ask", trace };
   }
 
   if (sandboxAllows) {
-    trace.push(`sandbox=${sbx} 内允许：${op.riskNote}`);
-    if (apr === "untrusted" && op.id !== "read") {
-      trace.push("approval=Untrusted → 白名单外命令先请示");
-      return { key: "ask", trace };
-    }
+    trace.push(sbx === "dfa" ? "Codex 不再施加外层沙箱" : `sandbox=${sbx} 内允许：${op.riskNote}`);
     trace.push("无需审批 → 执行并回传输出");
     return { key: "allow", trace };
   }
@@ -70,17 +61,12 @@ function decide(op: Op, sbx: Sandbox, apr: Approval): { key: VerdictKey; trace: 
         : "WorkspaceWrite 拒绝工作区外写入";
   trace.push(reason);
 
-  switch (apr) {
-    case "on-request":
-      trace.push("approval=OnRequest → 模型可发起升级请示，交用户裁决");
-      return { key: "ask", trace };
-    case "untrusted":
-      trace.push("approval=UnlessTrusted → 未放行命令在执行前就请示");
-      return { key: "ask", trace };
-    case "never":
-      trace.push("approval=Never → 不请示，直接以失败收场");
-      return { key: "deny", trace };
+  if (apr === "on-request") {
+    trace.push("普通越界失败先返回模型。模型可另行发起显式权限请求");
+    return { key: "ask", trace };
   }
+  trace.push("当前策略与示例规则未提供升级路径");
+  return { key: "deny", trace };
 }
 
 export function initSandboxSim(root: HTMLElement | null): void {

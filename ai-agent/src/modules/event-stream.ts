@@ -8,22 +8,22 @@ interface Line {
 }
 
 const SCRIPT: Line[] = [
-  { cls: "k-user", dir: "in", text: 'turn/start { input: "修复 test_login" }' },
+  { cls: "k-user", dir: "in", text: 'turn/start { threadId, input: [{ type: "text", text: "修复 test_login" }] }' },
   { cls: "k-sys", text: "◂ turn/started { turn.id: turn_42 }" },
   { cls: "k-tool", dir: "out", text: "◂ item/started { type: commandExecution }" },
-  { cls: "k-user", dir: "in", text: 'turn/steer { input: "不要修改数据库" }' },
-  { cls: "k-sys", text: "pending_input += steer", note: "当前 token 流不被抢断" },
+  { cls: "k-user", dir: "in", text: 'turn/steer { threadId, expectedTurnId: turn_42, input: [{ type: "text", text: "不要修改数据库" }] }' },
+  { cls: "k-sys", text: "→ turn/steer result { turnId: turn_42 }", note: "已受理，仍等待后续采样" },
   { cls: "k-tool", text: "◂ item/completed { commandExecution · exitCode: 1 }" },
   { cls: "k-sys", text: "step boundary → drain pending_input" },
   { cls: "k-user", text: 'history += "不要修改数据库"' },
   { cls: "k-model", text: "next sampling step · 新约束已可见" },
   { cls: "k-tool", dir: "out", text: "◂ item/started { type: commandExecution }" },
-  { cls: "k-user", dir: "in", text: "turn/interrupt { turnId: turn_42 }" },
-  { cls: "k-warn", text: "cancellation token fired · grace ≤ 100ms" },
-  { cls: "k-tool", text: "synthetic tool output · aborted by user" },
+  { cls: "k-user", dir: "in", text: "turn/interrupt { threadId, turnId: turn_42 }" },
+  { cls: "k-warn", text: "cancellation token fired · 尝试收尾" },
+  { cls: "k-tool", text: "Core · 将在途工具收尾" },
   { cls: "k-sys", text: "history += <turn_aborted>", note: "副作用可能已部分发生" },
-  { cls: "k-sys", text: "◂ item/completed { status: aborted }" },
-  { cls: "k-sys", text: "◂ turn/completed { status: interrupted }" },
+  { cls: "k-sys", text: "核对宿主日志 · 进程可能已产生副作用" },
+  { cls: "k-sys", text: "◂ turn/completed { threadId, turn: { id: turn_42, status: interrupted } }" },
 ];
 
 export function initEventStream(

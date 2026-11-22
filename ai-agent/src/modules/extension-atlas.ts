@@ -6,7 +6,7 @@ const ENTRIES: Record<string, { title: string; role: string; boundary: string }>
   },
   rollout: {
     title: "Thread Rollout",
-    role: "每个 Thread 独立的追加式事实日志，记录消息、检查点、World State、设置与必要事件。",
+    role: "持久 Thread 的追加式会话日志，记录消息、检查点、World State、设置与必要事件。",
     boundary: "用于 resume、fork 与审计；不是每轮完整塞给模型。",
   },
   review: {
@@ -21,8 +21,8 @@ const ENTRIES: Record<string, { title: string; role: string; boundary: string }>
   },
   longterm: {
     title: "Long-term Memories",
-    role: "后台从多个 rollout 提取、去敏并整理可跨 Thread 复用的事实，再通过摘要和检索工具按需读取。",
-    boundary: "外部上下文会触发污染防护；不能替代精确 resume。",
+    role: "为后续 Thread 提供经筛选的上下文。提取和摘要读取按所选记忆版本与配置处理。",
+    boundary: "实验性 thread/memory/read 读取已加载线程所选版本的摘要。恢复线程历史使用 resume。",
   },
 };
 
